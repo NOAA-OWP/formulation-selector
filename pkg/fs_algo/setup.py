@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 # Instructions on package data files: https://sinoroc.gitlab.io/kb/python/package_data.html
 # Instructions for build & install in terminal:
-# > cd /path/to/fsds_proc/
+# > cd /path/to/fs_algo/
 # > python setup.py sdist bdist_wheel
 # > pip install -e ./
 setup(

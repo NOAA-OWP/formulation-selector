@@ -3,7 +3,7 @@
 @author: Guy Litt <guy.litt@noaa.gov>
 @description: Reads in the xSSA dataset, 
     subset xSSA data to just CAMELS basins, 
-    and converts to a standard format expected by the FSDS tooling.
+    and converts to a standard format expected by the formulation-selector tooling.
 @usage: python proc_xssa_metrics.py "/full/path/to/xssa_config.yaml"
 
 Changelog/contributions
@@ -13,14 +13,14 @@ import argparse
 import pandas as pd
 from pathlib import Path
 import yaml
-from fsds_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
+from fs_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process the YAML config file.')
     parser.add_argument('path_config', type=str, help='Path to the YAML configuration file')
     args = parser.parse_args()
     # The path to the configuration
-    path_config = args.path_config # '/Users/guylitt/git/fsds/scripts/eval_ingest/xssa/xssa_config.yaml' 
+    path_config = args.path_config # '~/git/formulation-selector/scripts/eval_ingest/xssa/xssa_config.yaml' 
 
     if not Path(path_config).exists():
         raise ValueError("The provided path to the configuration file does not exist: {path_config}")

@@ -5,7 +5,7 @@ Write the new 'fixed' dataset
 """
 
 import pandas as pd
-from fsds_proc.proc_eval_metrics import check_fix_nwissite_gageids
+from fs_proc.proc_eval_metrics import check_fix_nwissite_gageids
 from pathlib import Path
 home_dir = str(Path.home())
 dir_base = Path(f'{home_dir}/noaa/regionalization/data/SI2022')

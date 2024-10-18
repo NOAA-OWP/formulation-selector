@@ -33,7 +33,7 @@ needed to acquire variables of interest. List objects include the following:
 \item \code{paths$dir_db_hydfab} the local path to where hydrofabric data are saved
 \item \code{path$dir_db_attrs} local path for saving catchment attributes as parquet files
 \item \code{path$s3_path_hydatl} the s3 location where hydroatlas data exist
-\item \code{path$dir_std_base} the location of user_data_std containing dataset that were standardized by \pkg{fsds_proc}.
+\item \code{path$dir_std_base} the location of user_data_std containing dataset that were standardized by \pkg{fs_proc}.
 \item \code{datasets} character vector. A list of datasets of interest inside \code{paths$dir_std_base}. Not used in \code{proc_attr_gageids}
 }}
 

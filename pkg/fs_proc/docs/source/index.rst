@@ -10,7 +10,7 @@ Welcome to Formulation Selector Processing's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-.. automodule:: fsds_proc.proc_eval_metrics
+.. automodule:: fs_proc.proc_eval_metrics
     :members:
     :undoc-members:
     :show-inheritance:

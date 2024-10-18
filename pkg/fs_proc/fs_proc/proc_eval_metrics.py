@@ -22,7 +22,7 @@ import warnings
 import os
 import shutil
 from importlib import resources as impresources
-from fsds_proc import data
+from fs_proc import data
 from itertools import compress
 import pynhd as nhd
 
@@ -34,12 +34,12 @@ def _proc_flatten_ls_of_dict_keys(config: dict, key: str) -> list:
     return [x for xs in keys_cs for x in xs]
 
 def _read_std_config():
-    """Read the standardized categorical mappings used in fsds_proc
+    """Read the standardized categorical mappings used in fs_proc
 
     :return: yaml configuration file mappings as a dict of lists of dicts
     :rtype: dict
     """
-    catg_file = impresources.files(data) / 'fsds_categories.yaml'
+    catg_file = impresources.files(data) / 'fs_categories.yaml'
     with catg_file.open("rt") as f:
         std_config = yaml.safe_load(f)
     return std_config
@@ -184,16 +184,16 @@ def _save_dir_struct(dir_save: str | os.PathLike,
 
     return save_dir_base, other_save_dirs
 
-def _proc_check_std_fsds_ids(vars: list, category=['metric','target_var'][0]):
+def _proc_check_std_fs_ids(vars: list, category=['metric','target_var'][0]):
     """
     Run check to ensure that variables are listed in the standardized 
-        fsds_categories.yaml
+        fs_categories.yaml
 
     :param vars: user-defined variable listing of the anticipated mapped
         variables (e.g. ['NSE','RMSE'])
     :type vars: list
     :param category: choose the category of 'metric' or 'target_var' desired
-        from the fsds standardized categories file. Defaults to 'metric'
+        from the formulation-selector standardized categories file. Defaults to 'metric'
     :type category: list, optional
     :raises ValueError: If at least one of the provided vars is not standard,
         raises error. 
@@ -292,7 +292,7 @@ def _proc_check_input_df(df: pd.DataFrame,
     metric_mappings = col_schema_df['metric_mappings'][0].split('|')
 
     # Run check that mappings are part of standardized column naming
-    _proc_check_std_fsds_ids(metric_mappings, category = 'metric')
+    _proc_check_std_fs_ids(metric_mappings, category = 'metric')
 
     # rename metrics to the standardized format
     df = df.rename(columns = dict(zip(metrics, metric_mappings)))
@@ -301,7 +301,8 @@ def _proc_check_input_df(df: pd.DataFrame,
 
 def proc_col_schema(df: pd.DataFrame, 
                     col_schema_df: pd.DataFrame, 
-                    dir_save: str | os.PathLike) -> xr.Dataset:
+                    dir_save: str | os.PathLike, 
+                    check_nwis: bool = False) -> xr.Dataset:
     """
     Process model evaluation metrics into individual standardized files 
         and save a standardized metadata file.
@@ -310,11 +311,17 @@ def proc_col_schema(df: pd.DataFrame,
         minimum catchment ID and evaluation metrics
     :type df: pd.DataFrame
     :param col_schema_df: The column schema naming convention ingested from 
-        the yaml file corresponding to the dataset. C
+        the yaml file corresponding to the dataset. To create the schema df,
+        refer to :func:`read_schm_ls_of_dict`
     :type col_schema_df: pd.DataFrame
     :param dir_save: Path for saving the standardized metric data file(s)
         and the metadata file.
     :type dir_save: str | os.PathLike
+    :param check_nwis: Set to True if NWIS gage ids are the standard location 
+        identifier in this dataset. If True, this checks whether NWIS gage ids
+        are missing leading zeros and provides a correction if needed. Also
+        expects `col_schema_df['featureSource'] == 'nwissite'`.
+    :type check_nwis: bool
     :raises ValueError: when dir_save does not contain the expected directory
         structure in cases when saving non-hierarchical file formats
     :return: dataset of the standardized data/metadata
@@ -370,6 +377,33 @@ def proc_col_schema(df: pd.DataFrame,
 
     # Run format checker/df renamer on input data based on config file's entries:
     df = _proc_check_input_df(df,col_schema_df)
+
+    # Run format checker on nwissite gage ids for missing leading zeros
+    if check_nwis and col_schema_df['featureSource'].values[0] == 'nwissite':
+        # Run check on NWIS gage IDS - make sure leading zeros exist where needed.
+        df_new = check_fix_nwissite_gageids(
+            df=df, 
+            gage_id_col = col_schema_df['gage_id'].values[0],
+            featureSource = col_schema_df['featureSource'].values[0], 
+            featureID=col_schema_df['featureID'].values[0],
+            replace_orig_gage_id_col=True)
+        
+        check_equal_df = df_new.equals(df)
+        if not check_equal_df == None:
+            warn_str_diff = (f"The {col_schema_df['gage_id'].values[0]} column" 
+                          f" in the input dataset has nwissite gage ID values"
+                          f"missing leading zeros. Auto-corrected gage ids may not"
+                          f" have caught all issues. Consider inspecting input data.")
+            warnings.warn(warn_str_diff
+                         )
+            
+            df = df_new.copy()
+    elif col_schema_df['featureSource'].values[0] == 'nwissite':
+        print(f"The input dataset uses nwissite gage ids. Consider setting\
+              \ncheck_nwis=True to run a check on whether the "
+              f"{col_schema_df['gage_id'].values[0]} column "
+              f"\nin the dataset contains appropriately formatted gage ids, \
+              \nspecifically that leading zeros haven't been inadvertently removed.")
 
     # Convert dataframe to the xarray dataset and add metadata:
     ds = df.to_xarray()

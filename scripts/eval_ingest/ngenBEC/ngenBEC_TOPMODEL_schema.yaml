@@ -2,7 +2,7 @@
 col_schema:   # required column mappings in the evaluation metrics dataset
   - 'gage_id': 'hru_id_CAMELS' # The basin identifier/gage id used for each modeled location in the evaluation metrics dataset
   - 'metric_cols': 'NNash|LogNash|KGE|Nash|RMSE' # Column(s) in the dataset corresponding to the evaluation metrics. If multiple exist, separate each string by '|' e.g. 'rmse|kge|nse'
-  - 'metric_mappings': 'NNSE|logNSE|KGE|NSE|RMSE' # The mapping of metric_cols to the standardized format as specified in fsds_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
+  - 'metric_mappings': 'NNSE|logNSE|KGE|NSE|RMSE' # The mapping of metric_cols to the standardized format as specified in fs_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
 file_io: # May define {home_dir} for python's '{home_dir}/string_path'.format(home_dir =str(Path.home())) functionality
   - 'path_data': 'C:/Projects/NOAA_NWM/Regionalization/FSDS/TOPMODEL_CFE_Calibration_BChoat/NWM_performance_14.csv' # Where the raw input data are stored.  - 'path_data': 'C:/Projects/NOAA_NWM/Regionalization/FSDS/TOPMODEL_CFE_Calibration_BChoat' # Where the raw input data are stored.
   - 'dir_save': 'C:/Projects/NOAA_NWM/Regionalization/FSDS/StandardizedData' # Required. The save location of standardized output
@@ -14,7 +14,7 @@ formulation_metadata:
   - 'formulation_id': 'Topmodel' # Optional alternative in lieu of generating a formulation_id based on 'formulation_base'. Should leave empty if automatic formulation_id generation desired.
   - 'formulation_ver': # Optional. The version of the formulation
   - 'temporal_res': 'hourly' # The temporal resolution corresponding to the modeled data
-  - 'target_var': 'Q' # Required. The target variable modeled. This is standardized. See target_var_mappings in fsds_categories.yaml
+  - 'target_var': 'Q' # Required. The target variable modeled. This is standardized. See target_var_mappings in fs_categories.yaml
   - 'start_date': '2008-10-01' # Required. The YYYY-MM-DD start date corresponding to the evaluation metric's modeled timeseries
   - 'end_date':  '2013-10-01' # Required. The YYYY-MM-DD end date corresponding to the evaluation metric's modeled timeseries
   - 'modeled notes': 'PET module used was one that best predicted aridity index as calculated based on gridded weather data.'

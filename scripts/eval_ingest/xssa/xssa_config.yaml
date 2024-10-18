@@ -4,9 +4,9 @@ col_schema:   # required column mappings in the evaluation metrics dataset
   - 'featureID': 'USGS-{gage_id}' # python f-string / R glue() format; converting the 'gage_id' to the standardized featureID used by nhdplusTools. Must use '{gage_id}' e.g. 'USGS-{gage_id}'
   - 'featureSource': 'nwissite' # The standardized nhdplusTools featureSource. Possible featureSources might be 'nwissite', 'comid'.
   - 'metric_cols': 'nse|rmse|kge' # Column(s) in the dataset corresponding to the evaluation metrics. If multiple exist, separate each string by '|' e.g. 'rmse|kge|nse'
-  - 'metric_mappings': 'NSE|RMSE|KGE' # The mapping of metric_cols to the standardized format as specified in fsds_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
+  - 'metric_mappings': 'NSE|RMSE|KGE' # The mapping of metric_cols to the standardized format as specified in fs_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
 file_io: # May define {home_dir} for python's '{home_dir}/string_path'.format(home_dir =str(Path.home())) functionality
-  - 'path_camels': '{home_dir}/noaa/camels2/camels_hydro.txt' # Path to the CAMELS basins dataset. CAMELS data should not always be a requirement for dataset processing, but serves to help analyze common catchments.
+  - 'path_camels': '{home_dir}/noaa/camels/camels_hydro.txt' # Path to the CAMELS basins dataset. CAMELS data should not always be a requirement for dataset processing, but serves to help analyze common catchments.
   - 'path_data': '{home_dir}/noaa/regionalization/data/julemai-xSSA/data_in/basin_metadata/basin_validation_results.txt' # Where the raw input data are stored.
   - 'dir_save': '{home_dir}/noaa/regionalization/data/input' # Required. The save location of standardized output
   - 'save_type': 'zarr' #  Required. Save as hierarchical files 'netcdf' or 'zarr'. Default 'netcdf' until attribute 
@@ -17,7 +17,7 @@ formulation_metadata:
   - 'formulation_id': 'Raven_blended' # Optional alternative in lieu of generating a formulation_id based on 'formulation_base'. Should leave empty if automatic formulation_id generation desired.
   - 'formulation_ver': # Optional. The version of the formulation
   - 'temporal_res': 'daily' # The temporal resolution corresponding to the modeled data
-  - 'target_var': 'Q' # Required. The target variable modeled. This is standardized. See target_var_mappings in fsds_categories.yaml
+  - 'target_var': 'Q' # Required. The target variable modeled. This is standardized. See target_var_mappings in fs_categories.yaml
   - 'start_date': '1971-01-01' # Required. The YYYY-MM-DD start date corresponding to the evaluation metric's modeled timeseries
   - 'end_date':  '1990-12-31' # Required. The YYYY-MM-DD end date corresponding to the evaluation metric's modeled timeseries
   - 'modeled notes': 'Validation for basins with more than 5 years observed streamflow data'

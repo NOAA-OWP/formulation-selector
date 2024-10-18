@@ -427,7 +427,7 @@ proc_attr_gageids <- function(gage_ids,featureSource,featureID,Retr_Params,
   #'  \item \code{paths$dir_db_hydfab} the local path to where hydrofabric data are saved
   #'  \item \code{path$dir_db_attrs} local path for saving catchment attributes as parquet files
   #'  \item \code{path$s3_path_hydatl} the s3 location where hydroatlas data exist
-  #'  \item \code{path$dir_std_base} the location of user_data_std containing dataset that were standardized by \pkg{fsds_proc}.
+  #'  \item \code{path$dir_std_base} the location of user_data_std containing dataset that were standardized by \pkg{fs_proc}.
   #'  \item \code{datasets} character vector. A list of datasets of interest inside \code{paths$dir_std_base}. Not used in \code{proc_attr_gageids}
   #'  }
   #' @param lyrs character. The layer names of interest from the hydrofabric gpkg. Default 'network'
@@ -462,7 +462,7 @@ proc_attr_gageids <- function(gage_ids,featureSource,featureID,Retr_Params,
     if('try-error' %in% class(site_feature)){
       stop(glue::glue("The following nldi features didn't work. You may need to
              revisit the configuration yaml file that processes this dataset in
-            fsds_proc: \n {featureSource}, and featureID={featureID}"))
+            fs_proc: \n {featureSource}, and featureID={featureID}"))
     } else if (!is.null(site_feature)){
       comid <- site_feature['comid']$comid
       ls_comid[[gage_id]] <- comid
@@ -496,7 +496,7 @@ read_loc_data <- function(loc_id_filepath, loc_id, fmt = 'csv'){
   #' @param loc_id The column name of the identifier column
   #' @param fmt The format passed to arrow::open_dataset() in the non-csv case.
   #' Default 'csv'. May also be 'parquet', 'arrow', 'feather', 'zarr', etc.
-  #' @seealso [proc_attr_read_gage_ids_fsds()]
+  #' @seealso [proc_attr_read_gage_ids_fs()]
   #' @seealso [proc_attr_wrap()]
   #' @export
   # Changelog / contributions
@@ -527,9 +527,9 @@ read_loc_data <- function(loc_id_filepath, loc_id, fmt = 'csv'){
   return(dat_loc)
 }
 
-proc_attr_read_gage_ids_fsds <- function(dir_dataset, ds_filenames=''){
-  #' @title Read in standardized FSDS gage_id location identifiers
-  #' @description Reads output generated using \pkg{fsds_proc} python package and
+proc_attr_read_gage_ids_fs <- function(dir_dataset, ds_filenames=''){
+  #' @title Read in standardized formulation-selector gage_id location identifiers
+  #' @description Reads output generated using \pkg{fs_proc} python package and
   #' selects the gage_id location identifier(s) and the
   #' featureSource & featureID that correspond to the gage_id
   #' @param dir_dataset directory path to the dataset
@@ -545,7 +545,7 @@ proc_attr_read_gage_ids_fsds <- function(dir_dataset, ds_filenames=''){
   # Changelog/contributions
   #  2024-07-29 Originally created, GL
 
-  # ----  Read in a standard format filename and file type from fsds_proc ---- #
+  # ----  Read in a standard format filename and file type from fs_proc ---- #
   dir_ds <- base::file.path(dir_dataset)
   files_ds <- base::list.files(dir_ds)
   fns <- base::lapply(ds_filenames,
@@ -570,31 +570,31 @@ proc_attr_read_gage_ids_fsds <- function(dir_dataset, ds_filenames=''){
     print(paste0("The following contents inside \n",dir_ds,
                  "\n do not match expected format:\n", paste0(fns, collapse = ", ")))
     stop("Create a different file format reader here that generates everything in the return list.")
-    # TODO make this more adaptable so that it doesn't depend on running python fsds_proc beforehand
+    # TODO make this more adaptable so that it doesn't depend on running python fs_proc beforehand
     # Idea: e.g. read in user-defined gage_id data as a .csv
     # Idea: read in gage_id data inside a non-standard netcdf file, then define featureSource and featureID from a separate yaml file
   }
   return(base::list(gage_ids=gage_ids, featureSource=featureSource, featureID=featureID))
 }
 
-grab_attrs_datasets_fsds_wrap <- function(Retr_Params,lyrs="network",overwrite=FALSE){
-  #' @title Grab catchment attributes from processed FSDS input
+grab_attrs_datasets_fs_wrap <- function(Retr_Params,lyrs="network",overwrite=FALSE){
+  #' @title Grab catchment attributes from processed formulation-selector input
   #' @description Wrapper function that acquires catchment attribute data from
-  #' FSDS processed input generated via \pkg{fsds_proc} package
+  #' formulation-selector processed input generated via \pkg{fs_proc} package
   #' @param Retr_Params list of parameters built for grabbing catchment attribute data. List objects include the following:
   #'  \itemize{
   #'  \item \code{paths} list of directories or paths used to acquire and save data These include the following:
   #'  \item \code{paths$dir_db_hydfab} the local path to where hydrofabric data are saved
   #'  \item \code{path$dir_db_attrs} local path for saving catchment attributes as parquet files
   #'  \item \code{path$s3_path_hydatl} the s3 location where hydroatlas data exist
-  #'  \item \code{path$dir_std_base} the location of user_data_std containing dataset that were standardized by \pkg{fsds_proc}.
+  #'  \item \code{path$dir_std_base} the location of user_data_std containing dataset that were standardized by \pkg{fs_proc}.
   #'  \item \code{datasets} character vector. A list of datasets of interest inside \code{paths$dir_std_base}. If 'all' is specified, then all datasets in the directory are processed.
   #'  }
   #' @param overwrite boolean default FALSE. Should hydrofabric data be overwritten?
   #' @param lyrs default "network" the hydrofabric layers of interest.
   #'  Only 'network' is needed for attribute grabbing.
   #' @details Runs two proc.attr.hydfab functions:
-  #'  \code{\link{proc_attr_read_gage_ids_fsds}} - retrieves the gage_ids generated by \pkg{fsds_proc}
+  #'  \code{\link{proc_attr_read_gage_ids_fs}} - retrieves the gage_ids generated by \pkg{fs_proc}
   #'  \code{\link{proc_attr_gageids}} - retrieves the attributes for all provided gage_ids
   #'
   #' @export
@@ -625,12 +625,12 @@ grab_attrs_datasets_fsds_wrap <- function(Retr_Params,lyrs="network",overwrite=F
     message(glue::glue("--- PROCESSING {dataset_name} DATASET ---"))
     dir_dataset <- base::file.path(Retr_Params$paths$dir_std_base,dataset_name)
 
-    # Retrieve the gage_ids, featureSource, & featureID from fsds_proc standardized output
-    ls_fsds_std <- proc.attr.hydfab::proc_attr_read_gage_ids_fsds(dir_dataset)
+    # Retrieve the gage_ids, featureSource, & featureID from fs_proc standardized output
+    ls_fs_std <- proc.attr.hydfab::proc_attr_read_gage_ids_fs(dir_dataset)
     # TODO add option to read in gage ids from a separate data source
-    gage_ids <- ls_fsds_std$gage_ids
-    featureSource <- ls_fsds_std$featureSource
-    featureID <- ls_fsds_std$featureID
+    gage_ids <- ls_fs_std$gage_ids
+    featureSource <- ls_fs_std$featureSource
+    featureID <- ls_fs_std$featureID
 
     # ---------------------- Grab all needed attributes ---------------------- #
     ls_comids <- proc.attr.hydfab::proc_attr_gageids(gage_ids,
@@ -673,23 +673,23 @@ grab_attrs_datasets_fsds_wrap <- function(Retr_Params,lyrs="network",overwrite=F
 check_attr_selection <- function(attr_cfg_path = NULL, vars = NULL, verbose = TRUE){
   #' @title Check that attributes selected by user are available
   #' @author Lauren Bolotin \email{lauren.bolotin@noaa.gov }
-  #' @description Sees if the attributes requested by a user matches with the 
-  #'  attributes supported by the package, listed in the attribute menu. 
+  #' @description Sees if the attributes requested by a user matches with the
+  #'  attributes supported by the package, listed in the attribute menu.
   #'  Returns list of
   #'   - missing_vars: a list of the requested variables that were not found
-  #'        in the attribute menu as specified. 
-  #' @param attr_cfg_path a path to a .yaml configuration file specifying which 
+  #'        in the attribute menu as specified.
+  #' @param attr_cfg_path a path to a .yaml configuration file specifying which
   #'        attributes a user is requesting
   #' @param vars a list specifying which attributes a user is requesting, in lieu
   #'        of a list coming from a .yaml configuration file
   #' @export
 
-  # Read in the menu of attributes available through FSDS
+  # Read in the menu of attributes available through formulation-selector
   dir_base <- system.file("extdata",package="proc.attr.hydfab")
-  attr_menu <- base::paste0(dir_base, '/fsds_attr_menu.yaml')
+  attr_menu <- base::paste0(dir_base, '/fs_attr_menu.yaml')
   attr_menu <- yaml::read_yaml(attr_menu)
   dataset_indices <- seq(1, base::length(attr_menu))
-  
+
   if(!is.null(attr_cfg_path)){
 
     # Read in the user defined config of attributes of interest
@@ -704,25 +704,25 @@ check_attr_selection <- function(attr_cfg_path = NULL, vars = NULL, verbose = TR
       vars <- attr_cfg_sel[[dataset_index]] %>% unlist() %>% unname()
       if (!is.null(vars)){
         vars <- paste0(vars, collapse = ', ')
-        msg <- glue::glue('Checking the ', dataset, 
-                          ' dataset for the following requested attributes: \n', 
+        msg <- glue::glue('Checking the ', dataset,
+                          ' dataset for the following requested attributes: \n',
                           vars)
         message(msg)
       }
-      
+
     }
     if(verbose){
       lapply(dataset_indices, print_query)
     }
-    
+
   } else if(!is.null(vars)){
     # vars <- c("TOT_twi","TOT_PRSNOW","TOT_POPDENS90","TOT_EWT","TOT_RECHG","TOT_BFI")
     vars_sel <- vars
   } else {
     stop("Must provide attr_cfg_path or vars as arguments to check_attr_selection")
   }
-  
-  
+
+
   vars_menu <- NA
   # Compile the attribute menu into one list of variables
   create_menu_list <- function(dataset_index){
@@ -731,9 +731,9 @@ check_attr_selection <- function(attr_cfg_path = NULL, vars = NULL, verbose = TR
     }
   lapply(dataset_indices, create_menu_list)
 
-  
+
   # Warn the user of any requested attrs that are missing
-  missing_vars <- vars_sel[base::which(!vars_sel %in% vars_menu)] 
+  missing_vars <- vars_sel[base::which(!vars_sel %in% vars_menu)]
   missing_vars_list <- base::paste0(missing_vars, collapse=', ')
 
   # Only print a warning if the user requested unavailable attrs:

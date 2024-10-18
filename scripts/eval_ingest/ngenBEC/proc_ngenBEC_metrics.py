@@ -3,7 +3,7 @@ title: Find CAMELS basins inside Julie Mai's xSSA dataset
 author: Guy Litt <guy.litt@noaa.gov>
 description: Reads in the xSSA dataset, 
     subset xSSA data to just CAMELS basins, 
-    and converts to a standard format expected by the FSDS tooling.
+    and converts to a standard format expected by the formulation-selector tooling.
 usage: python proc_xssa_metrics.py "/full/path/to/xssa_schema.yaml"
 
 Changelog/contributions
@@ -13,7 +13,7 @@ import argparse
 import pandas as pd
 from pathlib import Path
 import yaml
-from fsds_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
+from fs_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process the YAML config file.')

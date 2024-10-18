@@ -34,7 +34,7 @@ dir_user <- system.file("extdata","user_data_std", package="proc.attr.hydfab") #
 dir_dataset <- file.path(dir_user,'xssa-mini')
 path_mini_ds <- file.path(dir_dataset,'xSSA-mini_Raven_blended.nc')
 
-ls_fsds_std <- proc.attr.hydfab::proc_attr_read_gage_ids_fsds(dir_dataset)
+ls_fs_std <- proc.attr.hydfab::proc_attr_read_gage_ids_fs(dir_dataset)
 
 ha_vars <- c('pet_mm_s01', 'cly_pc_sav')#, 'cly_pc_uav') # hydroatlas variables
 sc_vars <- c() # TODO look up variables. May need to select datasets first
@@ -77,33 +77,33 @@ testthat::test_that('proc_attr_gageids',{
   # test just usgs vars
   Retr_Params_usgs <- Retr_Params_ha <- Retr_Params
   Retr_Params_usgs$vars <- list(usgs_vars = usgs_vars)
-  ls_comids <- proc.attr.hydfab::proc_attr_gageids(gage_ids=ls_fsds_std$gage_ids[2],
-                                      featureSource=ls_fsds_std$featureSource,
-                                      featureID=ls_fsds_std$featureID,
+  ls_comids <- proc.attr.hydfab::proc_attr_gageids(gage_ids=ls_fs_std$gage_ids[2],
+                                      featureSource=ls_fs_std$featureSource,
+                                      featureID=ls_fs_std$featureID,
                                       Retr_Params=Retr_Params_usgs,
                                       lyrs="network",overwrite=FALSE)
-  testthat::expect_identical(names(ls_comids),ls_fsds_std$gage_ids[2])
+  testthat::expect_identical(names(ls_comids),ls_fs_std$gage_ids[2])
   testthat::expect_identical(class(ls_comids),"list")
 
   # test just hydroatlas var
   Retr_Params_ha$vars <- list(ha_vars = ha_vars)
-  ls_comids_ha <- proc.attr.hydfab::proc_attr_gageids(gage_ids=ls_fsds_std$gage_ids[2],
-                                                   featureSource=ls_fsds_std$featureSource,
-                                                   featureID=ls_fsds_std$featureID,
+  ls_comids_ha <- proc.attr.hydfab::proc_attr_gageids(gage_ids=ls_fs_std$gage_ids[2],
+                                                   featureSource=ls_fs_std$featureSource,
+                                                   featureID=ls_fs_std$featureID,
                                                    Retr_Params=Retr_Params_ha,
                                                    lyrs="network",overwrite=FALSE)
 
   # test a wrong featureSource
-  testthat::expect_message(proc.attr.hydfab::proc_attr_gageids(gage_ids=ls_fsds_std$gage_ids[2],
+  testthat::expect_message(proc.attr.hydfab::proc_attr_gageids(gage_ids=ls_fs_std$gage_ids[2],
                                                    featureSource='notasource',
-                                                   featureID=ls_fsds_std$featureID,
+                                                   featureID=ls_fs_std$featureID,
                                                    Retr_Params=Retr_Params,
                                                    lyrs="network",overwrite=FALSE),
                            regexp="Skipping")
   # Expect 'skipping' this gage_id b/c NA doesn't exist
   testthat::expect_message(proc.attr.hydfab::proc_attr_gageids(gage_ids=c(NA),
                                                               featureSource='nwissite',
-                                                              featureID=ls_fsds_std$featureID,
+                                                              featureID=ls_fs_std$featureID,
                                                               Retr_Params=Retr_Params,
                                                               lyrs="network",overwrite=FALSE),
                            regexp="Skipping")
@@ -115,17 +115,17 @@ testthat::test_that('check_attr_selection', {
   # Test for requesting something NOT in the attr menu
   attr_cfg_path_missing <- paste0(dir_base, '/xssa_attr_config_missing_vars.yaml')
   testthat::expect_message(testthat::expect_warning(expect_equal(proc.attr.hydfab::check_attr_selection(attr_cfg_path_missing), c("TOT_TWi", "TOT_POPDENS91"))))
-  
+
   # Test for only requesting vars that ARE in the attr menu
   attr_cfg_path <- paste0(dir_base, '/xssa_attr_config_all_vars_avail.yaml')
   testthat::expect_message(testthat::expect_equal(proc.attr.hydfab::check_attr_selection(attr_cfg_path), NA))
-  
-  
+
+
   ## Using a list of variables of interest instead of a config yaml
   # Test for requesting something NOT in the attr menu
   vars <- c('TOT_TWi', 'TOT_PRSNOW', 'TOT_EWT')
   testthat::expect_warning(testthat::expect_equal(proc.attr.hydfab::check_attr_selection(vars = vars), 'TOT_TWi'))
-  
+
   # Test for only requesting vars that ARE in the attr menu
   vars <- c('TOT_TWI', 'TOT_PRSNOW', 'TOT_EWT')
   testthat::expect_equal(proc.attr.hydfab::check_attr_selection(vars = vars), NA)
@@ -217,9 +217,9 @@ testthat::test_that("proc_attr_wrap", {
   file.remove(file.path(Retr_Params$paths$dir_db_attrs,"comid_18094081_attrs.parquet"))
 })
 
-testthat::test_that("grab_attrs_datasets_fsds_wrap", {
+testthat::test_that("grab_attrs_datasets_fs_wrap", {
 
-  ls_comids_all <- proc.attr.hydfab::grab_attrs_datasets_fsds_wrap(Retr_Params,
+  ls_comids_all <- proc.attr.hydfab::grab_attrs_datasets_fs_wrap(Retr_Params,
                                                                lyrs="network",
                                                                overwrite=FALSE)
   testthat::expect_equal(names(ls_comids_all), Retr_Params$datasets)
@@ -229,14 +229,14 @@ testthat::test_that("grab_attrs_datasets_fsds_wrap", {
   Retr_Params_bad_ds <- Retr_Params
   Retr_Params_bad_ds$datasets <- c("bad","xssa-mini")
   testthat::expect_error(
-    proc.attr.hydfab::grab_attrs_datasets_fsds_wrap(Retr_Params_bad_ds,
+    proc.attr.hydfab::grab_attrs_datasets_fs_wrap(Retr_Params_bad_ds,
                                                     lyrs="network",
                                                     overwrite=FALSE))
 
   # Test that all datasets are processed
   Retr_Params_all_ds <- Retr_Params
   Retr_Params_all_ds$datasets <- "all"
-  ls_comids_all_ds <- proc.attr.hydfab::grab_attrs_datasets_fsds_wrap(Retr_Params_all_ds,
+  ls_comids_all_ds <- proc.attr.hydfab::grab_attrs_datasets_fs_wrap(Retr_Params_all_ds,
                                                                       lyrs="network",
                                                                       overwrite=FALSE)
   # When 'all' datasets requested, should have the same number retrieved
@@ -252,7 +252,7 @@ testthat::test_that("grab_attrs_datasets_fsds_wrap", {
   Retr_Params_no_ds$loc_id_read$featureSource_loc <- 'nwissite'
   Retr_Params_no_ds$loc_id_read$featureID_loc <- 'USGS-{gage_id}'
   Retr_Params_no_ds$loc_id_read$fmt <- 'csv'
-  dat_gid_ex <- proc.attr.hydfab::grab_attrs_datasets_fsds_wrap(Retr_Params_no_ds,
+  dat_gid_ex <- proc.attr.hydfab::grab_attrs_datasets_fs_wrap(Retr_Params_no_ds,
                                                   lyrs="network",
                                                   overwrite=FALSE)
 
