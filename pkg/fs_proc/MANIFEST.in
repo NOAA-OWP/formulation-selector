@@ -1,0 +1,1 @@
+recursive-include fs_proc/data *.yaml

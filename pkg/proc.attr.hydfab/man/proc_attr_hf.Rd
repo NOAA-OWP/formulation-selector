@@ -8,7 +8,7 @@ proc_attr_hf(
   comid,
   dir_db_hydfab,
   custom_name = "{lyrs}_",
-  ext = "gpkg",
+  fileext = "gpkg",
   lyrs = c("divides", "network")[2],
   hf_cat_sel = TRUE,
   overwrite = FALSE
@@ -21,7 +21,7 @@ proc_attr_hf(
 
 \item{custom_name}{character class. A custom name to insert into hydrofabric file. Default \code{glue("{lyrs}_")}}
 
-\item{ext}{character class. file extension of hydrofabric file. Default 'gpkg'}
+\item{fileext}{character class. file extension of hydrofabric file. Default 'gpkg'}
 
 \item{lyrs}{character class. The layer name(s) of interest from hydrofabric. Default 'network'.}
 

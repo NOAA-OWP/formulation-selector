@@ -1,4 +1,4 @@
-# expected categorical formats used in fsds
+# expected categorical formats used in formulation-selector
 target_var_mappings: # Lists each allowable target variable and what it means
   - 'Q': 'stream discharge'
   - 'SWE': 'snow water equivalent'

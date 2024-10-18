@@ -2,6 +2,9 @@
 Unit testing for AlgoTrainEval class in the fs_algo package
 
 example
+> cd /path/to/fs_algo/fs_algo/tests/
+> python -m unittest test_algo_train_eval.py
+
 > coverage run -m unittest test_algo_train_eval.py  
 > coverage report
 > coverage html 
@@ -247,13 +250,13 @@ class TestFsSaveAlgoDirStruct(unittest.TestCase):
         with self.assertRaises(ValueError):
             fs_algo_train_eval.fs_save_algo_dir_struct(dir_base + '/not_a_dir/')
 
-class TestOpenResponseDataFsds(unittest.TestCase):
+class TestOpenResponseDataFs(unittest.TestCase):
     dir_std_base = tempfile.gettempdir()
 
-    def test_open_response_data_fsds(self):
+    def test_open_response_data_fs(self):
 
         with self.assertRaisesRegex(ValueError, 'Could not identify an approach to read in dataset'):
-            fs_algo_train_eval._open_response_data_fsds(self.dir_std_base,ds='not_a_ds')
+            fs_algo_train_eval._open_response_data_fs(self.dir_std_base,ds='not_a_ds')
 #%% ALGO TRAIN & EVAL
 class TestStdAlgoPath(unittest.TestCase):
 
@@ -571,7 +574,11 @@ class TestAlgoTrainEvalBasic(unittest.TestCase):
             'rf': [{'n_estimators': [10,30,40]}],
             'mlp': [{'hidden_layer_sizes': (50,)}]
         }
-        self.dir_out_alg_ds = '/tmp'
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_dir = Path(tmpdir)
+
+        self.dir_out_alg_ds = temp_dir
         self.dataset_id = 'test_ds'
         self.metric = 'target'
         self.test_size = 0.2

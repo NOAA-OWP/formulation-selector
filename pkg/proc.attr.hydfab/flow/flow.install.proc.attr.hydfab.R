@@ -21,10 +21,10 @@ if ('bolotin' %in% Sys.getenv("HOME")) {
 } else if ('choat' %in% Sys.getenv("HOME")){
   # if you have a different path to formulation-selector, add it here, otherwise remove
 } else { # assume this is the path to the formulation-selector repo dir
-  fsds_dir <- file.path(Sys.getenv("HOME"),"git","formulation-selector")
+  fs_dir <- file.path(Sys.getenv("HOME"),"git","formulation-selector")
 }
 # Run unit tests?
-RunTest <- TRUE#TRUE Default FALSE prevents s3 data downloading in unit testing (FALSE=fast)
+RunTest <- FALSE#TRUE Default FALSE prevents s3 data downloading in unit testing (FALSE=fast)
 ShowTestCovr <- FALSE # Only possible if RunTest==TRUE. Even slower though.
 # ---------------------------------------------------------------------------- #
 # Enter in all R packages here
@@ -32,7 +32,7 @@ namePack <- c("proc.attr.hydfab")
 
 for(pack in namePack){
 
-  pkg_dir <- file.path(fsds_dir,"pkg") # Note that CRAN does not allow '_' in package names, hence the '.'
+  pkg_dir <- file.path(fs_dir,"pkg") # Note that CRAN does not allow '_' in package names, hence the '.'
   if (!dir.exists(pkg_dir)){
     stop(paste0("reconsider the path to ",pkg_dir))
   }

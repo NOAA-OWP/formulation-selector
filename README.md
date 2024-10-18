@@ -4,11 +4,9 @@
 # Regionalization and Formulation Testing and Selection (RaFTS)
 
 **Description**:  
-The formulation-selector tool (RaFTS) is under development. For more information, see the [Wiki](https://github.com/NOAA-OWP/formulation-selector/wiki). 
+The formulation-selector tool, aka Regionalation and Formulation Testing & Selection (RaFTS), is under development. For more information, see the [Wiki](https://github.com/NOAA-OWP/formulation-selector/wiki). 
 
 As NOAA OWP builds the model-agnostic NextGen framework, the hydrologic modeling community will need to know how to optimally select model formulations and estimate parameter values across ungauged catchments. This problem becomes intractable when considering the unique combinations of current and future model formulations combined with the innumerable possible parameter combinations across the continent. To simplify the model selection problem, we apply an analytical tool that predicts hydrologic formulation performance (Bolotin et al., 2022, Liu et al., 2022) using community-generated data. The regionalization and formulation testing and selection (RaFTS) tool readily predicts how models might perform across catchments based on catchment attributes. This decision support tool is designed such that as the hydrologic modeling community generates more results, better decisions can be made on where formulations would be best suited.
-
-As NOAA OWP builds the model-agnostic NextGen framework, the hydrologic modeling community will need to know how to optimally select model formulations and estimate parameter values across ungauged catchments. This problem becomes intractable when considering the unique combinations of current and future model formulations combined with the innumerable possible parameter combinations across the continent. To simplify the model selection problem, we apply an analytical tool that predicts hydrologic formulation performance (Bolotin et al., 2022, Liu et al., 2022) using community-generated data. The formulation selection decision support (FSDS) tool readily predicts how models might perform across catchments based on catchment attributes. This decision support tool is designed such that as the hydrologic modeling community generates more results, better decisions can be made on where formulations would be best suited.
 
 **Technology stack**: 
   - **Python:** The features of the formulation-selector that ingest model results and catchment attributes to predict model performances based on catchment attributes is written in Python. 
@@ -44,33 +42,32 @@ You may consider creating a new virtual environment for employing `formulation-s
 - xarray
 
 
-## Installation - `fsds_proc` Python package
+## Installation - `fs_proc` Python package
 
 ### TL;DR
 - [NOAA-OWP/hydrofabric](https://github.com/NOAA-OWP/hydrofabric)
-  - Note that the arrow package needs `arro
-  w::arrow_with_s3() == TRUE`. If `FALSE`, consider downloading arrow via [apache's r-universe](https://apache.r-universe.dev/arrow)
+  - Note that the arrow package needs `arrow::arrow_with_s3() == TRUE`. If `FALSE`, consider downloading arrow via [apache's r-universe](https://apache.r-universe.dev/arrow)
   - Steps to install hydrofabric: Refer to wiki
 - [USGS nhdplusTools](https://github.com/doi-usgs/nhdplusTools/)
 - [pynhd](https://github.com/hyriver/pynhd)
 
 
-## Installation - fsds_proc python package
+## Installation - fs_proc python package
 
 ### TLDR
- - Install `fsds_proc` package
-   `pip install /path/to/pkg/fsds_proc/fsds_proc/.`
- - Build a yaml config file `/sripts/eval_metrics/name_of_dataset_here/name_of_dataset_schema.yaml` (refer to this template)[https://github.com/glitt13/fsds/blob/std_catg/scripts/eval_ingest/xssa/xssa_schema.yaml)
- - Create a script that reads in the data and runs the standardization processing. [Example script here](https://github.com/glitt13/fsds/blob/std_catg/scripts/eval_ingest/xssa/proc_xssa_metrics.py)
+ - Install `fs_proc` package
+   `pip install /path/to/pkg/fs_proc/fs_proc/.`
+ - Build a yaml config file `/sripts/eval_metrics/name_of_dataset_here/name_of_dataset_schema.yaml` [refer to this template](https://github.com/NOAA-OWP/formulation-selector/blob/main/scripts/eval_ingest/xssa/xssa_schema.yaml)
+ - Create a script that reads in the data and runs the standardization processing. [Example script here](https://github.com/NOAA-OWP/formulation-selector/blob/main/scripts/eval_ingest/xssa/proc_xssa_metrics.py)
  - Then run the following:
   ```
   cd /path/to/scripts/eval_metrics/name_of_dataset_here/
   python proc_name_of_dataset_here_metrics.py "name_of dataset_here_schema.yaml"
   ```
 
-### 1. Install the `fsds_proc` package, which standardizes raw input data into a common format.
+### 1. Install the `fs_proc` package, which standardizes raw input data into a common format.
 ```
-> cd /path/to/pkg/fsds_proc/fsds_proc
+> cd /path/to/pkg/fs_proc/fs_proc
 > pip install .
 ```
 
@@ -83,7 +80,7 @@ We track these tasks inside `formulation-selector/scripts/eval_ingest/_name_of_r
 #### 1. `data_schema.yaml`
 The data schema yaml file contains the following fields:
  - `col_schema`:  required column mappings in the evaluation metrics dataset. These describe the column names in the raw data and how they'll map to standardized column names. 
-    - for `metric_mappings` refer to the the [fsds_categories.yaml](https://github.com/glitt13/fsds/blob/std_catg/pkg/fsds_proc/fsds_proc/data/fsds_categories.yaml) 
+    - for `metric_mappings` refer to the the [fs_categories.yaml](https://github.com/NOAA-OWP/formulation-selector/blob/main/pkg/fs_proc/fs_proc/data/fs_categories.yaml) 
  - `file_io`: The location of the input data and desired save location. Also specifies the save file format.
  - `formulation_metadata`: Descriptive traits of the model formulation that generated the metrics. Some of these are required fields while others are optional.
  - `references`: Optional but _very_ helplful metadata describing where the data came from.
@@ -93,7 +90,7 @@ The script that converts the raw data into the desired format. This performs the
  - Read in the data schema yaml file (standardized)
  - Ingest the raw data (standardized)
  - Modify the raw data to become wide-format where columns consist of the gage id and separate columns for each formulation evaluation metric (user-developed munging)
- - Call the `fsds_proc.proc_col_schema()` to standardize the dataset into a common format (standardized function call)
+ - Call the `fs_proc.proc_col_schema()` to standardize the dataset into a common format (standardized function call)
 
 
 
@@ -111,9 +108,9 @@ If the software is configurable, describe it in detail, either here or in other 
 
 ## How to test the software
 
-You may also run unit tests on `fsds_proc`:
+You may also run unit tests on `fs_proc`:
 ```
-> cd /path/to/formulation-selection/pkg/fsds_proc/fsds_proc/tests
+> cd /path/to/formulation-selection/pkg/fs_proc/fs_proc/tests
 > python -m unittest test_proc_eval_metrics.py
 ```
 To assess code coverage:
@@ -140,20 +137,20 @@ General instructions on _how_ to contribute should be stated with a link to [CON
 
 # Attribute Grabber
 **Description**:  
-Attributes from non-standardized datasets may need to be acquired for FSDS modeling and prediction. The R package `proc.attr.hydfab` performs the attribute grabbing.
+Attributes from non-standardized datasets may need to be acquired for RaFTS modeling and prediction. The R package `proc.attr.hydfab` performs the attribute grabbing.
 
 ## Installation - `proc.attr.hydfab` R package
-Run [`flow.install.proc.attr.hydfab.R`](https://github.com/glitt13/fsds/blob/main/pkg/proc.attr.hydfab/flow/flow.install.proc.attr.hydfab.R) to install the package. Note that a user may need to modify the section that creates the `fsds_dir` for their custom path to this repo's directory.
+Run [`flow.install.proc.attr.hydfab.R`](https://github.com/NOAA-OWP/formulation-selector/blob/main/pkg/proc.attr.hydfab/flow/flow.install.proc.attr.hydfab.R) to install the package. Note that a user may need to modify the section that creates the `fs_dir` for their custom path to this repo's directory.
 
 ## Usage - `proc.attr.hydfab`
-The following is an example script that runs the attribute grabber: [`fsds_attrs_grab`](https://github.com/glitt13/fsds/blob/main/pkg/proc.attr.hydfab/flow/fsds_attrs_grab.R).
+The following is an example script that runs the attribute grabber: [`fs_attrs_grab`](https://github.com/NOAA-OWP/formulation-selector/blob/main/pkg/proc.attr.hydfab/flow/fsds_attrs_grab.R).
 
 This script grabs attribute data corresponding to locations of interest, and saves those attribute data inside a directory as multiple parquet files. The `proc.attr.hydfab::retrieve_attr_exst()` function may then efficiently query and then retrieve desired data by variable name and comid from those parquet files.
 
-Note that this script was designed to process data that have already been generated by the `fsds_proc` python package, but users may want to grab attributes from additional locations that have not been processed by `fsds_proc` (e.g. attributes from ungaged basins to use for prediction). 
+Note that this script was designed to process data that have already been generated by the `fs_proc` python package, but users may want to grab attributes from additional locations that have not been processed by `fs_proc` (e.g. attributes from ungaged basins to use for prediction). 
 
- - To independently process attributes for locations without running `fsds_proc` python package beforehand: A user may ignore previously-processed data by setting `Retr_Params$datasets` as `NULL` and specifying the path to a file containing gage_ids inside the `Retr_Params$loc_id_read` list.
- - In the context of reading in a processed dataset from `fsds_proc` or reading in a separate file specifying locations of interest, the `Retr_Params$datasets` uses directory names inside `input/user_data_std/` (or simply `all` to process all datasets). The additional file with location ids may also be read in, or ignored entirely. In summary, the either-or or both approaches are options, and is defined by how the `Retr_Params` parameter list object is populated.
+ - To independently process attributes for locations without running `fs_proc` python package beforehand: A user may ignore previously-processed data by setting `Retr_Params$datasets` as `NULL` and specifying the path to a file containing gage_ids inside the `Retr_Params$loc_id_read` list.
+ - In the context of reading in a processed dataset from `fs_proc` or reading in a separate file specifying locations of interest, the `Retr_Params$datasets` uses directory names inside `input/user_data_std/` (or simply `all` to process all datasets). The additional file with location ids may also be read in, or ignored entirely. In summary, the either-or or both approaches are options, and is defined by how the `Retr_Params` parameter list object is populated.
  - The 'independent' data file for processing attributes has been tested for .csv and .parquet file formats. Other formats compatible with `arrow::open_dataset()` should be possible but have not been tested.
 
 ----

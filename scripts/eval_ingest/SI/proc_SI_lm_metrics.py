@@ -2,7 +2,7 @@
 @title: Format model results for the linear model run by 2022 Summer Institute "Formulation and Evaluation" team (Bolotin, Liu, Liao, Haces)
 @author: Lauren Bolotin <lauren.bolotin@noaa.gov>
 @description: Reads in the linear model dataset, which is for a subset of CAMELS basins, 
-    and converts to a standard format expected by the FSDS tooling.
+    and converts to a standard format expected by the formulation-selector tooling.
 @usage: python proc_SI_lm_metrics.py "/full/path/to/SI_lm_schema.yaml"
 
 Changelog/contributions
@@ -12,7 +12,7 @@ import argparse
 import pandas as pd
 from pathlib import Path
 import yaml
-from fsds_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
+from fs_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process the YAML config file.')

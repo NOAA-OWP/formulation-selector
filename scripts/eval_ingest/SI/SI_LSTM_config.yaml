@@ -4,11 +4,11 @@ col_schema:   # required column mappings in the evaluation metrics dataset
   - 'featureID': 'USGS-{gage_id}' # python f-string / R glue() format; converting the 'gage_id' to the standardized featureID used by nhdplusTools. Must use '{gage_id}' e.g. 'USGS-{gage_id}'
   - 'featureSource': 'nwissite' # The standardized nhdplusTools featureSource. Possible featureSources might be 'nwissite', 'comid'.
   - 'metric_cols': 'NSE|nnse' # Column(s) in the dataset corresponding to the evaluation metrics. If multiple exist, separate each string by '|' e.g. 'rmse|kge|nse'
-  - 'metric_mappings': 'NSE|NNSE' # The mapping of metric_cols to the standardized format as specified in fsds_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
+  - 'metric_mappings': 'NSE|NNSE' # The mapping of metric_cols to the standardized format as specified in fs_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
 file_io: # May define {home_dir} for python's '{home_dir}/string_path'.format(home_dir =str(Path.home())) functionality
   - 'path_data': '{home_dir}/Lauren/FSDS/results/SI_LSTM/LSTM_fixed.csv' # Where the raw input data are stored.
   - 'dir_save': '{home_dir}/Lauren/FSDS/data/input' # Required. The save location of standardized output
-  - 'save_type': 'netcdf' #  Required. Save as hierarchical files 'netcdf' or 'zarr'. Default 'netcdf' until zarr functionality added in fsds.attr.hydfab R package.
+  - 'save_type': 'netcdf' #  Required. Save as hierarchical files 'netcdf' or 'zarr'. Default 'netcdf' until zarr functionality added in proc.attr.hydfab R package.
   - 'save_loc': 'local' #  Required.  Use 'local' for saving to a local path via dir_save. Future work will create an approach for 'aws' or other cloud saving methods
 formulation_metadata:  
   - 'dataset_name': 'SI-LSTM' # Required. 
@@ -16,7 +16,7 @@ formulation_metadata:
   - 'formulation_id': 'LSTM' # Optional alternative in lieu of generating a formulation_id based on 'formulation_base'. Should leave empty if automatic formulation_id generation desired.
   - 'formulation_ver': # Optional. The version of the formulation
   - 'temporal_res': 'hourly' # The temporal resolution corresponding to the modeled data
-  - 'target_var': 'Q' # Required. The target variable modeled. This is standardized. See target_var_mappings in fsds_categories.yaml
+  - 'target_var': 'Q' # Required. The target variable modeled. This is standardized. See target_var_mappings in fs_categories.yaml
   - 'start_date': '2002-10-01' # Required. The YYYY-MM-DD start date corresponding to the evaluation metric's modeled timeseries
   - 'end_date':  '2007-09-30' # Required. The YYYY-MM-DD end date corresponding to the evaluation metric's modeled timeseries
   - 'modeled notes': '10 different LSTMs trained with 90% of CAMELS basins, predicting out of sample on the remaining 10%'
