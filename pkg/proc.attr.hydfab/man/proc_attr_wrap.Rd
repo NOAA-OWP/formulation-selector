@@ -4,7 +4,13 @@
 \alias{proc_attr_wrap}
 \title{Wrapper to retrieve variables when processing attributes}
 \usage{
-proc_attr_wrap(comid, Retr_Params, lyrs = "network", overwrite = FALSE)
+proc_attr_wrap(
+  comid,
+  Retr_Params,
+  lyrs = "network",
+  overwrite = FALSE,
+  hfab_retr = FALSE
+)
 }
 \arguments{
 \item{comid}{character. The common identifier USGS location code for a surface water feature.}
@@ -14,6 +20,8 @@ proc_attr_wrap(comid, Retr_Params, lyrs = "network", overwrite = FALSE)
 \item{lyrs}{character. The layer names of interest from the hydrofabric gpkg. Default 'network'}
 
 \item{overwrite}{boolean. Should the hydrofabric cloud data acquisition be redone and overwrite any local files? Default FALSE.}
+
+\item{hfab_retr}{boolean. Should the hydrofabric geopackage data be retrieved? Default FALSE.}
 }
 \description{
 Identifies a comid location using the hydrofabric and then

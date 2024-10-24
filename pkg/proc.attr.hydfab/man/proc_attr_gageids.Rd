@@ -47,5 +47,6 @@ for grabbing catchment attribute data corresponding to the gage_id
 location. Acquires user-requested variables from multiple catchment
 attribute sources. Calls \code{\link{proc_attr_wrap}} which writes all
 acquired variables to a parquet file as a standard data.table format.
-Returns a list of comids that corresponded to the gage_ids
+Returns a data.table of all data returned from \code{nhdplusTools::get_nldi_feature}
+that corresponded to the gage_ids
 }

@@ -1,0 +1,11 @@
+# The name is the expected format for variables specified in proc.attr.hydfab
+hydroatlas_attributes:
+  - 'name': 'ha_vars'
+  - 'internal_dataset_name' : 'hydroatlas__v1'
+camels_attributes:
+  - 'name': 'camels_vars'
+usgs_attributes:
+  - 'name': 'usgs_vars'
+  - 'internal_dataset_name' : 'usgs_nhdplus__v2'
+hydrofabric_attributes:
+  - 'name': 'hfab_vars'

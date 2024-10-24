@@ -25,6 +25,8 @@ Only 'network' is needed for attribute grabbing.}
 \description{
 Wrapper function that acquires catchment attribute data from
 formulation-selector processed input generated via \pkg{fs_proc} package
+Returns list of data.table object of nhdplusTools::get_nldi_feature()
+for all gage_ids
 }
 \details{
 Runs two proc.attr.hydfab functions:

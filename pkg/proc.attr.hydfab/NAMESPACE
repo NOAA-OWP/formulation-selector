@@ -2,6 +2,7 @@
 
 export(check_attr_selection)
 export(grab_attrs_datasets_fs_wrap)
+export(hfab_config_opt)
 export(proc_attr_exst_wrap)
 export(proc_attr_gageids)
 export(proc_attr_hf)

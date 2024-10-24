@@ -24,11 +24,19 @@ formulation_metadata:
     - 'juliemai-xSSA' # Required. In this example case, it's a sublist of just one thing.
   - 'formulation_base': 'Raven_blended' # Informational. Unique name of formulation.
 hydfab_config: # Required section describing hydrofabric connection details and objects of interest
- - 's3_base' : "s3://lynker-spatial/tabular-resources" # Required. s3 path containing hydrofabric-formatted attribute datasets
- - 's3_bucket' : 'lynker-spatial' # Required. s3 bucket containing hydrofabric data
- - 'ext' : 'gpkg' # Required. file extension of the hydrofrabric data. Default 'gpkg'.
- - 'hf_cat_sel': "total" # Required. Options include 'total' or 'all'; total: interested in the single location's aggregated catchment data; all: all subcatchments of interest
-attr_select: # The names of variable sublistings are standardized, e.g. ha_vars, usgs_vars, sc_vars
+ - s3_base: "s3://lynker-spatial/tabular-resources" # Required. s3 path containing hydrofabric-formatted attribute datasets
+ - s3_bucket: 'lynker-spatial' # Required. s3 bucket containing hydrofabric data
+ - hf_cat_sel: "total" # Required. Options include 'total' or 'all'; total: interested in the single location's aggregated catchment data; all: all subcatchments of interest
+ - gpkg:  # Optional. A local gpkg file. Default 'NULL'. See hfsubsetR::get_subset()
+ - hfab_retr: FALSE # Optional, Boolean. Defaults to the hfab_retr argument default in the proc_attr_wrap() function (TRUE). Should the hydrofabric data be downloaded? Hydrofabric data download may not be necessary. Processing is faster if set to FALSE
+ - hf_version: "2.1.1"  # Optional, character string. Defaults to the hf_version argument default in hfsubsetR::get_subset() function. The hydrofabric version.
+ - domain: "conus"  # Optional, character string. Defaults to the hf_version argument default in hfsubsetR::get_subset() function. The hydrofabric domain.
+ - type: "nextgen"  # Optional, character string. Defaults to the hf_version argument default in hfsubsetR::get_subset() function. The hydrofabric type.
+ - lyrs: # Optional, sublist of character strings. Defaults to the hf_version argument default in hfsubsetR::get_subset() function. Hydrofabric layers to extract.
+   - 'divides'
+   - 'network'
+ - source: "s3://lynker-spatial/hydrofabric"
+attr_select: # The names of variable sublistings are standardized with _vars, e.g. ha_vars, usgs_vars, sc_vars
   - 's3_path_hydatl': '{s3_base}/hydroATLAS/hydroatlas_vars.parquet' # path to hydroatlas data formatted for hydrofabric. Required only if hydroatlas variables desired.
   - 'ha_vars':  # hydroatlas variables. Must specify s3_path_hydatl if desired.
     - 'pet_mm_s01'
