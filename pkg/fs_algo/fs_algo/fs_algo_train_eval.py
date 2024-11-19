@@ -55,10 +55,10 @@ class AttrConfigAndVars:
         home_dir = str(Path.home())
         dir_base = list([x for x in self.attr_config['file_io'] if 'dir_base' in x][0].values())[0].format(home_dir=home_dir)
         # Location of attributes (predictor data):
-        dir_db_attrs = list([x for x in self.attr_config['file_io'] if 'dir_db_attrs' in x][0].values())[0].format(dir_base = dir_base)
+        dir_db_attrs = list([x for x in self.attr_config['file_io'] if 'dir_db_attrs' in x][0].values())[0].format(dir_base = dir_base, home_dir=home_dir)
 
         # parent location of response variable data:
-        dir_std_base =  list([x for x in self.attr_config['file_io'] if 'dir_std_base' in x][0].values())[0].format(dir_base = dir_base)
+        dir_std_base =  list([x for x in self.attr_config['file_io'] if 'dir_std_base' in x][0].values())[0].format(dir_base = dir_base, home_dir=home_dir)
 
         # The datasets of interest
         datasets = list([x for x in self.attr_config['formulation_metadata'] if 'datasets' in x][0].values())[0]
@@ -71,7 +71,7 @@ class AttrConfigAndVars:
 
 
 def fs_read_attr_comid(dir_db_attrs:str | os.PathLike, comids_resp:list | Iterable, attrs_sel: str | Iterable = 'all',
-                       _s3 = None,storage_options=None)-> pd.DataFrame:
+                       _s3 = None,storage_options=None,read_type:str=['all','filename'][0])-> pd.DataFrame:
     """Read attribute data acquired using proc.attr.hydfab R package & subset to desired attributes
 
     :param dir_db_attrs: directory where attribute .parquet files live
@@ -84,6 +84,9 @@ def fs_read_attr_comid(dir_db_attrs:str | os.PathLike, comids_resp:list | Iterab
     :type _s3: future feature, optional
     :param storage_options: future feature, defaults to None
     :type storage_options: future feature, optional
+    :param read_type: should all parquet files be lazy-loaded, assign 'all'
+     otherwise just files with comids_resp in the file name? assign 'filename'. Defaults to 'all'
+    :type read_type: str
     :return: dict of the following keys:
         - `attrs_sel`
         - `dir_db_attrs`
@@ -97,12 +100,19 @@ def fs_read_attr_comid(dir_db_attrs:str | os.PathLike, comids_resp:list | Iterab
         # TODO  Setup the s3fs filesystem that will be used, with xarray to open the parquet files
         #_s3 = s3fs.S3FileSystem(anon=True)
 
-    # Read attribute data acquired using proc.attr.hydfab R package
-    all_attr_ddf = dd.read_parquet(dir_db_attrs, storage_options = storage_options)
+    if read_type == 'all': # Considering all parquet files inside directory
+        # Read attribute data acquired using proc.attr.hydfab R package
+        all_attr_ddf = dd.read_parquet(dir_db_attrs, storage_options = storage_options)
+        # Subset based on comids of interest
+        attr_ddf_subloc = all_attr_ddf[all_attr_ddf['featureID'].str.contains('|'.join(comids_resp))]
 
-    # Subset based on comids of interest
-    attr_ddf_subloc = all_attr_ddf[all_attr_ddf['featureID'].str.contains('|'.join(comids_resp))]
-
+    elif read_type == 'filename': # Read based on comid being located in the parquet filename
+        matching_files = [file for file in Path(dir_db_attrs).iterdir() \
+                          if file.is_file() and any(sub in file.name for sub in comids_resp)]
+        attr_ddf_subloc = dd.read_parquet(matching_files, storage_options=storage_options)
+    else:
+        raise ValueError(f"Unrecognized read_type provided in fs_read_attr_comid: {read_type}")
+    
     if attr_ddf_subloc.shape[0].compute() == 0:
         warnings.warn(f'None of the provided featureIDs exist in {dir_db_attrs}: \
                       \n {", ".join(attrs_sel)} ', UserWarning)
