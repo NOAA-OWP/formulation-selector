@@ -7,5 +7,5 @@ metrics: # All option could pull from the pred config file
   - 'NSE'
 plot_types:
   - obs_vs_sim_scatter: True # NOTE: These plots can only be created if observed (actual) model performance values are available
-  - perf_map: True
+  - pred_map: True
 

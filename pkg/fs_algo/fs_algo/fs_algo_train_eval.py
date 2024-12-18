@@ -1547,11 +1547,11 @@ def plot_pred_vs_obs_regr(y_pred, y_obs, ds:str, metr:str):
     # Adapted from plot in bolotinl's fs_perf_viz.py
     
     # Plot the observed vs. predicted module performance
-    plt.scatter(x=y_obs,y=y_pred, c='teal')
+    plt.scatter(x=y_obs,y=y_pred)
     plt.axline((0, 0), (1, 1), color='black', linestyle='--')
     plt.ylabel('Predicted {}'.format(metr))
     plt.xlabel('Actual {}'.format(metr))
-    plt.title('Observed vs. Predicted Performance: {}'.format(ds))
+    plt.title('Observed vs. RaFTS Predicted Performance: {}'.format(ds))
     fig = plt.gcf()
     return fig
 
@@ -1567,15 +1567,15 @@ def plot_pred_vs_obs_wrap(y_pred, y_obs, dir_out_viz_base:str|os.PathLike,
     plt.clf()
     plt.close()
 
-#%% Performance map visualization, adapted from plot in bolotinl's fs_perf_viz.py
-def std_map_perf_path(dir_out_viz_base:str|os.PathLike, ds:str,
+#%% Prediction map visualization, adapted from plot in bolotinl's fs_perf_viz.py
+def std_map_pred_path(dir_out_viz_base:str|os.PathLike, ds:str,
                       metr:str,algo_str:str,
                       split_type:str='') -> pathlib.PosixPath:
     
     # Generate a filepath of the feature_importance plot:
-    path_perf_map_plot = Path(f"{dir_out_viz_base}/{ds}/performance_map_{ds}_{metr}_{algo_str}_{split_type}.png")
-    path_perf_map_plot.parent.mkdir(parents=True,exist_ok=True)
-    return path_perf_map_plot
+    path_pred_map_plot = Path(f"{dir_out_viz_base}/{ds}/prediction_map_{ds}_{metr}_{algo_str}_{split_type}.png")
+    path_pred_map_plot.parent.mkdir(parents=True,exist_ok=True)
+    return path_pred_map_plot
 
 def gen_conus_basemap(dir_out_basemap, # This should be the data_visualizations directory
                     url = 'https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_state_500k.zip',
@@ -1607,14 +1607,15 @@ def gen_conus_basemap(dir_out_basemap, # This should be the data_visualizations 
 #     geo_df['performance'] = data['prediction'].values
 #     geo_df.crs = ("EPSG:4326")
     
-def plot_map_perf(geo_df, states,title,metr,colname_data='performance'):
+def plot_map_pred(geo_df, states,title,metr,colname_data='performance'):
     fig, ax = plt.subplots(1, 1, figsize=(20, 24))
     base = states.boundary.plot(ax=ax,color="#555555", linewidth=1)
     # Points
     geo_df.plot(column=colname_data, ax=ax, markersize=150, cmap='viridis', legend=False, zorder=2) # delete zorder to plot points behind states boundaries
     # States
     states.boundary.plot(ax=ax, color="#555555", linewidth=1, zorder=1)  # Plot states boundary again with lower zorder
-
+    
+    # TODO: need to customize the colorbar min and max based on the metric
     ## cbar = plt.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0,vmax = 1), cmap='viridis')
     cbar = plt.cm.ScalarMappable(cmap='viridis')
     ax.tick_params(axis='x', labelsize= 24)
@@ -1630,13 +1631,13 @@ def plot_map_perf(geo_df, states,title,metr,colname_data='performance'):
     fig = plt.gcf()
     return fig
 
-def plot_map_perf_wrap(test_gdf,dir_out_viz_base, ds,
+def plot_map_pred_wrap(test_gdf,dir_out_viz_base, ds,
                       metr,algo_str,
                       split_type='test',
                       colname_data='performance'):
 
-    path_perf_map_plot = std_map_perf_path(dir_out_viz_base,ds,metr,algo_str,split_type)
-    dir_out_basemap = path_perf_map_plot.parent.parent
+    path_pred_map_plot = std_map_pred_path(dir_out_viz_base,ds,metr,algo_str,split_type)
+    dir_out_basemap = path_pred_map_plot.parent.parent
     states = gen_conus_basemap(dir_out_basemap = dir_out_basemap)
 
     # Ensure the gdf matches the 4326 epsg used for states:
@@ -1644,12 +1645,12 @@ def plot_map_perf_wrap(test_gdf,dir_out_viz_base, ds,
 
     # Generate the map
     plot_title = f"Predicted Performance: {metr} - {ds}"
-    plot_perf_map = plot_map_perf(geo_df=test_gdf, states=states,title=plot_title,
+    plot_pred_map = plot_map_pred(geo_df=test_gdf, states=states,title=plot_title,
                                   metr=metr,colname_data=colname_data)
 
     # Save the plot as a .png file
-    plot_perf_map.savefig(path_perf_map_plot, dpi=300, bbox_inches='tight')
-    print(f"Wrote performance map to \n{path_perf_map_plot}")
+    plot_pred_map.savefig(path_pred_map_plot, dpi=300, bbox_inches='tight')
+    print(f"Wrote performance map to \n{path_pred_map_plot}")
     plt.clf()
     plt.close()
 
