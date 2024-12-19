@@ -1,0 +1,11 @@
+# Config visualization of the RaFTS results
+name_pred_config: 'xssa_pred_config.yaml' # REQUIRED. The name of the prediction configuration file if in same directory as this config file. Otherwise the full path to the file.  
+algos: # All option could pull from the pred config file 
+  - 'rf'
+metrics: # All option could pull from the pred config file 
+  - 'KGE'
+  - 'NSE'
+plot_types:
+  - obs_vs_sim_scatter: True # NOTE: These plots can only be created if observed (actual) model performance values are available
+  - pred_map: True
+

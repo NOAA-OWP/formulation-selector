@@ -1,0 +1,19 @@
+# Style theme for RaFTS data visualizations
+
+axes.labelsize : 12
+lines.linewidth : 2
+xtick.labelsize : 11
+ytick.labelsize : 11
+legend.fontsize : 11
+font.family : Arial
+
+# viridis color codes: https://waldyrious.net/viridis-palette-generator/
+# viridis with a slightly lighter purple:
+axes.prop_cycle: cycler('color', ['7e3b8a', '21918c', 'fde725', '3b528b', '5ec962'])
+
+# Other odd options -------
+# viridis: 
+# axes.prop_cycle: cycler('color', ['440154', '21918c', 'fde725', '3b528b', '5ec962'])
+
+# viridis plasma: 
+# axes.prop_cycle: cycler('color', ['f89540', 'cc4778', '7e03a8', '0d0887', 'f0f921'])

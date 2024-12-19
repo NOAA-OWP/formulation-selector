@@ -23,9 +23,22 @@ file_io: # May define {home_dir} for python's '{home_dir}/string_path'.format(ho
   - write_type: 'parquet' # Required filetype for writing NLDI feature metadata. Default 'parquet'. May also select 'csv'
   - path_meta:  "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.{write_type}"  #Required. Training attribute metadata filepath formatted for R's glue or py f-string, as generated using `proc.attr.hydfab::write_meta_nldi_feat()`. Strongly suggested default:  "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.{write_type}"  
 formulation_metadata:
-  - datasets: # Required. Must match directory name inside dir_std_base. May be a list of items, or simply sublist 'all' to select everything inside dir_std_base for attribute grabbing.
-    - 'juliemai-xSSA' # Required. In this example case, it's a sublist of just one thing.
-  - formulation_base: 'Raven_blended' # Informational. Unique name of formulation. Optional.
+  - datasets: # Required. Must match directory name inside dir_std_base. May be a list of items.
+    -  kratzert19_ealstm_MSE  # Required. In this example case, it's a sublist of just one thing.
+    -  kratzert19_ealstm_NSE 
+    -  kratzert19_HBV_ub 
+    -  kratzert19_lstm_MSE 
+    -  kratzert19_lstm_no_static_MSE 
+    -  kratzert19_lstm_no_static_NSE 
+    -  kratzert19_lstm_NSE 
+    -  kratzert19_mHm_basin 
+    -  kratzert19_q_sim_fuse_900 
+    -  kratzert19_q_sim_fuse_902
+    -  kratzert19_q_sim_fuse_904
+    -  kratzert19_SAC_SMA
+    -  kratzert19_VIC_basin
+  - formulation_base: '' # Informational. Unique name of formulation. Optional.
+  - multidatasets_id: '*.nc' # Optional. If defined, multiple datasets inside the datasets directories may be considered matching the str identifier here
 hydfab_config: # Required section describing hydrofabric connection details and objects of interest, particularly for hfsubsetR::get_subset()
  - s3_base: "s3://lynker-spatial/tabular-resources" # Required. s3 path containing hydrofabric-formatted attribute datasets
  - s3_bucket: 'lynker-spatial' # Required. s3 bucket containing hydrofabric data
@@ -43,10 +56,7 @@ hydfab_config: # Required section describing hydrofabric connection details and 
 attr_select: # Required. The names of variable sublistings are standardized with _vars, e.g. ha_vars, usgs_vars, sc_vars
   - s3_path_hydatl: '{s3_base}/hydroATLAS/hydroatlas_vars.parquet' # path to hydroatlas data formatted for hydrofabric. Required only if hydroatlas variables desired.
   - ha_vars:  # hydroatlas variables. Must specify s3_path_hydatl if desired.
-    - 'pet_mm_s01'
-    - 'cly_pc_sav'
-    - 'cly_pc_uav'
-    - 'ari_ix_sav'
+    - # NADA
   - usgs_vars: # list of variables retrievable using nhdplusTools::get_characteristics_metadata().
     - 'TOT_TWI'
     - 'TOT_PRSNOW'

@@ -1,0 +1,8 @@
+# Config file for running attr_gen_camels.R
+path_in_gages_ii: "{home_dir}/noaa/camels/gagesII_wood/gages_list.txt" # nwissite USGS gage ids that may be missing leading zeros
+path_out_gages_ii: '{home_dir}/noaa/camels/gagesII_wood/camels_ii_gage_ids.txt' # The nwissite USGS gage ids with leading zeros
+path_attrs_list_nhd: "{home_dir}/noaa/regionalization/processing/usgs_nhdplus_attrs.csv" # File containing list of attributes of interest, corresponding to those acquired via nhdplusTools
+dir_db_attrs: "{home_dir}/noaa/regionalization/data/input/attributes/" # The directory containing parquet files for writing updated attributes
+dir_std_base: "{home_dir}/noaa/regionalization/data/input/user_data_std" # The directory of standardized datasets
+datasets: ["camelsii_nhdp_grab_24nov05"] # The new dataset name corresponding to these data
+ds_type: 'camels'
