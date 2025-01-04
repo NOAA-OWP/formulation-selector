@@ -16,11 +16,11 @@ proc_attr_gageids(
 \arguments{
 \item{gage_ids}{array of gage_id values to be queried for catchment attributes}
 
-\item{featureSource}{The \code{\link[nhdplusTools]{get_nldi_features}}feature featureSource,
+\item{featureSource}{The \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature}feature featureSource,
 e.g. 'nwissite'}
 
 \item{featureID}{a glue-configured conversion of gage_id into a recognized
-featureID for \code{\link[nhdplusTools]{get_nldi_features}}. E.g. if gage_id
+featureID for \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature}. E.g. if gage_id
 represents exactly what the nldi_feature$featureID should be, then
 featureID="{gage_id}". In other instances, conversions may be necessary,
 e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
@@ -45,7 +45,7 @@ needed to acquire variables of interest. List objects include the following:
 Prepares inputs for main processing step. Iterates over each location
 for grabbing catchment attribute data corresponding to the gage_id
 location. Acquires user-requested variables from multiple catchment
-attribute sources. Calls \code{\link{proc_attr_wrap}} which writes all
+attribute sources. Calls \link{proc_attr_wrap} which writes all
 acquired variables to a parquet file as a standard data.table format.
 Returns a data.table of all data returned from \code{nhdplusTools::get_nldi_feature}
 that corresponded to the gage_ids

@@ -1,0 +1,27 @@
+# Config for training and testing algorithms that predict formulation metrics or hydrologic signatures based on catchment attributes
+algorithms: # REQUIRED. Refer to AlgoTrainEval.train_algos to see what options are present (e.g. rf, mlp)
+  rf:  # STRONGLY RECOMMENDED. Refer to sklearn.ensemble.RandomForestRegressor for arguments to pass here. Otherwise defaults will be used
+    - n_estimators: [50,100,200,300,400]
+  mlp:  # OPTIONAL. Refer to sklearn.neural_network.MLPRegressor for arguments to pass here. Otherwise defaults will be when 'mlp' is specified here
+    - hidden_layer_sizes: (4,) # expect a tuple for hidden_layer_sizes, which will be interpreted as a string literal
+    - activation: relu
+    - solver: lbfgs
+    - alpha: [0.0001,0.001,0.01,0.1]
+    - batch_size: auto
+    - learning_rate: constant
+    - power_t: 0.5
+    - max_iter: [20000,80000,160000]
+test_size: 0.3 # The proportion of dataset for testing, passed to sklearn.train_test_split
+seed: 32 # the random seed
+name_attr_config: 'ealstm_attr_config.yaml'  # REQUIRED. Name of the corresponding dataset's attribute configuration file, which should be in the same directory as this. If not provided, assumes 'attr' may be substituted for this filename's 'algo'
+name_attr_csv: 'ealstm_train_attrs_31.csv' # OPTIONAL. If provided, read this .csv file to define attributes used for training algorithm(s). Default None means use the attributes from the attr config file.
+colname_attr_csv: 'attribute' # OPTIONAL. But REQUIRED if name_attr_csv provided. The column name containing the attribute names. Default None.
+verbose: True # Boolean. Should the train/test/eval provide printouts on progress?
+read_type: 'filename' # Optional. Default 'all'. Should all parquet files be lazy-loaded, assign 'all' otherwise just files with comids_resp in the file name? assign 'filename'. Defaults to 'all'
+make_plots: False # Optional. Default False. Should plots be created & saved to file?
+same_test_ids: True # Optional. Default True. Should all datasets being compared have the same test ID? If not, algos will be trained true to the test_size, but the train_test split may not be the same across each dataset (particularly total basins differ)
+metrics: # OPTIONAL. The metrics of interest for processing. If not provided, all metrics in the input dataset will be processed. Must be a sublist structure.
+  - 'NNSE' 
+  - 'FHV'
+  - 'FLV'
+  - 'FMS'

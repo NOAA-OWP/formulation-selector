@@ -19,7 +19,7 @@ Reads directly from a csv or arrow-compatible dataset.
 Returns the dataset's column identifer renamed as 'gage_id' in a tibble
 }
 \seealso{
-\code{\link[=proc_attr_read_gage_ids_fs]{proc_attr_read_gage_ids_fs()}}
+\link{proc_attr_read_gage_ids_fs}
 
-\code{\link[=proc_attr_wrap]{proc_attr_wrap()}}
+\link{proc_attr_wrap}
 }

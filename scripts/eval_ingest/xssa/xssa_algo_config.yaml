@@ -14,4 +14,7 @@ algorithms: # REQUIRED. Refer to AlgoTrainEval.train_algos to see what options a
 test_size: 0.3 # The proportion of dataset for testing, passed to sklearn.train_test_split
 seed: 32 # the random seed
 name_attr_config: 'xssa_attr_config.yaml'  # REQUIRED. Name of the corresponding dataset's attribute configuration file, which should be in the same directory as this. If not provided, assumes 'attr' may be substituted for this filename's 'algo'
+name_attr_csv:  # OPTIONAL. If provided, read this .csv file to define attributes used for training algorithm(s). Default None means use the attributes from the attr config file.
+colname_attr_csv: # OPTIONAL. But REQUIRED if name_attr_csv provided. The column name containing the attribute names. Default None.
 verbose: True # Boolean. Should the train/test/eval provide printouts on progress?
+read_type: 'filename' # Optional. Default 'all'. Should all parquet files be lazy-loaded, assign 'all' otherwise just files with comids_resp in the file name? assign 'filename'. Defaults to 'all'

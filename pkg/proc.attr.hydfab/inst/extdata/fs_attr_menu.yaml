@@ -1,4 +1,4 @@
-hydroatlas_attributes: 
+hydroatlas_attributes:
     - 'hf_id': 'hydrofabric id'
     - 'hydroatlas_id': 'hydroatlas id'
     - 'dis_m3_pyr': 'sub-basin annual average natural discharge'
@@ -118,7 +118,7 @@ hydroatlas_attributes:
     - 'snw_pc_s09': 'sub-basin september average snow cover extent'
     - 'snw_pc_s10': 'sub-basin october average snow cover extent'
     - 'snw_pc_s11': 'sub-basin november average snow cover extent'
-    - 'snw_pc_s12': 'sub-basin december average snow cover extent' 
+    - 'snw_pc_s12': 'sub-basin december average snow cover extent'
     - 'glc_cl_smj': 'sub-basin spatial majority land cover classes'
     - 'glc_pc_s01': 'sub-basin spatial land cover extent: tree cover, broadleaved, evergreen'
     - 'glc_pc_s02': 'sub-basin spatial land cover extent: tree cover, broadleaved, deciduous, closed'
@@ -169,7 +169,7 @@ hydroatlas_attributes:
     - 'pnv_pc_s02': 'sub-basin potential natural vegetation extent: tropical deciduous forest'
     - 'pnv_pc_s03': 'sub-basin potential natural vegetation extent: temperate broadleaf evergreen forest'
     - 'pnv_pc_s04': 'sub-basin potential natural vegetation extent: temperate needleleaf evergreen forest'
-    - 'pnv_pc_s05': 'sub-basin potential natural vegetation extent: temperatue deciduous forest'
+    - 'pnv_pc_s05': 'sub-basin potential natural vegetation extent: temperate deciduous forest'
     - 'pnv_pc_s06': 'sub-basin potential natural vegetation extent: boreal evergreen forest'
     - 'pnv_pc_s07': 'sub-basin potential natural vegetation extent: boreal deciduous forest'
     - 'pnv_pc_s08': 'sub-basin potential natural vegetation extent: evergreen/deciduous mixed forest'
@@ -184,7 +184,7 @@ hydroatlas_attributes:
     - 'pnv_pc_u02': 'upstream potential natural vegetation extent: tropical deciduous forest'
     - 'pnv_pc_u03': 'upstream potential natural vegetation extent: temperate broadleaf evergreen forest'
     - 'pnv_pc_u04': 'upstream potential natural vegetation extent: temperate needleleaf evergreen forest'
-    - 'pnv_pc_u05': 'upstream potential natural vegetation extent: temperatue deciduous forest'
+    - 'pnv_pc_u05': 'upstream potential natural vegetation extent: temperate deciduous forest'
     - 'pnv_pc_u06': 'upstream potential natural vegetation extent: boreal evergreen forest'
     - 'pnv_pc_u07': 'upstream potential natural vegetation extent: boreal deciduous forest'
     - 'pnv_pc_u08': 'upstream potential natural vegetation extent: evergreen/deciduous mixed forest'
@@ -282,7 +282,7 @@ hydroatlas_attributes:
     - 'gdp_ud_ssu': 'sub-basin total gross domestic product'
     - 'gdp_ud_usu': 'upstream total gross domestic product'
     - 'hdi_ix_sav': 'sub-basin average human development index'
-camels_attributes: 
+camels_attributes:
     - 'gauge_id': 'usgs gauge id'
     - 'huc_02': '2-digit hydrologic unit code'
     - 'gauge_name': 'usgs gauge name'
@@ -322,7 +322,7 @@ camels_attributes:
     - 'gvf_max': 'upstream maximum monthly mean of green vegetation fraction'
     - 'gvf_diff': 'upstream difference between the maximum and minimum monthly mean green vegetation fraction'
     - 'dom_land_cover': 'upstream spatial majority land cover classes'
-    - 'dom_land_cover_frac': 'upstream spatial majority land cover extent' 
+    - 'dom_land_cover_frac': 'upstream spatial majority land cover extent'
     - 'root_depth_XX': 'root depth'
     - 'soil_depth_pelletier': 'upstream average depth to bedrock'
     - 'soil_depth_statgso': 'upstream average depth to bedrock'

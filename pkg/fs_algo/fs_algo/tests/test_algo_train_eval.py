@@ -150,10 +150,11 @@ class TestFsRetrNhdpComids(unittest.TestCase):
         featureID = 'USGS-{gage_id}'
         gage_ids = ["01031500", "08070000"]
 
-        result = fs_algo_train_eval.fs_retr_nhdp_comids(featureSource, featureID, gage_ids)
+        result = fs_algo_train_eval.fs_retr_nhdp_comids_geom(featureSource, featureID, gage_ids)
 
         # Assertions
-        self.assertEqual(result, ['1722317', '1520007'])
+        self.assertListEqual(result['comid'].tolist(), ['1722317', '1520007'])
+        self.assertEqual(result.columns.tolist(), ['comid', 'geometry'])
 
 class TestFindFeatSrceId(unittest.TestCase):
 
@@ -413,7 +414,7 @@ class TestAlgoTrainEval(unittest.TestCase):
         self.assertTrue(mock_dump.called)
 
         for algo in self.train_eval.algs_dict.keys():
-            self.assertIn('loc_pipe', self.train_eval.algs_dict[algo])
+            self.assertIn('file_pipe', self.train_eval.algs_dict[algo])
 
     def test_org_metadata_alg(self):
         # Test organizing metadata
@@ -431,7 +432,7 @@ class TestAlgoTrainEval(unittest.TestCase):
         # Check eval_df is correctly populated
         self.assertFalse(self.train_eval.eval_df.empty)
         self.assertIn('dataset', self.train_eval.eval_df.columns)
-        self.assertIn('loc_pipe', self.train_eval.eval_df.columns)
+        self.assertIn('file_pipe', self.train_eval.eval_df.columns)
         self.assertIn('algo', self.train_eval.eval_df.columns)
         self.assertEqual(self.train_eval.eval_df['dataset'].iloc[0], self.dataset_id)
 
@@ -440,6 +441,7 @@ class TestAlgoTrainEvalMlti(unittest.TestCase):
     def setUp(self):
         # Sample data for testing
         data = {
+            #'comid':['1', '2', '3', '4', '5,1', '2', '3', '4', '5','1', '2', '3', '4', '5'],
             'attr1': [1, 2, 3, 4, 5,1, 2, 3, 4, 5,1, 2, 3, 4, 5],
             'attr2': [5, 4, 3, 2, 1,5, 4, 3, 2, 1,5, 4, 3, 2, 1],
             'metric': [0.1, 0.9, 0.3, 0.1, 0.8,0.1, 0.9, 0.3, 0.1, 0.8,0.1, 0.9, 0.3, 0.1, 0.8]
@@ -454,10 +456,14 @@ class TestAlgoTrainEvalMlti(unittest.TestCase):
         self.dataset_id = 'test_dataset'
         self.metric = 'metric'
         self.test_size = 0.3
+        self.test_id_col = 'comid'
         self.rs = 32
         self.verbose = False
 
-        self.algo_train_eval = AlgoTrainEval(self.df, self.attrs, self.algo_config, self.dir_out_alg_ds, self.dataset_id, self.metric, self.test_size, self.rs, self.verbose)
+        self.algo_train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
+                                              dir_out_alg_ds=self.dir_out_alg_ds,dataset_id=self.dataset_id,
+                                              metr=self.metric, test_size=self.test_size, rs=self.rs,
+                                              verbose=self.verbose)
 
     def test_initialization(self):
         self.assertEqual(self.algo_train_eval.df.shape, self.df.shape)
@@ -536,8 +542,8 @@ class TestAlgoTrainEvalSngl(unittest.TestCase):
         self.grid_search_algs=list()
 
         self.algo_train_eval = AlgoTrainEval(
-            self.df, self.attrs, self.algo_config, self.dir_out_alg_ds,
-            self.dataset_id, self.metr, self.test_size, self.rs, self.verbose
+            df=self.df, attrs=self.attrs, algo_config=self.algo_config, dir_out_alg_ds=self.dir_out_alg_ds,
+            dataset_id=self.dataset_id, metr=self.metr, test_size=self.test_size, rs=self.rs, verbose=self.verbose
         )
 
     @patch.object(AlgoTrainEval, 'split_data')
@@ -585,10 +591,10 @@ class TestAlgoTrainEvalBasic(unittest.TestCase):
         self.rs = 42
         self.verbose = False
         self.algo_config_grid = dict()
-        self.algo = AlgoTrainEval(self.df, self.attrs, self.algo_config,
-                                  self.dir_out_alg_ds, self.dataset_id, 
-                                  self.metric, self.test_size, self.rs, 
-                                  self.verbose)
+        self.algo = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
+                                  dir_out_alg_ds=self.dir_out_alg_ds, dataset_id=self.dataset_id, 
+                                  metr=self.metric, test_size=self.test_size, rs=self.rs, 
+                                  verbose=self.verbose)
 
     @patch('joblib.dump')  # Mock saving the model to disk
     @patch('sklearn.model_selection.train_test_split', return_value=(pd.DataFrame(), pd.DataFrame(), pd.Series(), pd.Series()))

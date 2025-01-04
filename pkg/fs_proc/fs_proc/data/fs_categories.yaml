@@ -21,6 +21,11 @@ metric_mappings_single_timeseries: # Refer to CIROH-funded TEEHR Metric List: ht
   - 'KGEmod1': 'Kling-Gupta efficiency from Kling et al 2012'
   - 'KGEmod2': 'Kling-Gupta efficiency from Clark et al 2021'
   - 'MSESS': 'mean square error skill score'
+  - 'alpha_NSE': 'alpha NSE decomposition, Gupta et al 2009: the variability ratio sigma_m/sigma_o'  #Added based on Kratzert et al, 2019 (may not be in TEEHR)
+  - 'beta_NSE': 'beta NSE decomposition, Gupta et al 2009: bias; ratio of means mu_m/mu_o' #Added based on Kratzert et al, 2019 (may not be in TEEHR)
+  - 'FHV': 'top 2% peak flow bias, Yilmaz et al 2008' #Added based on Kratzert et al, 2019 (may not be in TEEHR)
+  - 'FLV': '30% low flow bias, Yilmaz et al 2008' #Added based on Kratzert et al, 2019 (may not be in TEEHR)
+  - 'FMS': 'bias of FDC midsegment slope, Yilmaz et al 2008' #Added based on Kratzert et al, 2019 (may not be in TEEHR)
 metric_mappings_hydrotools: #  consider the metrics provided via hydrotools https://github.com/NOAA-OWP/hydrotools/tree/main/python/metrics/src/hydrotools/metrics/metrics.py
   - 'MESS': 'mean error skill score' 
   - 'COP': 'coefficient of persistence'
@@ -33,7 +38,7 @@ metric_mappings_hydrotools: #  consider the metrics provided via hydrotools http
   - 'PctC': 'percent correct'
   - 'BC': 'base chance'
   - 'ETS': 'equitable threat score'
-metric_mappings_signatures:
+metric_mappings_signatures: 
   - 'FDCSE': 'flow duration curve slope error'
   - 'APFRE': 'annual peak flow relative error'
   - 'MMVE': 'mean monthly volume error'
@@ -56,3 +61,27 @@ metric_mappings_probabilistic:
   - 'BSS': 'Brier skill score'
   - 'CRPS': 'continuous ranked probability score'
   - 'CRPSS': 'continuous ranked probability skill'
+metric_xssa_process_categories: # Custom response variables from Mai et al 2022 xSSA paper
+  - 'W_precip_corr': 'Precipitation Correction $W$'
+  - 'V_rainsnow_part': 'Rain-Snow Partitioning $V$'
+  - 'U_perc': "Percoloation $U$"
+  - 'T_pot_melt': "Potential Melt $T$"
+  - 'S_delay_ro': "Convolution (dlyd runoff) $S$"
+  - 'R_srfc_ro': "Convolution (srfc runoff) $R$"
+  - 'Q_snow_bal': "Snow Balance $Q$"
+  - 'P_baseflow': "Baseflow $P$"
+  - 'O_evap': "Evaporation $O$"
+  - 'N_quickflow': "Quickflow $N$"
+  - 'M_infilt': "Infiltration $M$"
+  - 'W_wt_precip_corr': 'Precipitation Correction $W$, variance weighted'
+  - 'V_wt_rainsnow_part': 'Rain-Snow Partitioning $V$, variance weighted'
+  - 'U_wt_perc': "Percoloation $U$, variance weighted"
+  - 'T_wt_pot_melt': "Potential Melt $T$, variance weighted"
+  - 'S_wt_delay_ro': "Convolution (dlyd runoff) $S$, variance weighted"
+  - 'R_wt_srfc_ro': "Convolution (srfc runoff) $R$, variance weighted"
+  - 'Q_wt_snow_bal': "Snow Balance $Q$, variance weighted"
+  - 'P_wt_baseflow': "Baseflow $P$, variance weighted"
+  - 'P_wt_baseflow': "Evaporation $O$, variance weighted"
+  - 'N_wt_quickflow': "Quickflow $N$, variance weighted"
+  - 'M_wt_infilt': "Infiltration $M$, variance weighted"
+  # If you add response variable, make sure it begins with metric_ e.g. metric_xssa_process_categories, 

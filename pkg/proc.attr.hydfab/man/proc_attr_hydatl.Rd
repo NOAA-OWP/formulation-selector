@@ -4,16 +4,23 @@
 \alias{proc_attr_hydatl}
 \title{Retrieve hydroatlas variables}
 \usage{
-proc_attr_hydatl(hf_id, s3_path, ha_vars, local_path = NA)
+proc_attr_hydatl(
+  hf_id,
+  path_ha,
+  ha_vars,
+  s3_ha = "s3://lynker-spatial/tabular-resources/hydroATLAS/hydroatlas_vars.parquet"
+)
 }
 \arguments{
-\item{hf_id}{numeric. the hydrofabric id, expected to be the COMID}
+\item{hf_id}{character or numeric. the hydrofabric id, usually the COMID, may be vector}
 
-\item{s3_path}{character. full path to the s3 bucket's file holding the hydroatlas data}
+\item{path_ha}{character. full path to the local parquet or s3 bucket's
+parquet holding the hydroatlas data as formatted for the hydrofabric.}
 
 \item{ha_vars}{list of characters. The variables of interest in the hydroatlas v1}
 
-\item{local_path}{character. The local filepath where hydroatlas data are saved to reduce s3 bucket connections.}
+\item{s3_ha}{character. The s3 path containing original
+hydroatlas-hydrofabric dataset.}
 }
 \description{
 retrieves hydrofabric variables from s3 bucket

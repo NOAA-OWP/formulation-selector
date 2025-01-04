@@ -28,5 +28,5 @@ Runs checks on input arguments and retrieved contents, generating warnings
 if requested comids and/or variables were completely absent from the dataset
 }
 \seealso{
-\code{\link[=proc_attr_wrap]{proc_attr_wrap()}}
+\link{proc_attr_wrap}
 }

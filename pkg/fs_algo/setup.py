@@ -8,7 +8,7 @@ setup(
     include_package_data=True,
     package_data={'' : ['./data/*.yaml']},
     name="fs_algo",
-    version="0.0.1",
+    version="0.0.2.2",
     author="Guy Litt, Ben Choat, Lauren Bolotin",
     author_email="guy.litt@noaa.gov",
     description="A package for predicting hydrologic formulation metrics and signatures based on catchment attributes.",

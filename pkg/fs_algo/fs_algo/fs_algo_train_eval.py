@@ -4,7 +4,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler, FunctionTransformer
 from sklearn.pipeline import make_pipeline
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV,learning_curve
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -19,6 +19,18 @@ import joblib
 import itertools
 import yaml
 import warnings
+import matplotlib.pyplot as plt
+import matplotlib
+from matplotlib.figure import Figure
+import matplotlib.ticker as ticker
+import pathlib
+import seaborn as sns
+from sklearn.decomposition import PCA
+from shapely.geometry import Point
+import geopandas as gpd
+import urllib
+import zipfile
+import forestci as fci
 
 # %% BASIN ATTRIBUTES (PREDICTORS) & RESPONSE VARIABLES (e.g. METRICS)
 class AttrConfigAndVars:
@@ -55,23 +67,62 @@ class AttrConfigAndVars:
         home_dir = str(Path.home())
         dir_base = list([x for x in self.attr_config['file_io'] if 'dir_base' in x][0].values())[0].format(home_dir=home_dir)
         # Location of attributes (predictor data):
-        dir_db_attrs = list([x for x in self.attr_config['file_io'] if 'dir_db_attrs' in x][0].values())[0].format(dir_base = dir_base)
+        dir_db_attrs = list([x for x in self.attr_config['file_io'] if 'dir_db_attrs' in x][0].values())[0].format(dir_base = dir_base, home_dir=home_dir)
 
         # parent location of response variable data:
-        dir_std_base =  list([x for x in self.attr_config['file_io'] if 'dir_std_base' in x][0].values())[0].format(dir_base = dir_base)
+        dir_std_base =  list([x for x in self.attr_config['file_io'] if 'dir_std_base' in x][0].values())[0].format(dir_base = dir_base, home_dir=home_dir)
 
         # The datasets of interest
         datasets = list([x for x in self.attr_config['formulation_metadata'] if 'datasets' in x][0].values())[0]
+
+        # TODO The multidatasets_identifier remains un-tested until this note goes away!
+        # multidatasets_identifier used in case multiple datasets exist inside each 'datasets' directory.
+        mltidatasets_id = [x for x in self.attr_config['formulation_metadata'] if 'multidatasets_identifier' in x]
+        if mltidatasets_id: 
+            # Extract the match string used to identify each of the .nc datasets created by fs_proc.proc_eval_metrics.proc_col_schema()
+            mltidatasets_str = mltidatasets_id[0]['multidatasets_id']
+            for ds in datasets:
+                all_dataset_paths = _std_fs_proc_ds_paths(dir_std_base,ds=ds,
+                                                          mtch_str = '*' + mltidatasets_str)
+                # Redefine datasets
+                datasets = [Path(x).name() for x in all_dataset_paths]
+
+
         # Compile output
         self.attrs_cfg_dict = {'attrs_sel' : attrs_sel,
                             'dir_db_attrs': dir_db_attrs,
                             'dir_std_base': dir_std_base,
                             'dir_base': dir_base,
                             'datasets': datasets}
+def _check_attr_rm_dupes(attr_df:pd.DataFrame, 
+                   uniq_cols:list = ['featureID','featureSource','data_source','attribute','value'],
+                   sort_col:str = 'dl_timestamp',
+                   ascending=True)-> pd.DataFrame:
+    """Check if duplicate attributes exist in the dataset. If so, remove them.
 
+    :param attr_df: The standard dataframe of attributes, location identifierws and their values
+    :type attr_df: pd.DataFrame
+    :param uniq_cols: The columns in attr_df to be tested for duplication, defaults to ['featureID','featureSource','data_source','attribute','value']
+    :type uniq_cols: list, optional
+    :param sort_col: The column name of the timestamps. Default 'dl_timestamp'
+    :type sort_col: str, optional
+    :param ascending: The argument to pass into sort_values on the `sort_col`. If ascending = False, the most recent timestamp will be kept, and the oldest with True. Default True.
+    :type ascending: bool, optional
+    :return: The dataframe with removed attributes
+    :rtype: pd.DataFrame
+
+    note:: When ascending = False, the most recent timestamp will be kept, and the oldest with True.
+    """
+
+    if attr_df[['featureID','attribute']].duplicated().any():
+        print("Duplicate attribute data exist. Attempting to remove using fs_algo_train_eval._check_attr_rm_dupes().")
+        attr_df = attr_df.sort_values(sort_col, ascending = ascending)
+        attr_df = attr_df.drop_duplicates(subset=uniq_cols, keep='first')
+    return attr_df
 
 def fs_read_attr_comid(dir_db_attrs:str | os.PathLike, comids_resp:list | Iterable, attrs_sel: str | Iterable = 'all',
-                       _s3 = None,storage_options=None)-> pd.DataFrame:
+                       _s3 = None,storage_options=None,read_type:str=['all','filename'][0],
+                       reindex:bool=False)-> pd.DataFrame:
     """Read attribute data acquired using proc.attr.hydfab R package & subset to desired attributes
 
     :param dir_db_attrs: directory where attribute .parquet files live
@@ -84,6 +135,11 @@ def fs_read_attr_comid(dir_db_attrs:str | os.PathLike, comids_resp:list | Iterab
     :type _s3: future feature, optional
     :param storage_options: future feature, defaults to None
     :type storage_options: future feature, optional
+    :param read_type: should all parquet files be lazy-loaded, assign 'all'
+     otherwise just files with comids_resp in the file name? assign 'filename'. Defaults to 'all'
+    :type read_type: str
+    :param reindex: Should attribute dataframe be reindexed? Default False
+    :type reindex: bool
     :return: dict of the following keys:
         - `attrs_sel`
         - `dir_db_attrs`
@@ -97,28 +153,38 @@ def fs_read_attr_comid(dir_db_attrs:str | os.PathLike, comids_resp:list | Iterab
         # TODO  Setup the s3fs filesystem that will be used, with xarray to open the parquet files
         #_s3 = s3fs.S3FileSystem(anon=True)
 
-    # Read attribute data acquired using proc.attr.hydfab R package
-    all_attr_ddf = dd.read_parquet(dir_db_attrs, storage_options = storage_options)
+    # ------------------- Subset based on comids of interest ------------------
+    if read_type == 'all': # Considering all parquet files inside directory
+        # Read attribute data acquired using proc.attr.hydfab R package
+        all_attr_ddf = dd.read_parquet(dir_db_attrs, storage_options = storage_options)
+        attr_df_sub = attr_ddf_sub.compute()
+        attr_ddf_subloc = all_attr_ddf[all_attr_ddf['featureID'].isin(comids_resp)]
 
-    # Subset based on comids of interest
-    attr_ddf_subloc = all_attr_ddf[all_attr_ddf['featureID'].str.contains('|'.join(comids_resp))]
-
+    elif read_type == 'filename': # Read based on comid being located in the parquet filename
+        matching_files = [file for file in Path(dir_db_attrs).iterdir() \
+                          if file.is_file() and any(f'_{sub}_' in file.name for sub in comids_resp)]
+        attr_ddf_subloc = dd.read_parquet(matching_files, storage_options=storage_options)
+    else:
+        raise ValueError(f"Unrecognized read_type provided in fs_read_attr_comid: {read_type}")
+    
     if attr_ddf_subloc.shape[0].compute() == 0:
         warnings.warn(f'None of the provided featureIDs exist in {dir_db_attrs}: \
                       \n {", ".join(attrs_sel)} ', UserWarning)
     
-    # Subset based on attributes of interest
+    # ------------------- Subset based on attributes of interest ------------------
     if attrs_sel == 'all':
         attrs_sel = attr_ddf_subloc['attribute'].unique().compute()
 
-    attr_ddf_sub = attr_ddf_subloc[attr_ddf_subloc['attribute'].str.contains('|'.join(attrs_sel))]
+    attr_ddf_sub = attr_ddf_subloc[attr_ddf_subloc['attribute'].isin(attrs_sel)]
     
     attr_df_sub = attr_ddf_sub.compute()
 
     if attr_df_sub.shape[0] == 0:
         warnings.warn(f'The provided attributes do not exist with the retrieved featureIDs : \
                         \n {",".join(attrs_sel)}',UserWarning)
- 
+    # ------------------- Remove any duplicates & run checks -------------------
+    attr_df_sub = _check_attr_rm_dupes(attr_df=attr_df_sub)
+
     # Run check that all variables are present across all basins
     dict_rslt = _check_attributes_exist(attr_df_sub,attrs_sel)
     attr_df_sub, attrs_sel_ser = dict_rslt['df_attr'], dict_rslt['attrs_sel']
@@ -132,6 +198,10 @@ def fs_read_attr_comid(dir_db_attrs:str | os.PathLike, comids_resp:list | Iterab
                       which may be problematic for some algo training/testing. \
                       \nConsider reprocessing the attribute grabber (proc.attr.hydfab R package)',
                       UserWarning)
+        
+    # TODO should re-indexing happen???
+    if reindex:
+        attr_df_sub = attr_df_sub.reindex()
 
     return attr_df_sub
 
@@ -149,8 +219,8 @@ def _check_attributes_exist(df_attr: pd.DataFrame, attrs_sel:pd.Series | Iterabl
     """
     #
     if not isinstance(attrs_sel,pd.Series):
-            # Convert to a series for convenience of pd.Series.isin()
-            attrs_sel = pd.Series(attrs_sel)
+        # Convert to a series for convenience of pd.Series.isin()
+        attrs_sel = pd.Series(attrs_sel)
 
     # Run check that all attributes are present for all basins
     if df_attr.groupby('featureID')['attribute'].count().nunique() != 1:
@@ -162,7 +232,11 @@ def _check_attributes_exist(df_attr: pd.DataFrame, attrs_sel:pd.Series | Iterabl
         warnings.warn(f"    TOTAL unique locations with missing attributes: {len(bad_comids)}",UserWarning)
         df_attr_sub_missing = df_attr[df_attr['featureID'].isin(bad_comids)]
     
-        missing_attrs = attrs_sel[~attrs_sel.isin(df_attr_sub_missing['attribute'])]
+        if isinstance(attrs_sel,list):
+            missing_attrs = [attr for attr in attrs_sel if attr not in set(df_attr_sub_missing['attribute'])]
+            missing_attrs = pd.DataFrame({'attribute':missing_attrs})
+        else:
+            missing_attrs = attrs_sel[~attrs_sel.isin(df_attr_sub_missing['attribute'])]
         warnings.warn(f"    TOTAL MISSING ATTRS: {len(missing_attrs)}",UserWarning)
         str_missing = '\n    '.join(missing_attrs.values)
 
@@ -176,6 +250,32 @@ def _check_attributes_exist(df_attr: pd.DataFrame, attrs_sel:pd.Series | Iterabl
         
     
     return {'df_attr': df_attr, 'attrs_sel': attrs_sel}
+
+
+def _id_attrs_sel_wrap(attr_cfig: AttrConfigAndVars,
+                    path_cfig: str | os.PathLike = None,
+                    name_attr_csv: str = None,
+                    colname_attr_csv: str = None) -> list:
+    """Get attributes of interest from a csv file with column name, or the attribute config object
+
+    :param attr_cfig: The attribute config file object generated using fs_algo_train_eval.AttrConfigAndVars
+    :type attr_cfig: AttrConfigAndVars
+    :param path_cfig: Optional path to a file, that also lives in the same directory as the `name_attr_csv`, defaults to None
+    :type path_cfig: str | os.PathLike
+    :param name_attr_csv: The name of the csv file containing the attribute listing of interest, defaults to None
+    :type name_attr_csv: str, optional
+    :param colname_attr_csv: The column name inside the csv file containing the attributes of interest, defaults to None
+    :type colname_attr_csv: str, optional
+    :return: list of all attributes of interest, likely to use for training/prediction
+    :rtype: list
+    """
+    if name_attr_csv:
+        path_attr_csv = build_cfig_path(path_cfig,name_attr_csv)
+        attrs_sel = pd.read_csv(path_attr_csv)[colname_attr_csv].tolist()
+    else:
+        attrs_sel = attr_cfig.attrs_cfg_dict.get('attrs_sel', None)
+
+    return attrs_sel
 
 def _find_feat_srce_id(dat_resp: Optional[xr.core.dataset.Dataset] = None,
                        attr_config: Optional[Dict] = None) -> List[str]:
@@ -224,8 +324,9 @@ def _find_feat_srce_id(dat_resp: Optional[xr.core.dataset.Dataset] = None,
 
     return [featureSource, featureID]
 
-def fs_retr_nhdp_comids(featureSource:str,featureID:str,gage_ids: Iterable[str] ) ->list:    
-    """Retrieve response variable's comids, querying the shortest distance in the flowline
+def fs_retr_nhdp_comids_geom(featureSource:str,featureID:str,gage_ids: Iterable[str] 
+                             ) -> gpd.geodataframe.GeoDataFrame:    
+    """Retrieve response variable's comids & point geom, querying the shortest distance in the flowline
 
     :param featureSource: the datasource for featureID from the R function :mod:`nhdplusTools` :func:`get_nldi_features()`, e.g. 'nwissite'
     :type featureSource: str
@@ -234,23 +335,48 @@ def fs_retr_nhdp_comids(featureSource:str,featureID:str,gage_ids: Iterable[str] 
     :param gage_ids: The location identifiers compatible with the format specified in `featureID`
     :type gage_ids: Iterable[str]
     :raises warnings.warn: In case number of retrieved comids does not match total requested gage ids
-    :return: The COMIDs corresponding to the provided location identifiers, `gage_ids`
-    :rtype: list
+    :return: The COMIDs & point geometry corresponding to the provided location identifiers, `gage_ids`
+    :rtype: GeoDataFrame
+
+    Changelog:
+        2024-12-01 refactor: return GeoDataFrame with coordinates instead of a list of just comids, GL
     """
 
     nldi = nhd.NLDI()
-    comids_resp = [nldi.navigate_byid(fsource=featureSource,fid= featureID.format(gage_id=gage_id),
-                                navigation='upstreamMain',
-                                source='flowlines',
-                                distance=1 # the shortest distance
-                                ).loc[0]['nhdplus_comid'] 
-                                for gage_id in gage_ids]
     
-    if len(comids_resp) != len(gage_ids) or comids_resp.count(None) > 0: # May not be an important check
-        raise warnings.warn("The total number of retrieved comids does not match \
-                      total number of provided gage_ids",UserWarning)
+    comids_miss = []
+    comids_resp = []
+    geom_pts = []
+    for gage_id in gage_ids:
+        try:
+            upstr_flowline = nldi.navigate_byid(
+                fsource=featureSource,
+                fid=featureID.format(gage_id=gage_id),
+                navigation='upstreamMain',
+                source='flowlines',
+                distance=1
+            ).loc[0]
+            geom_pts.append(Point(upstr_flowline['geometry'].coords[0]))
+            comid = upstr_flowline['nhdplus_comid']
+            comids_resp.append(comid)
+        except Exception as e:
+            print(f"Error processing gage_id {gage_id}: {e}")
+            # Handle the error (e.g., log it, append None, or any other fallback mechanism)
 
-    return comids_resp
+            # TODO Attempt a different approach for retrieving comid:
+            comids_miss.append(comid)
+            geom_pts.append(np.nan)
+            comids_resp.append(np.nan)  # Appending NA for failed gage_id, or handle differently as needed
+
+    # if len(comids_resp) != len(gage_ids) or comids_resp.count(None) > 0: # May not be an important check
+    #     raise warnings.warn("The total number of retrieved comids does not match \
+    #                   total number of provided gage_ids",UserWarning)
+
+    gdf_comid = gpd.GeoDataFrame(pd.DataFrame({ 'comid': comids_resp}),
+                                            geometry=geom_pts,crs=4326 
+                                )
+
+    return gdf_comid
 
 def build_cfig_path(path_known_config:str | os.PathLike, path_or_name_cfig:str | os.PathLike) -> os.PathLike | None:
     """Build the expected configuration file path within the RAFTS framework
@@ -284,7 +410,8 @@ def fs_save_algo_dir_struct(dir_base: str | os.PathLike ) -> dict:
     :param dir_base: The base directory for saving output
     :type dir_base: str | os.PathLike
     :raises ValueError: If the base directory does not exist
-    :return: Full paths to the `output` and `trained_algorithms` directories
+    :return: Full paths to the `output`, `trained_algorithms`,
+     `analysis` and `data_visualization` directories
     :rtype: dict
     """
 
@@ -303,17 +430,47 @@ def fs_save_algo_dir_struct(dir_base: str | os.PathLike ) -> dict:
     dir_out_alg_base = Path(dir_out/Path('trained_algorithms'))
     dir_out_alg_base.mkdir(exist_ok=True)
 
+    # TODO consider compatibility with std_pred_path
+    dir_preds_base = Path(dir_out/Path('algorithm_predictions'))
+    dir_preds_base.mkdir(exist_ok=True)
+
+    # The analysis directory
+    dir_out_anlys_base = Path(dir_out/Path("analysis"))
+    dir_out_anlys_base.mkdir(exist_ok=True)
+
+    # The data visualization directory
+    dir_out_viz_base = Path(dir_out/Path("data_visualizations"))
+    # TODO insert dir that Lauren creates here
+
     out_dirs = {'dir_out': dir_out,
-                'dir_out_alg_base': dir_out_alg_base}
+                'dir_out_alg_base': dir_out_alg_base,
+                'dir_out_preds_base' : dir_preds_base,
+                'dir_out_anlys_base' : dir_out_anlys_base,
+                'dir_out_viz_base' : dir_out_viz_base}
 
     return out_dirs
 
-def _open_response_data_fs(dir_std_base: str | os.PathLike, ds:str) -> xr.Dataset:
+def _std_fs_proc_ds_paths(dir_std_base: str|os.PathLike,ds:str,mtch_str='*.nc') -> list:
+    """The standard .nc paths for standardized dataset created using fs_proc.proc_eval_metrics.proc_col_schema()
+
+    :param dir_std_base:  The directory containing the standardized dataset generated from `fs_proc`
+    :type dir_std_base: str | os.PathLike
+    :param ds:  a string that's unique to the dataset of interest
+    :type ds: str
+    :param mtch_str: the desired matching string describing datasets of interests, defaults to '*.nc'
+    :type mtch_str: str, optional
+    :return: list of each filepath to a dataset
+    :rtype: list
+    """
+    ls_ds_paths = [x for x in Path(dir_std_base/Path(ds)).glob(mtch_str) if x.is_file()]
+    return ls_ds_paths
+
+def _open_response_data_fs(dir_std_base: str | os.PathLike, ds:str, mtch_str:str='*.nc') -> xr.Dataset:
     """Read in standardized dataset generated from :mod:`fs_proc`
 
     :param dir_std_base: The directory containing the standardized dataset generated from `fs_proc`
     :type dir_std_base: str | os.PathLike
-    :param ds: a string that's unique to the dataset of interest, generally not containing the file extension. 
+    :param ds: a string that represents the dataset of interest
     There should be a netcdf .nc or zarr .zarr file containing matches to this string
     :type ds: str
     :raises ValueError: The directory where the dataset file should live does not exist.
@@ -326,7 +483,11 @@ def _open_response_data_fs(dir_std_base: str | os.PathLike, ds:str) -> xr.Datase
         raise ValueError(f'The dir_std_base directory does not exist. Double check dir_std_base: \
                          \n{dir_std_base}')
     
-    path_nc = [x for x in Path(dir_std_base/Path(ds)).glob("*.nc") if x.is_file()]
+    path_nc = _std_fs_proc_ds_paths(dir_std_base=dir_std_base,ds=ds,mtch_str=mtch_str)
+    #path_nc = [x for x in Path(dir_std_base/Path(ds)).glob("*.nc") if x.is_file()]
+    if len(path_nc) > 1:
+        error_str = f"The following directory contains too many .nc files: {path_nc}"
+        raise ValueError(error_str)
 
     try:
         dat_resp = xr.open_dataset(path_nc[0], engine='netcdf4')
@@ -358,7 +519,8 @@ def std_algo_path(dir_out_alg_ds:str | os.PathLike, algo: str, metric: str, data
     path_algo = Path(dir_out_alg_ds) / Path(basename_alg_ds_metr + '.joblib')
     return path_algo
 
-def std_pred_path(dir_out: str | os.PathLike, algo: str, metric: str, dataset_id: str) -> str:
+def std_pred_path(dir_out: str | os.PathLike, algo: str, metric: str, dataset_id: str
+                  ) -> pathlib.PosixPath:
     """Standardize the prediction results save path
 
     :param dir_out: The base directory for saving output
@@ -372,12 +534,65 @@ def std_pred_path(dir_out: str | os.PathLike, algo: str, metric: str, dataset_id
     :return: full save path for parquet dataframe object of results
     :rtype: str
     """
+    # TODO consider refactoring this to pass in dir_out_preds_base instead
     dir_preds_base = Path(Path(dir_out)/Path('algorithm_predictions'))
     dir_preds_ds = Path(dir_preds_base/Path(dataset_id))
     dir_preds_ds.mkdir(exist_ok=True,parents=True)
     basename_pred_alg_ds_metr = f"pred_{algo}_{metric}__{dataset_id}.parquet"
     path_pred_rslt = Path(dir_preds_ds)/Path(basename_pred_alg_ds_metr)
     return path_pred_rslt
+
+def std_Xtrain_path(dir_out_alg_ds:str | os.PathLike, dataset_id: str
+                    ) -> pathlib.PosixPath:
+    """Standardize the algorithm save path
+    :param dir_out_alg_ds:  Directory where algorithm's output stored.
+    :type dir_out_alg_ds: str | os.PathLike
+    :param metric:  The metric or hydrologic signature identifier of interest
+    :type metric: str
+    :return: full save path for joblib object
+    :rtype: str
+    """
+    Path(dir_out_alg_ds).mkdir(exist_ok=True,parents=True)
+    basename_alg_ds = f'Xtrain__{dataset_id}'
+    path_Xtrain = Path(dir_out_alg_ds) / Path(basename_alg_ds + '.csv')
+    return path_Xtrain
+
+def std_eval_metrs_path(dir_out_viz_base: str|os.PathLike,
+                      ds:str, metr:str
+                      ) -> pathlib.PosixPath:
+    """Standardize the filepath for saving model evaluation metrics table
+
+    :param dir_out_viz_base: The base output directory
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The dataset name
+    :type ds: str
+    :param metric: The metric or hydrologic signature identifier of interest
+    :type metric: str
+    :return: The model metrics filepath
+    :rtype: pathlib.PosixPath
+    """
+    path_eval_metr = Path(f"{dir_out_viz_base}/{ds}/algo_eval_{ds}_{metr}.csv")
+    path_eval_metr.parent.mkdir(parents=True,exist_ok=True)
+    return path_eval_metr
+
+
+def std_test_pred_obs_path(dir_out_anlys_base:str|os.PathLike,ds:str, metr:str
+                      )->pathlib.PosixPath:
+    """Generate the standardized path for saving the predicted & observed metric/coordinates from testing
+
+    :param dir_out_anlys_base: Base analysis directory
+    :type dir_out_anlys_base: str | os.PathLike
+    :param ds: dataset name
+    :type ds: str
+    :param metr: metric/response variable of interest
+    :type metr: str
+    :return: save path to the pred_obs_{ds}_{metr}.csv file
+    :rtype: pathlib.PosixPath
+    """
+    # Create the path for saving the predicted and observed metric/coordinates from testing
+    path_pred_obs = Path(f"{dir_out_anlys_base}/{ds}/pred_obs_{ds}_{metr}.csv")
+    path_pred_obs.parent.mkdir(exist_ok=True,parents=True)
+    return path_pred_obs
 
 def _read_pred_comid(path_pred_locs: str | os.PathLike, comid_pred_col:str ) -> list[str]:
     """Read the comids from a prediction file formatted as .csv
@@ -398,19 +613,153 @@ def _read_pred_comid(path_pred_locs: str | os.PathLike, comid_pred_col:str ) -> 
             comids_pred = pd.read_csv(path_pred_locs)[comid_pred_col].values
         except:
             raise ValueError(f"Could not successfully read in {path_pred_locs} & select col {comid_pred_col}")
-    elif '.parquet' in Path(path_pred_locs).suffix:
-        try:
-            comids_pred = pd.read_parquet(path_pred_locs)[comid_pred_col].values
-        except:
-            raise ValueError(f"Could not successfully read in {path_pred_locs} & select col {comid_pred_col}")
     else:
         raise ValueError(f"NEED TO ADD CAPABILITY THAT HANDLES {Path(path_pred_locs).suffix} file extensions")
     comids_pred = [str(x) for x in comids_pred]
     return comids_pred
+
+
+def find_common_comid(dict_gdf_comids:Dict[str,gpd.GeoDataFrame], column='comid')->list:
+    """Given a collection of multiple datasets, find the shared comids
+
+    :param dict_gdf_comids: a dictionary of multiple datasets,
+      each containing a geodataframe of comids as generated by
+      :func:`fs_retr_nhdp_comids_geom`
+    :type dict_gdf_comids: dict[str, geopandas.GeoDataFrame]
+    :param column: The geodataframe column name for the comid, defaults to 'comid'
+    :type column: str, optional
+    :seealso: :func:`split_train_test_comid_wrap`
+    :seealso: :func:`fs_retr_nhdp_comids_geom`
+    :return: list of the shared comids
+    :rtype: list
+    """
+    
+    common_comid = None
+    for df in dict_gdf_comids.values():
+        if common_comid is None:
+            common_comid = set(df[column])
+        else:
+            common_comid &= set(df[column])
+
+    common_comid = list(common_comid)
+    return common_comid
+
+def combine_resp_gdf_comid_wrap(dir_std_base:str|os.PathLike,ds:str,
+                          attr_config:dict)->dict:
+    """Standardize the response variable and geodataframe/comid retrieval for a single dataset in a wrapper function
+
+    Removes data points from consideration if no comid could be found. Makes the gdf and response data consistent.
+
+    :param dir_std_base: The directory containing the standardized dataset generated from `fs_proc`
+    :type dir_std_base: str | os.PathLike
+    :param ds:  The unique dataset identifier
+    :type ds: str
+    :param attr_config: configuration data generated from the attribute configuration file
+    :type attr_config: dict
+    :return: dict of the response xarray dataset `'dat_resp'`,
+      and the geodataframe with comids & coordinates `'gdf_comid'`
+    :rtype: dict
+    """
+
+    dat_resp = _open_response_data_fs(dir_std_base,ds)
+
+    # %% COMID retrieval and assignment to response variable's coordinate
+    [featureSource,featureID] = _find_feat_srce_id(dat_resp,attr_config) # e.g. ['nwissite','USGS-{gage_id}']
+    # Grab the comid and associated coords/geodataframe 
+    gdf_comid = fs_retr_nhdp_comids_geom(featureSource=featureSource,
+                                                featureID=featureID,
+                                                gage_ids=dat_resp['gage_id'].values)
+    # Ensure the original identifier gage_id matches up to the coords
+    gdf_comid['gage_id'] = dat_resp['gage_id']
+ 
+
+    # --- response data identifier alignment with comids & na removal --- #
+    dat_resp = dat_resp.assign_coords(comid = gdf_comid['comid'].values)
+    idxs_na_comid = list(np.where(gdf_comid['comid'].isna())[0])
+    gage_id_mask = ~np.isin(np.arange(len(dat_resp['gage_id'])),idxs_na_comid)
+    if len(idxs_na_comid) > 0:
+        gage_ids_missing = dat_resp['gage_id'].isel(gage_id=~gage_id_mask).values
+        print(f"A total of {len(idxs_na_comid)} returned comids are NA values. \
+               \nRemoving the following gage_ids from dataset: \
+              \n{gage_ids_missing}")
+        # Remove the unknown comids now that they've been matched up to the original dims in dat_resp:
+        dat_resp = dat_resp.isel(gage_id=gage_id_mask)# remove NA vals from gage_id coord
+        dat_resp = dat_resp.isel(comid=gage_id_mask) # remove NA vals from comid coord
+    
+    gdf_comid = gdf_comid.drop_duplicates().dropna()
+    if any(gdf_comid['comid'].duplicated()):
+        print("Note that some duplicated comids found in dataset based on initial location identifier, gage_id")
+    gdf_comid['dataset'] = ds 
+
+
+    dict_resp_gdf = dict({'dat_resp':dat_resp,
+                        'gdf_comid': gdf_comid})
+    return(dict_resp_gdf)
+
+def split_train_test_comid_wrap(dir_std_base:str|os.PathLike, 
+                datasets:list, attr_config:dict,
+                comid_col='comid', test_size:float=0.3,
+                random_state:int=42) -> dict:
+    """Create a train/test split based on shared comids across multiple datasets
+    Helpful when multiple datasets desired for intercomparison share the same comids, but 
+    some datasets don't have the same size (e.g. dataset A has 489 locations whereas dataset B has 512 locations)
+    If datasets all share the same comids, or only one dataset provided, then proceeds with the standard train-test split.
+
+    :param dir_std_base:  The directory containing the standardized dataset generated from `fs_proc`
+    :type dir_std_base: str | os.PathLike
+    :param datasets: The unique dataset identifiers as a list
+    :type datasets: list
+    :param attr_config: configuration data generated from the attribute configuration file
+    :type attr_config: dict
+    :param comid_col: The column name of the comid in geodataframe as returned by `fs_retr_nhdp_comids_geom`, defaults to 'comid'
+    :type comid_col: str, optional
+    :param test_size: The fraction of data reserved for test data, defaults to 0.3
+    :type test_size: float, optional
+    :param random_state: The random state/random seed number, defaults to 42
+    :type random_state: int, optional
+    :seealso: :func:`train_test_split`
+    :return: A dictionary containing the following objects:
+        'dict_gdf_comids': dict of dataset keys, each with the geodataframe of comids
+        'sub_test_ids': the comids corresponding to testing
+        'sub_train_ids': the comids corresponding to training
+    :rtype: dict
+    """
+    dict_gdf_comids = dict()
+    for ds in datasets:
+
+        # Generate the geodatframe in a standard format
+        dict_resp_gdf = combine_resp_gdf_comid_wrap(dir_std_base,ds,attr_config )
+        # dat_resp = _open_response_data_fs(dir_std_base,ds)
+
+        # [featureSource,featureID] = _find_feat_srce_id(dat_resp,attr_config) 
+
+        # gdf_comid = fs_retr_nhdp_comids_geom(featureSource=featureSource,
+        #                                     featureID=featureID,
+        #                                     gage_ids=dat_resp['gage_id'].values)
+        # gdf_comid['dataset'] = ds        
+        dict_gdf_comids[ds] = dict_resp_gdf['gdf_comid']
+
+    if len(datasets) > 1:
+        common_comid = find_common_comid(dict_gdf_comids, column = comid_col)
+    else:
+        common_comid = dict_gdf_comids[ds]['comid'].tolist()
+    
+    # Create the train/test split() of comids. Note that duplicates are possible and must be removed!
+    df_common_comids = pd.DataFrame({'comid':common_comid}).dropna().drop_duplicates()
+    train_ids, test_ids = train_test_split(df_common_comids, test_size=test_size, random_state=random_state)
+
+    # Compile results into a standard structure
+    split_dict = {'dict_gdf_comids' : dict_gdf_comids,
+                'sub_test_ids': test_ids[comid_col],
+                'sub_train_ids': train_ids[comid_col]}
+    return split_dict
+
+
 class AlgoTrainEval:
     def __init__(self, df: pd.DataFrame, attrs: Iterable[str], algo_config: dict,
                  dir_out_alg_ds: str | os.PathLike, dataset_id: str,
                  metr: str, test_size: float = 0.3,rs: int = 32,
+                 test_ids = None,test_id_col:str = 'comid',
                  verbose: bool = False):
         """The algorithm training and evaluation class.
 
@@ -434,6 +783,10 @@ class AlgoTrainEval:
         :type test_size: float, optional
         :param rs: The random seed, defaults to 32.
         :type rs: int, optional
+        :param test_ids: The explicit comids of interest for testing. Defaults to None. If None, use the test_size instead for the train/test split 
+        :type test_ids: Iterable or None
+        :param test_id_col: The column name for comid, defaults to 'comid'
+        :type test_id_col: str
         :param verbose: Should print, defaults to False.
         :type verbose: bool, optional
         """
@@ -444,10 +797,11 @@ class AlgoTrainEval:
         self.dir_out_alg_ds = dir_out_alg_ds
         self.metric = metr
         self.test_size = test_size
+        self.test_ids = test_ids # No guarantee these remain in the appropriate order
+        self.test_id_col = test_id_col
         self.rs = rs
         self.dataset_id = dataset_id
         self.verbose = verbose
-
 
         # train/test split
         self.X_train = pd.DataFrame()
@@ -467,15 +821,13 @@ class AlgoTrainEval:
         # The evaluation summary result
         self.eval_df = pd.DataFrame()
 
-    
     def split_data(self):
-        """Split dataframe into training and testing predictors (X) and response (y) variables using :func:`sklearn.model_selection.train_test_split`
+        """Split dataframe into training and testing predictors (X) and response (y)
+          variables using :func:`sklearn.model_selection.train_test_split`
 
+        Changelog:
+        2024-12-02 Add in the explicitly provided comid option
         """
-        
-        if self.verbose:
-            print(f"      Performing train/test split as {round(1-self.test_size,2)}/{self.test_size}")
-
         # Check for NA values first
         self.df_non_na = self.df[self.attrs + [self.metric]].dropna()
         if self.df_non_na.shape[0] < self.df.shape[0]:
@@ -484,13 +836,40 @@ class AlgoTrainEval:
                 \n   NA VALUES FOUND IN INPUT DATASET!! \
                 \n   DROPPING {self.df.shape[0] - self.df_non_na.shape[0]} ROWS OF DATA. \
                 \n   !!!!!!!!!!!!!!!!!!!",UserWarning)
-            
+                
+        if self.test_ids is not None:
+            # The Truth is in the indices: e.g. `self.df` shares the same indicise as `self.test_ids`` 
+            # Use the manually provided comids for testing, then the remaining data for training
+            print("Using the custom test comids, and letting all remaining comids be used for training.")
+            df_sub_test = self.df.loc[self.test_ids.index]#self.df[self.df[self.test_id_col].isin(self.test_ids)].dropna(subset=self.attrs + [self.metric])
+            df_sub_train = self.df.loc[~self.df.index.isin(df_sub_test.index)]#self.df[~self.df[self.test_id_col].isin(self.test_ids)].dropna(subset=self.attrs + [self.metric])
+            # Assign class objects
+            self.y_test = df_sub_test[self.metric]
+            self.y_train = df_sub_train[self.metric]
+            self.X_test = df_sub_test[self.attrs]
+            self.X_train = df_sub_train[self.attrs]
+        else: # The standard train_test_split (Caution when processing multiple datasets, if total dims differ, then basin splits may differ)
+            if self.verbose:
+                print(f"      Performing train/test split as {round(1-self.test_size,2)}/{self.test_size}")
+            X = self.df_non_na[self.attrs]
+            y = self.df_non_na[self.metric]
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X,y, test_size=self.test_size, random_state=self.rs)
 
-        X = self.df_non_na[self.attrs]
-        y = self.df_non_na[self.metric]
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X,y, test_size=self.test_size, random_state=self.rs)
+    def all_X_all_y(self):
+        """ Combine the train/test splits into a single dataframe/array. 
+            This method may be called after calling AlgoTrainEval.split_data() 
+            to concatenate the training and testing datasets into single DataFrames
+            for features (X) and response variable (y). 
 
-    
+        :return: A tuple containing concatenated df for features (X) and response variable (y). 
+        :rtype: tuple(pandas.DataFrame, pandas.Series) 
+        """
+        # Combine the train/test splits into a single dataframe/array
+        # This may be called after calling AlgoTrainEval.split_data()
+        X = pd.concat([self.X_train,  self.X_test])
+        y = pd.concat([self.y_test, self.y_train])
+        return X, y
+
     def convert_to_list(self,d:dict) ->dict:
         """Runcheck: In situations where self.algo_config_grid is used, all objects must be iterables 
 
@@ -507,7 +886,15 @@ class AlgoTrainEval:
         return(d)
 
     def list_to_dict(self, config_ls):
-        # When a config object is inconveniently formatted as a list of multiple dict
+        """Convert to dict if a config object is inconveniently
+          formatted as a list of multiple dicts
+
+        :param config_ls: possibly a list of objects
+        :type config_ls: list
+        :return: dict of objects
+        :rtype: dict
+        """
+        # 
         if isinstance(config_ls,list):
             config_dict = {}
             for d in config_ls:
@@ -518,6 +905,7 @@ class AlgoTrainEval:
     
     def select_algs_grid_search(self):
         """Determines which algorithms' params involve hyperparameter tuning
+            based on if multiple parameters designated for consideration
         """
         ls_move_to_srch_cfig = list()
         for k, alg_ls in self.algo_config.items():
@@ -554,27 +942,78 @@ class AlgoTrainEval:
             # e.g. {'activation':'relu'} becomes {'activation':['relu']}
             self.algo_config_grid  = self.convert_to_list(self.algo_config_grid)
 
+    def calculate_rf_uncertainty(self, forest, X_train, X_test):
+        """
+        Calculate uncertainty using forestci for a Random Forest model.
+
+        Parameters:
+            forest (RandomForestRegressor): Trained Random Forest model.
+            X_train (ndarray): Training data.
+            X_test (ndarray): Test data.
+
+        Returns:
+            ndarray: Confidence intervals for each prediction.
+        """
+        ci = fci.random_forest_error(
+            forest=forest,
+            X_train_shape=X_train.shape,
+            X_test=X_test,
+            inbag=None, 
+            calibrate=True, 
+            memory_constrained=False, 
+            memory_limit=None, 
+            y_output=0  # Change this if multi-output
+        )
+        return ci
+
     def train_algos(self):
-        """Train algorithms based on what has been defined in the algo config file Algorithm options include the following:
-        
-            - `rf` for :class:`sklearn.ensemble.RandomForestRegressor`
-            - `mlp` for :class:`sklearn.neural_network.MLPRegressor`
+        """Train algorithms based on what has been defined in the algo config file
+
+        .. note::
+            Algorithm options include the following:
+                - `rf` for :class:`sklearn.ensemble.RandomForestRegressor`
+                - `mlp` for :class:`sklearn.neural_network.MLPRegressor`
         """
         # Train algorithms based on config
         if 'rf' in self.algo_config:  # RANDOM FOREST
             if self.verbose:
                 print(f"      Performing Random Forest Training")
             
-            rf = RandomForestRegressor(n_estimators=self.algo_config['rf'].get('n_estimators'),
+            rf = RandomForestRegressor(n_estimators=self.algo_config['rf'].get('n_estimators',300),
+                                       max_depth = self.algo_config['rf'].get('max_depth', None),
+                                       min_samples_split=self.algo_config['rf'].get('min_samples_split',2),
+                                       min_samples_leaf=self.algo_config['rf'].get('min_samples_leaf',1),
                                        oob_score=True,
                                        random_state=self.rs,
                                        )
-            pipe_rf = make_pipeline(rf)                           
+            pipe_rf = make_pipeline(rf)                       
             pipe_rf.fit(self.X_train, self.y_train)
+            
+            # --- Make predictions using the RandomForest model ---
+            y_pred_rf = rf.predict(self.X_test)
+
+            # # --- Inserting forestci for uncertainty calculation ---
+            # ci = fci.random_forest_error(
+            #     forest=rf,
+            #     X_train_shape=self.X_train.shape,
+            #     X_test=self.X_test,  # Assuming X contains test samples
+            #     inbag=None, 
+            #     calibrate=True, 
+            #     memory_constrained=False, 
+            #     memory_limit=None, 
+            #     y_output=0  # Change this if multi-output
+            # )
+            # # ci now contains the confidence intervals for each prediction
+            
+            # --- Calculate confidence intervals ---
+            # ci = self.calculate_rf_uncertainty(rf, self.X_train, self.X_test)
+
+            # --- Compare predictions with confidence intervals ---
             self.algs_dict['rf'] = {'algo': rf,
                                     'pipeline': pipe_rf,
                                     'type': 'random forest regressor',
-                                    'metric': self.metric}
+                                    'metric': self.metric}#,
+                                    #'ci': ci}
 
         if 'mlp' in self.algo_config:  # MULTI-LAYER PERCEPTRON
             
@@ -598,14 +1037,13 @@ class AlgoTrainEval:
                                      'type': 'multi-layer perceptron regressor',
                                      'metric': self.metric}
 
-   
     def train_algos_grid_search(self):
         """Train algorithms using GridSearchCV based on the algo config file.
         
-        Algorithm options include the following:
-        
-            - `rf` for :class:`sklearn.ensemble.RandomForestRegressor`
-            - `mlp` for :class:`sklearn.neural_network.MLPRegressor`
+        .. note::
+            Algorithm options include the following:
+                - `rf` for :class:`sklearn.ensemble.RandomForestRegressor`
+                - `mlp` for :class:`sklearn.neural_network.MLPRegressor`
         """
 
         if 'rf' in self.algo_config_grid:  # RANDOM FOREST
@@ -614,17 +1052,21 @@ class AlgoTrainEval:
             rf = RandomForestRegressor(oob_score=True, random_state=self.rs)
             # TODO move into main Param dict
             param_grid_rf = {
-                'randomforestregressor__n_estimators': self.algo_config_grid['rf'].get('n_estimators', [100, 200, 300])
+                'randomforestregressor__n_estimators': self.algo_config_grid['rf'].get('n_estimators', [100, 200, 300]),
+                'randomforestregressor__max_depth': self.algo_config_grid['rf'].get('max_depth', [None,10, 20, 30]), 
+                'randomforestregressor__min_samples_leaf': self.algo_config_grid['rf'].get('min_samples_leaf', [1, 2, 4]),
+                'randomforestregressor__min_samples_split': self.algo_config_grid['rf'].get('min_samples_split', [2, 5, 10])
             }
             pipe_rf = make_pipeline(rf)
             grid_rf = GridSearchCV(pipe_rf, param_grid_rf, cv=5, scoring='neg_mean_absolute_error', n_jobs=-1)
+            
             grid_rf.fit(self.X_train, self.y_train)
             self.algs_dict['rf'] = {'algo': grid_rf.best_estimator_.named_steps['randomforestregressor'],
                                     'pipeline': grid_rf.best_estimator_,
                                     'gridsearchcv': grid_rf,
                                     'type': 'random forest regressor',
                                     'metric': self.metric}
-
+        
         if 'mlp' in self.algo_config_grid:  # MULTI-LAYER PERCEPTRON
             if self.verbose:
                 print(f"      Performing Multilayer Perceptron Training with Grid Search")
@@ -692,7 +1134,7 @@ class AlgoTrainEval:
         return self.eval_dict
 
     def save_algos(self):
-        """ Write pipeline to file & record save path in `algs_dict['loc_pipe']`
+        """ Write pipeline to file & record save path in `algs_dict['file_pipe']`
 
         """
         
@@ -703,9 +1145,10 @@ class AlgoTrainEval:
             path_algo = std_algo_path(self.dir_out_alg_ds, algo, self.metric, self.dataset_id)
             # basename_alg_ds_metr = f'algo_{algo}_{self.metric}__{self.dataset_id}'
             # path_algo = Path(self.dir_out_alg_ds) / Path(basename_alg_ds_metr + '.joblib')
+            
             # write trained algorithm
             joblib.dump(self.algs_dict[algo]['pipeline'], path_algo)
-            self.algs_dict[algo]['loc_pipe'] = str(path_algo)
+            self.algs_dict[algo]['file_pipe'] = str(path_algo.name)
    
     def org_metadata_alg(self):
         """Must be called after running AlgoTrainEval.save_algos(). Records saved location of trained algorithm
@@ -717,10 +1160,10 @@ class AlgoTrainEval:
         self.eval_df['dataset'] = self.dataset_id
 
         # Assign the locations where algorithms were saved
-        self.eval_df['loc_pipe'] = [self.algs_dict[alg]['loc_pipe'] for alg in self.algs_dict.keys()] 
+        self.eval_df['file_pipe'] = [self.algs_dict[alg]['file_pipe'] for alg in self.algs_dict.keys()] 
         self.eval_df['algo'] = self.eval_df.index
         self.eval_df = self.eval_df.reset_index()
-    
+
     def train_eval(self):
         """ The overarching train, test, evaluation wrapper that also saves algorithms and evaluation results
 
@@ -739,7 +1182,7 @@ class AlgoTrainEval:
         if self.algo_config: # Just run a single simulation for these algos
             self.train_algos()
 
-        # Make predictions  # 
+        # Make predictions  (aka validation) 
         self.predict_algos()
 
         # Evaluate predictions; returns self.eval_dict
@@ -750,4 +1193,793 @@ class AlgoTrainEval:
 
         # Generate metadata dataframe
         self.org_metadata_alg() # Must be called after save_algos()
+
+###############################################################################
+###############################################################################
+###############################################################################
+# %% DATASERT CORRELATION ANALYSIS
+def plot_corr_mat(df_X: pd.DataFrame,
+                title='Feature Correlation Matrix'
+                ) -> matplotlib.figure.Figure:
+    """Generate a plot of the correlation matrix
+
+    :param df_X: The dataset dataframe
+    :type df_X: pd.DataFrame
+    :param title: Plot title, defaults to 'Feature Correlation Matrix'
+    :type title: str, optional
+    :return: The correlation matrix figure
+    :rtype: matplotlib.figure.Figure
+    """
+    # Calculate the correlation matrix
+    df_corr = df_X.corr()
+
+    #  Plot the correlation matrix
+    plt.figure(figsize=(10,8))
+    sns.heatmap(df_corr, annot=True, cmap ='coolwarm',linewidths=0.5, fmt='.2f')
+    plt.title(title)
+
+    fig = plt.gcf()
+    return fig
+
+def std_corr_mat_plot_path(dir_out_viz_base: str | os.PathLike,
+                            ds: str
+                            ) -> pathlib.PosixPath:
+    """Standardize the filepath for saving correlation matrix above a threshold
+
+    :param dir_out_viz_base: The base visualization output directory
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The dataset name
+    :type ds: str
+    :return: The correlation matrix filepath
+    :rtype: pathlib.PosixPath
+    """
+    path_corr_mat = Path(f"{dir_out_viz_base}/{ds}/correlation_matrix_{ds}.png")
+    path_corr_mat.parent.mkdir(parents=True,exist_ok=True)
+    return path_corr_mat
+
+def plot_corr_mat_save_wrap(df_X:pd.DataFrame, title:str,
+                            dir_out_viz_base:str | os.PathLike,
+                            ds:str)-> matplotlib.figure.Figure:
+    """Wrapper to plot and save the dataset correlation matrix
+
+    :param df_X: The full dataset of interest, e.g. used for training/validation
+    :type df_X: pd.DataFrame
+    :param title: Title to place in the correlation matrix plot
+    :type title: str
+    :param dir_out_viz_base: base directory for saving visualization
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The dataset name to use in plot title and filename
+    :type ds: str
+    :return: The correlation matrix plot
+    :rtype: matplotlib.figure.Figure
+    """
+    fig_corr_mat = plot_corr_mat(df_X, title)
+    path_corr_mat = std_corr_mat_plot_path(dir_out_viz_base,ds)
+    fig_corr_mat.savefig(path_corr_mat)
+    print(f"Wrote the {ds} dataset correlation matrix to:\n{path_corr_mat}")
+    return fig_corr_mat
+
+def std_corr_path(dir_out_anlys_base: str|os.PathLike, ds:str,
+                   cstm_str:str=None) -> pathlib.PosixPath:
+    """Standardize the filepath that saves correlated attributes
+
+    :param dir_out_anlys_base: The standardized analysis output directory
+    :type dir_out_anlys_base: str | os.PathLike
+    :param ds: the dataset name
+    :type ds: str
+    :param cstm_str: The option to add in a custom string such as the correlation threshold, defaults to None
+    :type cstm_str: str, optional
+    :return: Full filepath for saving correlated attributes table
+    :rtype: pathlib.PosixPath
+    """
+    # TODO generate a file of the correlated attributes:
+    if cstm_str:
+        path_corr_attrs = Path(f"{dir_out_anlys_base}/{ds}/correlated_attrs_{ds}_{cstm_str}.csv")
+    else:
+        path_corr_attrs = Path(f"{dir_out_anlys_base}/{ds}/correlated_attrs_{ds}.csv")
+    path_corr_attrs.parent.mkdir(parents=True,exist_ok=True)
+    return path_corr_attrs
+
+def corr_attrs_thr_table(df_X:pd.DataFrame, 
+                        corr_thr:float = 0.8) -> pd.DataFrame:
+    """Create a table of correlated attributes exceeding a threshold, with correlation values
+
+    :param df_X: The attribute dataset
+    :type df_X: pd.DataFrame
+    :param corr_thr: The correlation threshold, between 0 & 1. Absolute values above this should be reduced, defaults to 0.8
+    :type corr_thr: float, optional
+    :return: The table of attribute pairings whose absolute correlations exceed a threshold
+    :rtype: pd.DataFrame
+    """
+    df_corr = df_X.corr()
+
+    # TODO Change code to selecting upper triangle of correlation matrix
+    upper = df_corr.abs().where(np.triu(np.ones(df_corr.shape), k=1).astype(bool))
+
+    # Find attributes with correlation greater than a certain threshold
+    row_idx, col_idx = np.where(df_corr.abs() > corr_thr)
+    df_corr_rslt = pd.DataFrame({'attr1': df_corr.columns[row_idx],
+                'attr2': df_corr.columns[col_idx],
+                'corr' : [df_corr.iat[row, col] for row, col in zip(row_idx, col_idx)]
+                })
+    # Remove the identical attributes
+    df_corr_rslt = df_corr_rslt[df_corr_rslt['attr1']!= df_corr_rslt['attr2']].drop_duplicates()
+    return df_corr_rslt
+
+def write_corr_attrs_thr(df_corr_rslt:pd.DataFrame,path_corr_attrs: str | os.PathLike):
+    """Wrapper to generate high correlation pairings table and write to file
+
+    :param df_corr_rslt: _description_
+    :type df_corr_rslt: pd.DataFrame
+    :param path_corr_attrs: csv write path
+    :type path_corr_attrs: str | os.PathLike
+    """
+
+    df_corr_rslt.to_csv(path_corr_attrs) # INSPECT THIS FILE 
+    print(f"Wrote highly correlated attributes to {path_corr_attrs}")
+    print("The user may now inspect the correlated attributes and make decisions on which ones to exclude")
+
+def corr_thr_write_table_wrap(df_X:pd.DataFrame,dir_out_anlys_base:str|os.PathLike,
+                              ds:str,corr_thr:float=0.8)->pd.DataFrame:
+    """Wrapper to generate high correlation pairings table above an absolute threshold of interest and write to file
+    
+    :param df_X: The attribute dataset
+    :type df_X: pd.DataFrame
+    :param dir_out_anlys_base: The standard analysis directory
+    :type path_corr_attrs: str | os.PathLike
+    :param ds: The dataset name
+    :type ds: str
+    :param corr_thr: The correlation threshold, between 0 & 1. Absolute values above this detected, defaults to 0.8
+    :type corr_thr: float, optional
+    :return: The table of attribute pairings whose absolute correlations exceed a threshold
+    :rtype: pd.DataFrame
+    """
+    # Generate the paired table of attributes correlated above an absolute threshold
+    df_corr_rslt = corr_attrs_thr_table(df_X,corr_thr)
+    path_corr_attrs_cstm = std_corr_path(dir_out_anlys_base=dir_out_anlys_base,
+                                          ds=ds,
+                                         cstm_str=f'thr{corr_thr}') 
+    write_corr_attrs_thr(df_corr_rslt,path_corr_attrs_cstm)
+    return df_corr_rslt
+#%% PRINCIPAL COMPONENT ANALYSIS
+def pca_stdscaled_tfrm(df_X:pd.DataFrame, 
+                       std_scale:bool=True
+                       )->PCA:
+    """Generate the PCA object, and perform a standardized scaler transformation if desired
+
+    :param df_X: Dataframe of attribute data
+    :type df_X: pd.DataFrame
+    :param std_scale: Should the data be standard scaled?, defaults to True
+    :type std_scale: bool, optional
+    :return: The principal components analysis object
+    :rtype: PCA
+    """
+    
+    # Fit using the scaled data
+    if std_scale:
+        scaler = StandardScaler().fit(df_X)
+        df_X_scaled = pd.DataFrame(scaler.transform(df_X), index=df_X.index.values, columns=df_X.columns.values)
+    else:
+        df_X_scaled = df_X.copy()
+    pca_scaled = PCA()
+    pca_scaled.fit(df_X_scaled)
+    #cpts_scaled = pd.DataFrame(pca.transform(df_X_scaled))
+
+    return pca_scaled
+
+def plot_pca_stdscaled_tfrm(pca_scaled:PCA, 
+                            title:str = 'Explained Variance Ratio by Principal Component',
+                            std_scale:bool=True)-> matplotlib.figure.Figure:
+    """Generate variance explained by PCA plot
+
+    :param pca_scaled:  The PCA object generated from dataset
+    :type pca_scaled: PCA
+    :param title: plot title, defaults to 'Explained Variance Ratio by Principal Component'
+    :type title: str, optional
+    :param std_scale: Have the data been standardized,, defaults to True
+    :type std_scale: bool, optional
+    :return: Plot of the variance explained by PCA
+    :rtype: matplotlib.figure.Figure
+    """
+    
+    if std_scale:
+        xlabl = 'Principal Component of Standardized Data'
+    else:
+        xlabl = 'Principal Component'
+    # Create the plot for explained variance ratio
+    x_axis = np.arange(1, pca_scaled.n_components_ + 1)
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_axis, pca_scaled.explained_variance_ratio_, marker='o', linestyle='--', color='b')
+    plt.xlabel(xlabl)
+    plt.ylabel('Explained Variance Ratio')
+    plt.title(title)
+    plt.xticks(x_axis)
+    plt.grid(True)
+
+    fig = plt.gcf()
+    return fig
+
+def plot_pca_stdscaled_cumulative_var(pca_scaled:PCA, 
+                                      title='Cumulative Proportion of Variance Explained vs Principal Components',
+                                      std_scale:bool=True) -> matplotlib.figure.Figure:
+    """Generate cumulative variance PCA plot
+
+    :param pca_scaled: The PCA object
+    :type pca_scaled: PCA
+    :param title: plot title, defaults to 'Cumulative Proportion of Variance Explained vs Principal Components'
+    :type title: str, optional
+    :param std_scale: Have the data been standardized, defaults to True
+    :type std_scale: bool, optional
+    :return: Plot of the cumulative PCA variance
+    :rtype: matplotlib.figure.Figure
+    """
+    if std_scale:
+        xlabl = 'Principal Component of Standardized Data'
+    else:
+        xlabl = 'Principal Component'
+
+    # Calculate the cumulative variance explained
+    cumulative_variance_explained = np.cumsum(pca_scaled.explained_variance_ratio_)
+    x_axis = np.arange(1, pca_scaled.n_components_ + 1)
+
+    # Create the plot for cumulative proportion of variance explained
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_axis, cumulative_variance_explained, marker='o', linestyle='-', color='b')
+    plt.xlabel(xlabl)
+    plt.ylabel('Cumulative Proportion of Variance Explained')
+    plt.title(title)
+    plt.xticks(x_axis)
+    plt.grid(True)
+
+    fig = plt.gcf()
+    return fig 
+
+
+def std_pca_plot_path(dir_out_viz_base: str|os.PathLike,
+                      ds:str, cstm_str:str=None
+                      ) -> pathlib.PosixPath:
+    """Standardize the filepath for saving principal component analysis plots
+
+    :param dir_out_viz_base: The base visualization output directory
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The dataset name
+    :type ds: str
+    :param cstm_str: The option to add in a custom string such as the plot type, defaults to None, defaults to None
+    :type cstm_str: str, optional
+    :return: The PCA plot filepath
+    :rtype: pathlib.PosixPath
+    """
+    if cstm_str:
+        path_pca_plot = Path(f"{dir_out_viz_base}/{ds}/correlation_matrix_{ds}_{cstm_str}.png")
+    else:
+        path_pca_plot = Path(f"{dir_out_viz_base}/{ds}/correlation_matrix_{ds}.png")
+    path_pca_plot.parent.mkdir(parents=True,exist_ok=True)
+
+    return path_pca_plot
+
+
+def plot_pca_save_wrap(df_X:pd.DataFrame, 
+                        dir_out_viz_base:str|os.PathLike,
+                        ds:str, 
+                        std_scale:bool=True)->PCA:
+    """Wrapper function to generate PCA plots on dataset
+
+    :param df_X: The attribute dataset of interest
+    :type df_X: pd.DataFrame
+    :param dir_out_viz_base: Standardized output directory for visualization
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The dataset name
+    :type ds: str
+    :param std_scale: Should dataset be standardized using StandardScaler, defaults to True
+    :type std_scale: bool, optional
+    :return: The principal components analysis object
+    :rtype: PCA
+    """
+    # CREATE THE EXPLAINED VARIANCE RATIO PLOT
+    cstm_str = ''
+    if std_scale:
+        cstm_str = 'std_scaled'
+    pca_scaled = pca_stdscaled_tfrm(df_X,std_scale)
+    fig_pca_stdscale = plot_pca_stdscaled_tfrm(pca_scaled)
+    path_pca_stdscaled_fig = std_pca_plot_path(dir_out_viz_base,ds,cstm_str=cstm_str)
+    fig_pca_stdscale.savefig(path_pca_stdscaled_fig)
+    print(f"Wrote the {ds} PCA explained variance ratio plot to\n{path_pca_stdscaled_fig}")
+    plt.clf()
+    plt.close()
+    # CREATE THE CUMULATIVE VARIANCE PLOT
+    cstm_str_cum = 'cumulative_var'
+    if std_scale:
+        cstm_str_cum = 'cumulative_var_std_scaled'
+    path_pca_stdscaled_cum_fig = std_pca_plot_path(dir_out_viz_base,ds,cstm_str=cstm_str_cum)
+    fig_pca_cumulative = plot_pca_stdscaled_cumulative_var(pca_scaled)
+    fig_pca_cumulative.savefig(path_pca_stdscaled_cum_fig)
+    print(f"Wrote the {ds} PCA cumulative variance explained plot to\n{path_pca_stdscaled_cum_fig}")
+    plt.clf()
+    plt.close()
+    return None
+
+# %% RANDOM-FOREST FEATURE IMPORTANCE
+def _extr_rf_algo(train_eval:AlgoTrainEval)->RandomForestRegressor:
+    """Extract random forest from the algs_dict created by AlgoTrainEval class
+
+    :param train_eval: The instantiated & processed AlgoTrainEval object
+    :type train_eval: AlgoTrainEval
+    :return: The trained random forest algorithm
+    :rtype: RandomForestRegressor
+    """
+    if 'rf' in train_eval.algs_dict.keys():
+        rfr = train_eval.algs_dict['rf']['algo']
+    else:
+        print("Trained random forest object 'rf' non-existent in the provided AlgoTrainEval class object.",
+              "Check to make sure the algo processing config file creates a random forest. Then make sure the ")
+        rfr = None
+    return rfr
+
+def std_feat_imp_plot_path(dir_out_viz_base:str|os.PathLike, ds:str,
+                            metr:str) -> pathlib.PosixPath:
+    """Generate a filepath of the feature_importance plot:
+
+    :param dir_out_viz_base: The standard output base directory for visualizations
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable of interest
+    :type metr: str
+    :return: The path to the random forest feature importance plot as a .png
+    :rtype: pathlib.PosixPath
+    """
+    path_feat_imp_attrs = Path(f"{dir_out_viz_base}/{ds}/rf_feature_importance_{ds}_{metr}.png")
+    path_feat_imp_attrs.parent.mkdir(parents=True,exist_ok=True)
+    return path_feat_imp_attrs
+
+def plot_rf_importance(feat_imprt:np.ndarray,attrs:Iterable[str],
+                        title:str)->Figure:
+    """Generate the feature importance plot
+
+    :param feat_imprt: Feature importance array from `rfr.feature_importances_`
+    :type feat_imprt: np.ndarray
+    :param attrs: The catchment attributes of interest
+    :type attrs: Iterable[str]
+    :param title: The feature importance plot title
+    :type title: str
+    :return: The feature importance plot
+    :rtype: Figure
+    """
+    df_feat_imprt = pd.DataFrame({'attribute': attrs,
+                                'importance': feat_imprt}).sort_values(by='importance', ascending=False)
+    # Calculate the correlation matrix
+    plt.figure(figsize=(10,6))
+    plt.barh(df_feat_imprt['attribute'], df_feat_imprt['importance'])
+    plt.xlabel('Importance')
+    plt.ylabel('Attribute')
+    plt.title(title)
+
+    fig = plt.gcf()
+    return fig
+
+def save_feat_imp_fig_wrap(rfr:RandomForestRegressor,
+                           attrs: Iterable[str],
+                           dir_out_viz_base:str|os.PathLike,
+                           ds:str,metr:str):
+    """Wrapper to generate & save to file the feature importance plot
+
+    :param rfr: The trained random forest regressor object
+    :type rfr: RandomForestRegressor
+    :param attrs: The attributes 
+    :type attrs: Iterable[str]
+    :param dir_out_viz_base: _description_
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable of interest
+    :type metr: str
+    """
+    feat_imprt = rfr.feature_importances_
+    title_rf_imp = f"Random Forest feature importance of {metr}: {ds}"
+    fig_feat_imp = plot_rf_importance(feat_imprt, attrs=attrs, title= title_rf_imp)
+
+    path_fig_imp = std_feat_imp_plot_path(dir_out_viz_base,
+                                          ds,metr)
+
+    fig_feat_imp.savefig(path_fig_imp)
+    print(f"Wrote feature importance plot to {path_fig_imp}")
+    plt.clf()
+    plt.close()
+
+
+# %% Algorithm evaluation: learning curve, plotting
+def std_lc_plot_path(dir_out_viz_base: str|os.PathLike,
+                      ds:str, metr:str, algo_str:str
+                      ) -> pathlib.PosixPath:
+
+    path_lc_plot = Path(f"{dir_out_viz_base}/{ds}/learning_curve_{ds}_{metr}_{algo_str}.png")
+    path_lc_plot.parent.mkdir(parents=True,exist_ok=True)
+    return path_lc_plot
+
+class AlgoEvalPlotLC:
+    def __init__(self,X,y):
+        # The entire dataset of predictors/response    
+        self.X = X
+        self.y = y
+
+        # Initialize Learning curve objects
+        self.train_sizes_lc = np.empty(1)
+        self.train_scores_lc = np.empty(1)
+        self.valid_scores_lc = np.empty(1)
+
+
+    def gen_learning_curve(self,model, cv = 5,n_jobs=-1,
+                            train_sizes =np.linspace(0.1, 1.0, 10),
+                            scoring = 'neg_mean_squared_error'
+                            ):
         
+        # Generate learning curve data
+        self.train_sizes_lc, self.train_scores_lc, self.valid_scores_lc = learning_curve(
+            model, self.X, self.y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes, 
+            scoring=scoring
+        )
+
+        # Calculate mean and standard deviation
+        self.train_mean_lc = np.mean(-self.train_scores_lc, axis=1)  # Negate to get positive MSE
+        self.train_std_lc = np.std(-self.train_scores_lc, axis=1)
+        self.valid_mean_lc = np.mean(-self.valid_scores_lc, axis=1)
+        self.valid_std_lc = np.std(-self.valid_scores_lc, axis=1)
+
+    def plot_learning_curve(self,ylabel_scoring:str = "Mean Squared Error (MSE)",
+                            title:str='Learning Curve',
+                            training_uncn:bool = False) -> matplotlib.figure.Figure:
+        # GENERATE LEARNING CURVE FIGURE 
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.train_sizes_lc, self.train_mean_lc, 'o-', label='Training error')
+        plt.plot(self.train_sizes_lc, self.valid_mean_lc, 'o-', label='Cross-validation error')
+        if training_uncn:
+            plt.fill_between(self.train_sizes_lc, self.train_mean_lc - self.train_std_lc, self.train_mean_lc + self.train_std_lc, alpha=0.1, color="r", label='Training uncertainty')
+        plt.fill_between(self.train_sizes_lc, self.valid_mean_lc - self.valid_std_lc, self.valid_mean_lc + self.valid_std_lc, alpha=0.1, color="g", label='Cross-validation uncertainty')
+        plt.xlabel('Training Size', fontsize = 18)
+        plt.ylabel(ylabel_scoring, fontsize = 18)
+        plt.title(title)
+        plt.legend(loc='best',fontsize=15)
+        plt.grid(True)
+
+        # Adjust tick parameters for larger font size 
+        plt.tick_params(axis='both', which='major', labelsize=15)
+        plt.tick_params(axis='both', which='minor', labelsize=15)
+
+        fig = plt.gcf()
+        return fig
+    
+    def extr_modl_algo_train(self, train_eval:AlgoTrainEval):
+        modls = list(train_eval.algs_dict.keys())
+
+        for k, v in train_eval.algs_dict.items():
+            v['algo']
+
+def plot_learning_curve_save_wrap(algo_plot:AlgoEvalPlotLC, train_eval:AlgoTrainEval, 
+                            dir_out_viz_base:str|os.PathLike,
+                            ds:str,
+                            cv:int = 5,n_jobs:int=-1,
+                            train_sizes = np.linspace(0.1, 1.0, 10),
+                            scoring:str = 'neg_mean_squared_error',
+                            ylabel_scoring:str = "Mean Squared Error (MSE)",
+                            training_uncn:bool = False
+                            ):
+    """Wrapper to generate & write learning curve plots forsklearn ML algorithms
+
+    :param algo_plot: The initialized AlgoEvalPlotLC object with the full predictor matrix and response variable values
+    :type algo_plot: AlgoEvalPlotLC
+    :param train_eval: The initialized AlgoTrainEval class object
+    :type train_eval: AlgoTrainEval
+    :param dir_out_viz_base: The base directory for saving plots
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The unique dataset name
+    :type ds: str
+    :param cv: The number of folds in a K-fold cross validation, defaults to 5
+    :type cv: int, optional
+    :param n_jobs: The number of parallel jobs, defaults to -1 for using all available cores
+    :type n_jobs: int, optional
+    :param train_sizes: Relative or absolute numbers of training examples that will be used 
+      to generate the learning curve, defaults to np.linspace(0.1, 1.0, 10)
+    :type train_sizes: array-like, optional
+    :param scoring: A str or a scorrer collable object/function, defaults to 'neg_mean_squared_error'
+    :type scoring: str, optional
+    :param ylabel_scoring: Learning curve plot's y-axis label representing scoring metric, defaults to "Mean Squared Error (MSE)"
+    :type ylabel_scoring: str, optional
+    :param training_uncn: Should training uncertainty be represented as a shaded object?, defaults to False
+    :type training_uncn: bool, optional
+
+    """
+    algs_dict = train_eval.algs_dict
+    eval_dict = train_eval.eval_dict
+
+    # Looping over e/ algo inside algs_dict from AlgoTrainEval.train_eval
+    for algo_str, val in algs_dict.items():
+        best_algo = val['pipeline']
+        metr = eval_dict[algo_str]['metric']
+        full_algo_str = eval_dict[algo_str]['type'].title()
+
+        # Generate custom plot title
+        cstm_title = f'{full_algo_str} Learning Curve: {metr} - {ds}'
+        algo_str = f'{algo_str}' # Custom filepath string (e.g. 'rf', 'mlp')
+        
+        # Generate learning curve data
+        algo_plot.gen_learning_curve(model=best_algo, cv=cv,n_jobs=n_jobs,
+                            train_sizes =train_sizes,scoring=scoring)
+        # Create learning curve figure
+        fig_lc = algo_plot.plot_learning_curve(ylabel_scoring=ylabel_scoring,
+                            title=cstm_title,training_uncn=training_uncn)
+        # Standardize filepath to learning curve
+        path_plot_lc = std_lc_plot_path(dir_out_viz_base, ds, metr, algo_str = algo_str)
+    
+        fig_lc.savefig(path_plot_lc)
+
+        plt.clf()
+        plt.close()
+
+# %% Regression of Prediction vs Observation, adapted from plot in bolotinl's fs_perf_viz.py
+def std_regr_pred_obs_path(dir_out_viz_base:str|os.PathLike, ds:str,
+                            metr:str,algo_str:str,
+                            split_type:str='') -> pathlib.PosixPath:
+    """Generate a filepath of the predicted vs observed regresion plot
+
+    :param dir_out_viz_base: The base directory for saving plots
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable of interest
+    :type metr: str
+    :param algo_str: The type of algorithm used to create predictions
+    :type algo_str: str
+    :param split_type: The type of data being displayed (e.g. training, testing), defaults to ''
+    :type split_type: str, optional
+    :return: The path to save the regression of predicted vs observed values.
+    :rtype: pathlib.PosixPath
+    """
+
+    path_regr_pred_plot = Path(f"{dir_out_viz_base}/{ds}/regr_pred_obs_{ds}_{metr}_{algo_str}_{split_type}.png")
+    path_regr_pred_plot.parent.mkdir(parents=True,exist_ok=True)
+    return path_regr_pred_plot
+
+def plot_pred_vs_obs_regr(y_pred: np.ndarray, y_obs: np.ndarray, ds:str, metr:str)->Figure:
+    """Plot the observed vs. predicted module performance
+
+    :param y_pred: The predicted response variable
+    :type y_pred: np.ndarray
+    :param y_obs: The observed response variable
+    :type y_obs: np.ndarray
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable name of interest
+    :type metr: str
+    :return: THe predicted vs observed regression plot
+    :rtype: Figure
+    """
+    # Adapted from plot in bolotinl's fs_perf_viz.py
+    plt.scatter(x=y_obs,y=y_pred)
+    plt.axline((0, 0), (1, 1), color='black', linestyle='--')
+    plt.ylabel('Predicted {}'.format(metr))
+    plt.xlabel('Actual {}'.format(metr))
+    plt.title('Observed vs. RaFTS Predicted Performance: {}'.format(ds))
+    fig = plt.gcf()
+    return fig
+
+def plot_pred_vs_obs_wrap(y_pred: np.ndarray, y_obs:np.ndarray, dir_out_viz_base:str|os.PathLike,
+                           ds:str, metr:str, algo_str:str, split_type:str=''):
+    """Wrapper to create & save predicted vs. observed regression plot
+
+    :param y_pred: The predicted response variable
+    :type y_pred: np.ndarray
+    :param y_obs: The observed response variable
+    :type y_obs: np.ndarray
+    :param dir_out_viz_base: The base directory for saving plots
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable name of interest
+    :type metr: str
+    :param algo_str: The type of algorithm used to create predictions
+    :type algo_str: str
+    :param split_type: The type of data being displayed (e.g. training, testing), defaults to ''
+    :type split_type: str, optional
+    """
+    # Generate figure
+    fig_regr = plot_pred_vs_obs_regr(y_pred, y_obs, ds, metr)
+    # Generate filepath for saving figure
+    path_regr_plot = std_regr_pred_obs_path(dir_out_viz_base, ds,
+                            metr,algo_str,split_type)
+    # Save the plot as a .png file
+    fig_regr.savefig(path_regr_plot, dpi=300, bbox_inches='tight')
+    plt.clf()
+    plt.close()
+
+#%% Prediction map visualization, adapted from plot in bolotinl's fs_perf_viz.py
+def std_map_pred_path(dir_out_viz_base:str|os.PathLike, ds:str,
+                      metr:str,algo_str:str,
+                      split_type:str='') -> pathlib.PosixPath:
+    """Generate a filepath of the predicted response variables map:
+
+    :param dir_out_viz_base: The base directory for saving plots
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable name of interest
+    :type metr: str
+    :param algo_str: The type of algorithm used to create predictions
+    :type algo_str: str
+    :param split_type: The type of data being displayed (e.g. training, testing), defaults to ''
+    :type split_type: str, optional
+    :return: _description_
+    :rtype: pathlib.PosixPath
+    """
+    
+    # 
+    path_pred_map_plot = Path(f"{dir_out_viz_base}/{ds}/prediction_map_{ds}_{metr}_{algo_str}_{split_type}.png")
+    path_pred_map_plot.parent.mkdir(parents=True,exist_ok=True)
+    return path_pred_map_plot
+
+def gen_conus_basemap(dir_out_basemap:str | os.PathLike, # This should be the data_visualizations directory
+                    url:str = 'https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_state_500k.zip',
+                    fn_basemap:str='cb_2018_us_state_500k.shp') -> gpd.geodataframe.GeoDataFrame:
+    """Retrieve the basemap for CONUS
+
+    :param dir_out_basemap: The standard directory for saving the CONUS basemap
+    :type dir_out_basemap: str | os.PathLike
+    :param url: The url of a basemap of interest
+    :type url: str
+    :param fn_basemap: The filename to use for saving basemap, defaults to 'cb_2018_us_state_500k.shp'
+    :type fn_basemap: str, optional
+    :return: The geopandas dataframe of the basemap
+    :rtype: gpd.geodataframe.GeoDataFrame
+    """
+    url = 'https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_state_500k.zip'
+    path_zip_basemap = f'{dir_out_basemap}/cb_2018_us_state_500k.zip'
+    path_shp_basemap = f'{dir_out_basemap}/{fn_basemap}'
+
+    if not Path(path_zip_basemap).exists():
+        print('Downloading shapefile...')
+        urllib.request.urlretrieve(url, path_zip_basemap)
+    if not Path(path_shp_basemap).exists():
+        with zipfile.ZipFile(path_zip_basemap, 'r') as zip_ref:
+            zip_ref.extractall(f'{path_shp_basemap}')
+
+    states = gpd.read_file(path_shp_basemap)
+    states = states.to_crs("EPSG:4326")
+    return states
+    
+def plot_map_pred(geo_df:gpd.GeoDataFrame, states,title:str,metr:str,
+                  colname_data:str='performance'):
+    """Genereate a map of predicted response variables
+
+    :param geo_df: Geodataframe of response variable results
+    :type geo_df: gpd.GeoDataFrame
+    :param states: The states basemap
+    :type states: gpd.GeoDataFrame
+    :param title: Map title
+    :type title: str
+    :param metr: The metric/response variable of interest
+    :type metr: str
+    :param colname_data: The geo_df column name representing data of interest, defaults to 'performance'
+    :type colname_data: str, optional
+    :return: Map of predicted response variables
+    :rtype: Figure
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(20, 24))
+    base = states.boundary.plot(ax=ax,color="#555555", linewidth=1)
+    # Points
+    geo_df.plot(column=colname_data, ax=ax, markersize=150, cmap='viridis', legend=False, zorder=2) # delete zorder to plot points behind states boundaries
+    # States
+    states.boundary.plot(ax=ax, color="#555555", linewidth=1, zorder=1)  # Plot states boundary again with lower zorder
+    
+    # TODO: need to customize the colorbar min and max based on the metric
+    ## cbar = plt.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0,vmax = 1), cmap='viridis')
+    cbar = plt.cm.ScalarMappable(cmap='viridis')
+    ax.tick_params(axis='x', labelsize= 24)
+    ax.tick_params(axis='y', labelsize= 24)
+    plt.xlabel('Latitude',fontsize = 26)
+    plt.ylabel('Longitude',fontsize = 26)
+    cbar_ax = plt.colorbar(cbar, ax=ax,fraction=0.02, pad=0.04)
+    cbar_ax.set_label(label=metr,size=24)
+    cbar_ax.ax.tick_params(labelsize=24)  # Set colorbar tick labels size
+    plt.title(title, fontsize = 28)
+    ax.set_xlim(-126, -66)
+    ax.set_ylim(24, 50)
+    fig = plt.gcf()
+    return fig
+
+def plot_map_pred_wrap(test_gdf,dir_out_viz_base, ds,
+                      metr,algo_str,
+                      split_type='test',
+                      colname_data='performance'):
+
+    path_pred_map_plot = std_map_pred_path(dir_out_viz_base,ds,metr,algo_str,split_type)
+    dir_out_basemap = path_pred_map_plot.parent.parent
+    states = gen_conus_basemap(dir_out_basemap = dir_out_basemap)
+
+    # Ensure the gdf matches the 4326 epsg used for states:
+    test_gdf = test_gdf.to_crs(4326)
+
+    # Generate the map
+    plot_title = f"Predicted Performance: {metr} - {ds}"
+    plot_pred_map = plot_map_pred(geo_df=test_gdf, states=states,title=plot_title,
+                                  metr=metr,colname_data=colname_data)
+
+    # Save the plot as a .png file
+    plot_pred_map.savefig(path_pred_map_plot, dpi=300, bbox_inches='tight')
+    print(f"Wrote performance map to \n{path_pred_map_plot}")
+    plt.clf()
+    plt.close()
+
+# %% Best performance intercomparison
+def plot_best_perf_map(geo_df,states, title, comparison_col = 'dataset'):
+
+    """Generate a map of the best-predicted response variables as determined from multiple datasets
+
+    :param geo_df: Geodataframe of response variable results
+    :type geo_df: gpd.GeoDataFrame
+    :param states: The states basemap
+    :type states: gpd.GeoDataFrame
+    :param title: Map title
+    :type title: str
+    :param comparison_col: The geo_df column name representing data of interest, defaults to 'performance'
+    :type comparison_col: str, optional
+    :return: Map of best-predicted response variables
+    :rtype: Figure
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(20, 24))
+    base = states.boundary.plot(ax=ax, color="#555555", linewidth=1)
+
+
+    # Plot points based on the 'best_algo' column
+    geo_df.plot(column=comparison_col, ax=ax, markersize=150, cmap='viridis', legend=True,zorder=2)
+
+    # Plot states boundary again with lower zorder
+    states.boundary.plot(ax=ax, color="#555555", linewidth=1, zorder=1)
+
+    # Set title and axis limits
+    plt.title(title, fontsize=28)
+    ax.set_xlim(-126, -66)
+    ax.set_ylim(24, 50)
+
+    # Customize the legend, specifically for the geo_df plot
+    legend = ax.get_legend()
+    if legend:
+        legend.set_title("Formulations", prop={'size': 20})
+        for text in legend.get_texts():
+            text.set_fontsize(20)
+
+    fig = plt.gcf()
+    return fig
+
+def std_map_best_path(dir_out_viz_base:str|os.PathLike,metr:str,ds:str
+                      )->pathlib.PosixPath:
+    """# Generate a filepath of the best-performing dataset map:
+
+    :param dir_out_viz_base: _description_
+    :type dir_out_viz_base: str | os.PathLike
+    :param metr: The metric/response variable of interest
+    :type metr: str
+    :param ds: The unique dataset of interest
+    :type ds: str
+    :return: Path to the map figure in png
+    :rtype: pathlib.PosixPath
+    """
+    
+    path_best_map_plot = Path(f"{dir_out_viz_base}/{ds}/performance_map_best_formulation_{metr}.png")
+    path_best_map_plot.parent.mkdir(parents=True,exist_ok=True)
+    return path_best_map_plot
+
+
+def plot_best_algo_wrap(geo_df, dir_out_viz_base,subdir_anlys, metr,comparison_col = 'dataset'):
+    """Generate the map of the best performance across each formulation
+
+    note:: saves the plot inside the directory {ds}
+    """
+    path_best_map_plot = std_map_best_path(dir_out_viz_base,metr,subdir_anlys)
+    states = gen_conus_basemap(dir_out_basemap = dir_out_viz_base)
+    title = f"Best predicted performance: {metr}"
+
+    plot_best_perf = plot_best_perf_map(geo_df, states,title, comparison_col)
+    plot_best_perf.savefig(path_best_map_plot, dpi=300, bbox_inches='tight')
+    print(f"Wrote best performance map to \n{path_best_map_plot}")
+
+    plt.clf()
+    plt.close()

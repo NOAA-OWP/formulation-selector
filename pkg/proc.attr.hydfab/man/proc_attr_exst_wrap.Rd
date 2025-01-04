@@ -4,11 +4,9 @@
 \alias{proc_attr_exst_wrap}
 \title{Existing attribute data checker}
 \usage{
-proc_attr_exst_wrap(comid, path_attrs, vars_ls, bucket_conn = NA)
+proc_attr_exst_wrap(path_attrs, vars_ls, bucket_conn = NA)
 }
 \arguments{
-\item{comid}{character class. The common identifier USGS location code for a surface water feature.}
-
 \item{path_attrs}{character. Path to attribute file data storage location}
 
 \item{vars_ls}{list. Variable names}
@@ -26,7 +24,7 @@ names that will be downloaded.
 }
 }
 \seealso{
-\code{\link[=proc_attr_wrap]{proc_attr_wrap()}}
+\link{proc_attr_wrap}
 }
 \author{
 Guy Litt \email{guy.litt@noaa.gov}

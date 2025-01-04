@@ -7,8 +7,8 @@
 proc_attr_usgs_nhd(comid, usgs_vars)
 }
 \arguments{
-\item{comid}{character class. The common identifier USGS location code for
-a surface water feature. May be multiple comids.}
+\item{comid}{character or numeric class. The common identifier USGS
+location code for a surface water feature. May be multiple comids.}
 
 \item{usgs_vars}{list class. The standardized names of NHDplus variables.}
 }
@@ -16,5 +16,5 @@ a surface water feature. May be multiple comids.}
 Retrieve USGS variables based on comid
 }
 \seealso{
-\code{nhdplusTools::get_characteristics_metadata() }
+\link[nhdplusTools:get_characteristics_metadata]{nhdplusTools::get_characteristics_metadata}
 }
