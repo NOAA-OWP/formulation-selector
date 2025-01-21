@@ -665,6 +665,11 @@ def _read_pred_comid(path_pred_locs: str | os.PathLike, comid_pred_col:str ) -> 
             comids_pred = pd.read_parquet(path_pred_locs)[comid_pred_col].drop_duplicates().values
         except:
             raise ValueError(f"Could not successfully read in {path_pred_locs} & select col {comid_pred_col}")
+    elif '.parquet' in Path(path_pred_locs).suffix:
+        try:
+            comids_pred = pd.read_parquet(path_pred_locs)[comid_pred_col].values
+        except:
+            raise ValueError(f"Could not successfully read in {path_pred_locs} & select col {comid_pred_col}")
     else:
         raise ValueError(f"NEED TO ADD CAPABILITY THAT HANDLES {Path(path_pred_locs).suffix} file extensions")
     comids_pred = [str(x) for x in comids_pred]
