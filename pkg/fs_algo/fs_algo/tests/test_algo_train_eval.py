@@ -31,14 +31,11 @@ import xarray as xr
 import os
 import numpy as np
 import forestci as fci
-<<<<<<< HEAD
 from scipy import stats as st
 from sklearn.utils import resample
 from sklearn.pipeline import Pipeline
 # from sklearn.linear_model import LinearRegression
 from mapie.regression import MapieRegressor
-=======
->>>>>>> fb095d0 (Ss test fci dev3 (#38))
 
 # %% UNIT TESTING FOR AttrConfigAndVars
 
@@ -312,22 +309,6 @@ class TestStdPredPath(unittest.TestCase):
         mock_exists.return_value = True
         result = fs_algo_train_eval.std_pred_path(dir_out, algo, metric, dataset_id)
 
-        mock_mkdir.assert_called_once_with(exist_ok=True, parents=True)
-        self.assertEqual(result, expected_path)
-
-class TestStdXtrainPath(unittest.TestCase):
-
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.exists')
-    def test_std_Xtrain_path(self, mock_exists, mock_mkdir):
-        dir_out_alg_ds = tempfile.gettempdir()
-        dataset_id = 'test_dataset'
-        expected_path = Path(dir_out_alg_ds) / 'Xtrain__test_dataset.csv'
-
-        # Mock the existence of the directory
-        mock_exists.return_value = True
-
-        result = fs_algo_train_eval.std_Xtrain_path(dir_out_alg_ds, dataset_id)
         mock_mkdir.assert_called_once_with(exist_ok=True, parents=True)
         self.assertEqual(result, expected_path)
 
@@ -880,77 +861,5 @@ class TestAlgoTrainEvalBasic(unittest.TestCase):
         # Check eval dataframe was created
         self.assertIsInstance(self.algo.eval_df, pd.DataFrame)
         self.assertFalse(self.algo.eval_df.empty)
-<<<<<<< HEAD
     
-=======
-
-
-class TestCalculateRfUncertainty(unittest.TestCase):
-
-    def setUp(self):
-        # Sample data for testing
-        data = {
-            'attr1': [1, 2, 3, 4, 5],
-            'attr2': [5, 4, 3, 2, 1],
-            'metric': [0.1, 0.9, 0.3, 0.1, 0.8]
-        }
-        self.df = pd.DataFrame(data)
-        self.attrs = ['attr1', 'attr2']
-        self.algo_config = {
-            'rf': [{'n_estimators': [10, 50]}],
-        }
-        self.dir_out_alg_ds = './'
-        self.dataset_id = 'test_dataset'
-        self.metric = 'metric'
-        self.test_size = 0.3
-        self.rs = 32
-        self.verbose = False
-
-        # Initialize AlgoTrainEval instance
-        self.algo_train_eval = AlgoTrainEval(
-            df=self.df,
-            attrs=self.attrs,
-            algo_config=self.algo_config,
-            dir_out_alg_ds=self.dir_out_alg_ds,
-            dataset_id=self.dataset_id,
-            metr=self.metric,
-            test_size=self.test_size,
-            rs=self.rs,
-            verbose=self.verbose
-        )
-
-    @patch('forestci.random_forest_error')
-    def test_calculate_rf_uncertainty(self, mock_rf_error):
-        # Create mock inputs
-        forest = RandomForestRegressor()
-        X_train = np.random.rand(10, 5)
-        X_test = np.random.rand(3, 5)
-
-        # Mock RandomForestRegressor training
-        forest.fit(X_train, np.random.rand(10))
-
-        # Mock the output of forestci.random_forest_error
-        mock_ci = np.array([0.1, 0.2, 0.3])
-        mock_rf_error.return_value = mock_ci
-
-        # Call the method under test
-        result = self.algo_train_eval.calculate_rf_uncertainty(forest, X_train, X_test)
-
-        # Assertions
-        mock_rf_error.assert_called_once_with(
-            forest=forest,
-            X_train_shape=X_train.shape,
-            X_test=X_test,
-            inbag=None,
-            calibrate=True,
-            memory_constrained=False,
-            memory_limit=None,
-            y_output=0
-        )
-        np.testing.assert_array_equal(result, mock_ci)
-
-if __name__ == '__main__':
-    unittest.main()
-
->>>>>>> fb095d0 (Ss test fci dev3 (#38))
 # %%
