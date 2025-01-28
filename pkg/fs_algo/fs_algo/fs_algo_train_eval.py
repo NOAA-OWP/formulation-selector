@@ -1109,12 +1109,44 @@ class AlgoTrainEval:
             # --- Calculate confidence intervals ---
             ci = self.calculate_rf_uncertainty(rf, self.X_train, self.X_test)
 
+            # Calculating mlp uncertainty using Bootstrap Aggregating (Bagging)
+            n_models_rf = 10  # Number of bootstrap models
+            rf_predictions = []
+            for jj in range(n_models_rf):
+                # Resample the training data
+                X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
+    
+                # Train a RandomForestRegressor on the resampled data
+                rf = RandomForestRegressor(
+                    n_estimators=self.algo_config['rf'].get('n_estimators', 300),
+                    max_depth=self.algo_config['rf'].get('max_depth', None),
+                    min_samples_split=self.algo_config['rf'].get('min_samples_split', 2),
+                    min_samples_leaf=self.algo_config['rf'].get('min_samples_leaf', 1),
+                    oob_score=False,  # OOB score is not applicable in this manual bagging
+                    random_state=self.rs + jj,  # Different random state for each model
+                )
+                rf.fit(X_train_resampled, y_train_resampled)
+    
+                # Store predictions for the test set
+                rf_predictions.append(rf.predict(self.X_test))
+    
+            # Calculate mean and standard deviation of predictions
+            rf_predictions = np.array(rf_predictions)
+            mean_pred = rf_predictions.mean(axis=0)
+            std_pred = rf_predictions.std(axis=0)
+            lower_bound = mean_pred - 1.96 * std_pred
+            upper_bound = mean_pred + 1.96 * std_pred
+
             # --- Compare predictions with confidence intervals ---
             self.algs_dict['rf'] = {'algo': rf,
                                     'pipeline': pipe_rf,
                                     'type': 'random forest regressor',
                                     'metric': self.metric,
-                                    'ci': ci}
+                                    'ci': ci,
+                                    'Bagging_mean_pred': mean_pred,
+                                    'Bagging_lower_bound': lower_bound,
+                                    'Bagging_upper_bound': upper_bound
+                                    }
 
         if 'mlp' in self.algo_config:  # MULTI-LAYER PERCEPTRON
             
