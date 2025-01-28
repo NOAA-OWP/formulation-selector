@@ -32,6 +32,7 @@ import urllib
 import zipfile
 import re
 import forestci as fci
+from sklearn.utils import resample
 
 # %% BASIN ATTRIBUTES (PREDICTORS) & RESPONSE VARIABLES (e.g. METRICS)
 class AttrConfigAndVars:
@@ -1132,10 +1133,42 @@ class AlgoTrainEval:
                                max_iter=mlpcfg.get('max_iter', 200))
             pipe_mlp = make_pipeline(StandardScaler(),mlp)
             pipe_mlp.fit(self.X_train, self.y_train)
+
+            # Calculating mlp uncertainty using Bootstrap Aggregating (Bagging)
+            n_models_mlp = 10  # Number of bootstrap models
+            predictions = []
+            
+            for ii in range(n_models_mlp):
+                # Resample the training data
+                X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
+                
+                mlp_bagging = MLPRegressor(random_state=self.rs + ii,  # Different seed for each model
+                           hidden_layer_sizes=mlpcfg.get('hidden_layer_sizes', (100,)),
+                           activation=mlpcfg.get('activation', 'relu'),
+                           solver=mlpcfg.get('solver', 'lbfgs'),
+                           alpha=mlpcfg.get('alpha', 0.001),
+                           batch_size=mlpcfg.get('batch_size', 'auto'),
+                           learning_rate=mlpcfg.get('learning_rate', 'constant'),
+                           power_t=mlpcfg.get('power_t', 0.5),
+                           max_iter=mlpcfg.get('max_iter', 200))
+                mlp_bagging.fit(X_train_resampled, y_train_resampled)
+                predictions.append(mlp_bagging.predict(self.X_test))
+                
+            # Calculate mean and standard deviation of predictions
+            predictions = np.array(predictions)
+            mean_pred = predictions.mean(axis=0)
+            std_pred = predictions.std(axis=0)
+            lower_bound = mean_pred - 1.96 * std_pred
+            upper_bound = mean_pred + 1.96 * std_pred
+
             self.algs_dict['mlp'] = {'algo': mlp,
                                      'pipeline': pipe_mlp,
                                      'type': 'multi-layer perceptron regressor',
-                                     'metric': self.metric}
+                                     'metric': self.metric,
+                                     'Bagging_mean_pred': mean_pred,
+                                     'Bagging_lower_bound': lower_bound,
+                                     'Bagging_upper_bound': upper_bound
+                                     }
 
     def train_algos_grid_search(self):
         """Train algorithms using GridSearchCV based on the algo config file.
