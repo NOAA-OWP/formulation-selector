@@ -1104,9 +1104,6 @@ class AlgoTrainEval:
             pipe_rf = make_pipeline(rf)                       
             pipe_rf.fit(self.X_train, self.y_train)
             
-            # --- Make predictions using the RandomForest model ---
-            y_pred_rf = rf.predict(self.X_test)
-            
             # --- Calculate prediction intervals using MAPIE ---
             mapie = MapieRegressor(rf, cv="prefit", agg_function="median")  
             mapie.fit(self.X_train, self.y_train)  
