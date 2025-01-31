@@ -1172,6 +1172,10 @@ class AlgoTrainEval:
             pipe_mlp = make_pipeline(StandardScaler(),mlp)
             pipe_mlp.fit(self.X_train, self.y_train)
 
+            # --- Calculate prediction intervals using MAPIE ---
+            mapie = MapieRegressor(mlp, cv="prefit", agg_function="median")  
+            mapie.fit(self.X_train, self.y_train)  
+
             # Calculating mlp uncertainty using Bootstrap Aggregating (Bagging)
             n_models_mlp = 10  # Number of bootstrap models
             predictions = []
@@ -1205,7 +1209,8 @@ class AlgoTrainEval:
                                      'metric': self.metric,
                                      'Bagging_mean_pred': mean_pred,
                                      'Bagging_lower_bound': lower_bound,
-                                     'Bagging_upper_bound': upper_bound
+                                     'Bagging_upper_bound': upper_bound,
+                                     'mapie': mapie
                                      }
 
     def train_algos_grid_search(self):
