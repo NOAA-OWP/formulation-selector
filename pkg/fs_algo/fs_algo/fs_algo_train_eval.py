@@ -1107,6 +1107,10 @@ class AlgoTrainEval:
             # --- Make predictions using the RandomForest model ---
             y_pred_rf = rf.predict(self.X_test)
             
+            # --- Calculate prediction intervals using MAPIE ---
+            mapie = MapieRegressor(rf, cv="prefit", agg_function="median")  
+            mapie.fit(self.X_train, self.y_train)  
+
             # --- Calculate confidence intervals ---
             ci = self.calculate_rf_uncertainty(rf, self.X_train, self.X_test)
 
@@ -1137,10 +1141,6 @@ class AlgoTrainEval:
             std_pred = rf_predictions.std(axis=0)
             lower_bound = mean_pred - 1.96 * std_pred
             upper_bound = mean_pred + 1.96 * std_pred
-
-            # --- Calculate prediction intervals using MAPIE ---
-            mapie = MapieRegressor(rf, cv=10, agg_function="median")  
-            mapie.fit(self.X_train, self.y_train)  
 
             # --- Compare predictions with confidence intervals ---
             self.algs_dict['rf'] = {'algo': rf,
@@ -1286,7 +1286,6 @@ class AlgoTrainEval:
             if 'mapie' in v:
                 y_test_pred, y_test_pis = v['mapie'].predict(self.X_test, alpha=[0.05, 0.32]) # 95% and 68% prediction intervals
                 self.preds_dict[k] = {'y_pred': y_pred,
-                                      'y_mapie_pred': y_test_pred,
                                       'y_pis': y_test_pis,
                                       'type': v['type'],
                                       'metric': v['metric']}
