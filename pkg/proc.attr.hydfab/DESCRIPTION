@@ -1,10 +1,6 @@
 Package: proc.attr.hydfab
 Title: Grab and process catchment attributes using the hydrofabric
-<<<<<<< HEAD
 Version: 0.0.2.0001
-=======
-Version: 0.0.1.0018
->>>>>>> 595d473e (feat: update unit testing and package version)
 Authors@R: 
     c(person("Guy", "Litt", , "guy.litt@noaa.gov", role = c("aut", "cre"),
            comment = c(ORCID = "https://orcid.org/0000-0003-1996-7468")),
