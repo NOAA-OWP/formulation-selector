@@ -1107,6 +1107,36 @@ class AlgoTrainEval:
         
         return mean_pred, std_pred, confidence_intervals
 
+    def mlp_Bagging_ci(self, n_models=10):
+        mlpcfg = self.algo_config['mlp']
+        predictions = []
+        for ii in range(n_models):
+            X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
+            mlp_bagging = MLPRegressor(
+                random_state=self.rs + ii,
+                hidden_layer_sizes=mlpcfg.get('hidden_layer_sizes', (100,)),
+                activation=mlpcfg.get('activation', 'relu'),
+                solver=mlpcfg.get('solver', 'lbfgs'),
+                alpha=mlpcfg.get('alpha', 0.001),
+                batch_size=mlpcfg.get('batch_size', 'auto'),
+                learning_rate=mlpcfg.get('learning_rate', 'constant'),
+                power_t=mlpcfg.get('power_t', 0.5),
+                max_iter=mlpcfg.get('max_iter', 200)
+            )
+            mlp_bagging.fit(X_train_resampled, y_train_resampled)
+            predictions.append(mlp_bagging.predict(self.X_test))
+        predictions = np.array(predictions)
+        mean_pred = predictions.mean(axis=0)
+        std_pred = predictions.std(axis=0)
+        
+        ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
+        confidence_intervals = {
+            level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
+            for level, factor in ci_factors.items()
+        }
+        
+        return mean_pred, std_pred, confidence_intervals
+
     def train_algos(self):
         """Train algorithms based on what has been defined in the algo config file
 
@@ -1174,39 +1204,14 @@ class AlgoTrainEval:
             mapie.fit(self.X_train, self.y_train)  
 
             # Calculating mlp uncertainty using Bootstrap Aggregating (Bagging)
-            n_models_mlp = 10  # Number of bootstrap models
-            predictions = []
-            
-            for ii in range(n_models_mlp):
-                # Resample the training data
-                X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
-                
-                mlp_bagging = MLPRegressor(random_state=self.rs + ii,  # Different seed for each model
-                           hidden_layer_sizes=mlpcfg.get('hidden_layer_sizes', (100,)),
-                           activation=mlpcfg.get('activation', 'relu'),
-                           solver=mlpcfg.get('solver', 'lbfgs'),
-                           alpha=mlpcfg.get('alpha', 0.001),
-                           batch_size=mlpcfg.get('batch_size', 'auto'),
-                           learning_rate=mlpcfg.get('learning_rate', 'constant'),
-                           power_t=mlpcfg.get('power_t', 0.5),
-                           max_iter=mlpcfg.get('max_iter', 200))
-                mlp_bagging.fit(X_train_resampled, y_train_resampled)
-                predictions.append(mlp_bagging.predict(self.X_test))
-                
-            # Calculate mean and standard deviation of predictions
-            predictions = np.array(predictions)
-            mean_pred = predictions.mean(axis=0)
-            std_pred = predictions.std(axis=0)
-            lower_bound = mean_pred - 1.96 * std_pred
-            upper_bound = mean_pred + 1.96 * std_pred
+            mean_pred, std_pred, confidence_intervals = self.mlp_Bagging_ci()
 
             self.algs_dict['mlp'] = {'algo': mlp,
                                      'pipeline': pipe_mlp,
                                      'type': 'multi-layer perceptron regressor',
                                      'metric': self.metric,
                                      'Bagging_mean_pred': mean_pred,
-                                     'Bagging_lower_bound': lower_bound,
-                                     'Bagging_upper_bound': upper_bound,
+                                     'Bagging_confidence_intervals': confidence_intervals,
                                      'mapie': mapie
                                      }
 
