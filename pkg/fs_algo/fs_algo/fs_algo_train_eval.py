@@ -1081,8 +1081,9 @@ class AlgoTrainEval:
         )
         return ci
 
-    def rf_Bagging_ci(self, n_models=10):
+    def rf_Bagging_ci(self):
         rf_predictions = []
+        n_models = self.algo_config['rf'].get('n_models_rf_bootstrap')
         for jj in range(n_models):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
             rf = RandomForestRegressor(
