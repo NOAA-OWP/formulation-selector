@@ -1082,8 +1082,14 @@ class AlgoTrainEval:
         return ci
 
     def rf_Bagging_ci(self):
+        """
+        Calculate uncertainty using Bootstrap Aggregating (Bagging) for a Random Forest model based on what has been defined in the algo config file
+
+        .. note::
+                - `rf` for :class:`sklearn.ensemble.RandomForestRegressor`
+        """
         rf_predictions = []
-        n_models = self.algo_config['rf'].get('n_models_rf_bootstrap')
+        n_models = self.algo_config['rf'].get('n_models_rf_bootstrap',10)
         for jj in range(n_models):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
             rf = RandomForestRegressor(
@@ -1110,6 +1116,7 @@ class AlgoTrainEval:
 
     def mlp_Bagging_ci(self, n_models=10):
         mlpcfg = self.algo_config['mlp']
+        n_models = self.algo_config['mlp'].get('n_models_mlp_bootstrap',10)
         predictions = []
         for ii in range(n_models):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
