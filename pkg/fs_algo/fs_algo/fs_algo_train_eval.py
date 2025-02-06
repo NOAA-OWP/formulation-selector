@@ -1197,7 +1197,7 @@ class AlgoTrainEval:
                                     'pipeline': pipe_rf,
                                     'type': 'random forest regressor',
                                     'metric': self.metric,
-                                    'ci': ci,
+                                    'forestci': ci,
                                     'Bagging_mean_pred': mean_pred,
                                     'Bagging_confidence_intervals': confidence_intervals,
                                     'mapie': mapie
