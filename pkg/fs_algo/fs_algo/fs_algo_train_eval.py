@@ -34,6 +34,7 @@ import re
 import forestci as fci
 from sklearn.utils import resample
 from mapie.regression import MapieRegressor
+from scipy.stats import norm
 
 # %% BASIN ATTRIBUTES (PREDICTORS) & RESPONSE VARIABLES (e.g. METRICS)
 class AttrConfigAndVars:
@@ -1106,11 +1107,17 @@ class AlgoTrainEval:
         mean_pred = rf_predictions.mean(axis=0)
         std_pred = rf_predictions.std(axis=0)
         
-        ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
-        confidence_intervals = {
-            level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
-            for level, factor in ci_factors.items()
-        }
+        # ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
+        # confidence_intervals = {
+        #     level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
+        #     for level, factor in ci_factors.items()
+        # }
+        confidence_level = self.algo_config['rf'].get('confidence_level', 95)
+        ci_factor = norm.ppf(1 - (1 - confidence_level / 100) / 2)
+        lower_bound = mean_pred - ci_factor * std_pred
+        upper_bound = mean_pred + ci_factor * std_pred
+        
+        confidence_intervals = {confidence_level: (lower_bound, upper_bound)}        
         
         return mean_pred, std_pred, confidence_intervals
 
@@ -1137,11 +1144,17 @@ class AlgoTrainEval:
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
         
-        ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
-        confidence_intervals = {
-            level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
-            for level, factor in ci_factors.items()
-        }
+        # ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
+        # confidence_intervals = {
+        #     level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
+        #     for level, factor in ci_factors.items()
+        # }
+        confidence_level = self.algo_config['mlp'].get('confidence_level', 95)
+        ci_factor = norm.ppf(1 - (1 - confidence_level / 100) / 2)
+        lower_bound = mean_pred - ci_factor * std_pred
+        upper_bound = mean_pred + ci_factor * std_pred
+        
+        confidence_intervals = {confidence_level: (lower_bound, upper_bound)}
         
         return mean_pred, std_pred, confidence_intervals
 
