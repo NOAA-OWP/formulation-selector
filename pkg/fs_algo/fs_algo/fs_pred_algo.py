@@ -104,9 +104,9 @@ if __name__ == "__main__":
                     raise FileNotFoundError(f"The following algorithm path does not exist: \n{path_algo}")
 
                 # Read in the algorithm's pipeline
-                # pipe = joblib.load(path_algo)
-                pipeline_with_ci = joblib.load(path_algo)
-                pipe = pipeline_with_ci['pipe']  # Assign the actual pipeline (pipe) to 'pipe'
+                pipe = joblib.load(path_algo)
+                # pipeline_with_ci = joblib.load(path_algo)
+                # pipe = pipeline_with_ci['pipe']  # Assign the actual pipeline (pipe) to 'pipe'
                 rf_model = pipe.named_steps['randomforestregressor']  # Use the correct step name
                 feat_names = list(pipe.feature_names_in_)
                 df_attr_sub = df_attr_wide[feat_names]
@@ -123,20 +123,28 @@ if __name__ == "__main__":
                 # Perform prediction
                 resp_pred = pipe.predict(df_attr_sub_rmna)
 
-                # Calculate confidence intervals for the predictions using forestci
-                path_Xtrain = fsate.std_Xtrain_path(dir_out_alg_ds,  dataset_id=ds) 
-                X_train = pd.read_csv(path_Xtrain)                  
-                pred_ci = fci.random_forest_error(forest=rf_model, X_train_shape=X_train.shape, X_test=df_attr_sub.to_numpy())
-
-                # compile prediction results:
-                comids_pred = list(set(comids_pred)) # Make sure there are no duplicates
-                df_pred =pd.DataFrame({'featureID':df_attr_sub_rmna.index.to_list(),
-                             'prediction':resp_pred,
-                             'ci': pred_ci,
-                             'metric':metric,
-                             'dataset':ds,
-                             'algo':algo,
-                             'name_algo':Path(path_algo).name})
+                if algo == 'rf':
+                    # Calculate confidence intervals for the predictions using forestci
+                    path_Xtrain = fsate.std_Xtrain_path(dir_out_alg_ds,  dataset_id=ds) 
+                    X_train = pd.read_csv(path_Xtrain)                  
+                    forest_ci = fci.random_forest_error(forest=rf_model, X_train_shape=X_train.shape, X_test=df_attr_sub.to_numpy())
+    
+                    # compile prediction results:
+                    df_pred =pd.DataFrame({'comid':comids_pred,
+                                 'prediction':resp_pred,
+                                 'forestci': forest_ci,
+                                 'metric':metric,
+                                 'dataset':ds,
+                                 'algo':algo,
+                                 'name_algo':Path(path_algo).name})
+                else:
+                    # compile prediction results:
+                    df_pred =pd.DataFrame({'comid':comids_pred,
+                                 'prediction':resp_pred,
+                                 'metric':metric,
+                                 'dataset':ds,
+                                 'algo':algo,
+                                 'name_algo':Path(path_algo).name})                        
                 
                 path_pred_out = fsate.std_pred_path(dir_out,algo=algo,metric=metric,dataset_id=ds)
                 # Write prediction results
