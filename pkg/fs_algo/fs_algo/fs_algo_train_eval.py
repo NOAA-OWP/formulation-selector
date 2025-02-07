@@ -1366,7 +1366,7 @@ class AlgoTrainEval:
             # path_algo = Path(self.dir_out_alg_ds) / Path(basename_alg_ds_metr + '.joblib')
             
             # write trained algorithm
-            # joblib.dump(self.algs_dict[algo]['pipeline'], path_algo)
+            joblib.dump(self.algs_dict[algo]['pipeline'], path_algo)
             
             # Save pipeline and metadata in a dictionary
             pipeline_data = {
