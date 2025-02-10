@@ -875,7 +875,9 @@ class AlgoTrainEval:
                  dir_out_alg_ds: str | os.PathLike, dataset_id: str,
                  metr: str, test_size: float = 0.3,rs: int = 32,
                  test_ids = None,test_id_col:str = 'comid',
-                 verbose: bool = False):
+                 verbose: bool = False,
+                 mapie: bool = False,
+                 mapie_alpha : float = 95):
         """The algorithm training and evaluation class.
 
         :param df: The combined response variable and predictor variables DataFrame.
@@ -904,6 +906,10 @@ class AlgoTrainEval:
         :type test_id_col: str
         :param verbose: Should print, defaults to False.
         :type verbose: bool, optional
+        :param mapie: Calculate MAPIE, defaults to False.
+        :type verbose: bool, optional
+        :param mapie_alpha: Confidence interval(s) for MAPIE, defaults to 95.
+        :type test_size: float, optional
         """
         # class args
         self.df = df
@@ -917,6 +923,8 @@ class AlgoTrainEval:
         self.rs = rs
         self.dataset_id = dataset_id
         self.verbose = verbose
+        self.mapie = mapie
+        self.mapie_alpha = mapie_alpha
 
         # train/test split
         self.X_train = pd.DataFrame()
@@ -1158,19 +1166,32 @@ class AlgoTrainEval:
         
         return mean_pred, std_pred, confidence_intervals
 
-    def calculate_mapie(self, model):
-        """
-        Calculate prediction intervals using the MAPIE library.
+    # def calculate_mapie(self, model):
+    #     """
+    #     Calculate prediction intervals using the MAPIE library.
 
-        :param model: The trained model (e.g., RandomForestRegressor or MLPRegressor) to compute confidence intervals for.
-        :type model: object
-        :return: A fitted MAPIE regressor with computed intervals.
-        :rtype: MapieRegressor
-        """
-        mapie = MapieRegressor(model, cv="prefit", agg_function="median")  
-        mapie.fit(self.X_train, self.y_train)  
-        return mapie
+    #     :param model: The trained model (e.g., RandomForestRegressor or MLPRegressor) to compute confidence intervals for.
+    #     :type model: object
+    #     :return: A fitted MAPIE regressor with computed intervals.
+    #     :rtype: MapieRegressor
+    #     """
+    #     mapie = MapieRegressor(model, cv="prefit", agg_function="median")  
+    #     mapie.fit(self.X_train, self.y_train)  
+    #     return mapie
 
+    # def calculate_prediction_uncertainty(self):
+    #     """Generalized function to calculate prediction uncertainty using MAPIE."""
+    #     for algo in self.algs_dict:
+    #         self.algs_dict[algo]['mapie'] = self.calculate_mapie(self.algs_dict[algo]['algo'])
+
+    def calculate_mapie(self):
+        """Generalized function to calculate prediction uncertainty using MAPIE."""
+        for algo_name, algo_data in self.algs_dict.items():
+            model = algo_data['algo']
+            mapie = MapieRegressor(model, cv="prefit", agg_function="median")  
+            mapie.fit(self.X_train, self.y_train)  
+            algo_data['mapie'] = mapie
+            
     def train_algos(self):
         """Train algorithms based on what has been defined in the algo config file
 
@@ -1194,11 +1215,6 @@ class AlgoTrainEval:
             pipe_rf = make_pipeline(rf)                       
             pipe_rf.fit(self.X_train, self.y_train)
             
-            # --- Calculate prediction intervals using MAPIE ---
-            # mapie = MapieRegressor(rf, cv="prefit", agg_function="median")  
-            # mapie.fit(self.X_train, self.y_train)
-            mapie = self.calculate_mapie(rf)
-
             # --- Calculate confidence intervals ---
             ci = self.calculate_rf_uncertainty(rf, self.X_train, self.X_test)
 
@@ -1213,9 +1229,13 @@ class AlgoTrainEval:
                                     'forestci': ci,
                                     'Bagging_mean_pred': mean_pred,
                                     'Bagging_confidence_intervals': confidence_intervals,
-                                    'mapie': mapie
                                     }
 
+            # # --- Calculate prediction intervals using MAPIE if enabled ---
+            # if self.mapie:
+            #     mapie = self.calculate_mapie(rf)
+            #     self.algs_dict['rf']['mapie'] = self.calculate_mapie(rf)
+                
         if 'mlp' in self.algo_config:  # MULTI-LAYER PERCEPTRON
             
             
@@ -1234,11 +1254,6 @@ class AlgoTrainEval:
             pipe_mlp = make_pipeline(StandardScaler(),mlp)
             pipe_mlp.fit(self.X_train, self.y_train)
 
-            # --- Calculate prediction intervals using MAPIE ---
-            # mapie = MapieRegressor(mlp, cv="prefit", agg_function="median")  
-            # mapie.fit(self.X_train, self.y_train)
-            mapie = self.calculate_mapie(mlp)
-
             # Calculating mlp uncertainty using Bootstrap Aggregating (Bagging)
             mean_pred, std_pred, confidence_intervals = self.mlp_Bagging_ci()
 
@@ -1248,9 +1263,13 @@ class AlgoTrainEval:
                                      'metric': self.metric,
                                      'Bagging_mean_pred': mean_pred,
                                      'Bagging_confidence_intervals': confidence_intervals,
-                                     'mapie': mapie
                                      }
 
+            # # --- Calculate prediction intervals using MAPIE if enabled ---
+            # if self.mapie:
+            #     mapie = self.calculate_mapie(mlp)
+            #     self.algs_dict['mlp']['mapie'] = self.calculate_mapie(mlp)
+                
     def train_algos_grid_search(self):
         """Train algorithms using GridSearchCV based on the algo config file.
         
@@ -1327,9 +1346,19 @@ class AlgoTrainEval:
             
             y_pred = pipe.predict(self.X_test)
             if 'mapie' in v:
-                y_test_pred, y_test_pis = v['mapie'].predict(self.X_test, alpha=[0.05, 0.32]) # 95% and 68% prediction intervals
+                y_test_pred, y_test_pis = v['mapie'].predict(self.X_test, alpha=1-np.array(self.mapie_alpha)/100) 
+                
+                # Rename rows
+                row_labels = ['lower_limit', 'upper_limit']
+                
+                # Rename columns based on mapie_alpha values
+                col_labels = [f'pi_{int(alpha)}' for alpha in self.mapie_alpha]  # Convert to percentage
+                
+                # Convert to DataFrame
+                y_pis_list = [pd.DataFrame(y_test_pis[i], index=row_labels, columns=col_labels) for i in range(y_test_pis.shape[0])]
+                
                 self.preds_dict[k] = {'y_pred': y_pred,
-                                      'y_pis': y_test_pis,
+                                      'y_pis': y_pis_list,
                                       'type': v['type'],
                                       'metric': v['metric']}
             else:
@@ -1421,6 +1450,10 @@ class AlgoTrainEval:
 
         if self.algo_config: # Just run a single simulation for these algos
             self.train_algos()
+
+        # --- Calculate prediction intervals using MAPIE if enabled ---
+        if self.mapie:
+            self.calculate_mapie()
 
         # Make predictions  (aka validation) 
         self.predict_algos()
