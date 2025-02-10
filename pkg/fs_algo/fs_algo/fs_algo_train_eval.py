@@ -1166,24 +1166,6 @@ class AlgoTrainEval:
         
         return mean_pred, std_pred, confidence_intervals
 
-    # def calculate_mapie(self, model):
-    #     """
-    #     Calculate prediction intervals using the MAPIE library.
-
-    #     :param model: The trained model (e.g., RandomForestRegressor or MLPRegressor) to compute confidence intervals for.
-    #     :type model: object
-    #     :return: A fitted MAPIE regressor with computed intervals.
-    #     :rtype: MapieRegressor
-    #     """
-    #     mapie = MapieRegressor(model, cv="prefit", agg_function="median")  
-    #     mapie.fit(self.X_train, self.y_train)  
-    #     return mapie
-
-    # def calculate_prediction_uncertainty(self):
-    #     """Generalized function to calculate prediction uncertainty using MAPIE."""
-    #     for algo in self.algs_dict:
-    #         self.algs_dict[algo]['mapie'] = self.calculate_mapie(self.algs_dict[algo]['algo'])
-
     def calculate_mapie(self):
         """Generalized function to calculate prediction uncertainty using MAPIE."""
         for algo_name, algo_data in self.algs_dict.items():
@@ -1231,11 +1213,6 @@ class AlgoTrainEval:
                                     'Bagging_confidence_intervals': confidence_intervals,
                                     }
 
-            # # --- Calculate prediction intervals using MAPIE if enabled ---
-            # if self.mapie:
-            #     mapie = self.calculate_mapie(rf)
-            #     self.algs_dict['rf']['mapie'] = self.calculate_mapie(rf)
-                
         if 'mlp' in self.algo_config:  # MULTI-LAYER PERCEPTRON
             
             
@@ -1265,11 +1242,6 @@ class AlgoTrainEval:
                                      'Bagging_confidence_intervals': confidence_intervals,
                                      }
 
-            # # --- Calculate prediction intervals using MAPIE if enabled ---
-            # if self.mapie:
-            #     mapie = self.calculate_mapie(mlp)
-            #     self.algs_dict['mlp']['mapie'] = self.calculate_mapie(mlp)
-                
     def train_algos_grid_search(self):
         """Train algorithms using GridSearchCV based on the algo config file.
         
