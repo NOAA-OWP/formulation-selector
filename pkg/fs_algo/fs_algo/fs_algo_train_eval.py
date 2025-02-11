@@ -1065,7 +1065,7 @@ class AlgoTrainEval:
             # e.g. {'activation':'relu'} becomes {'activation':['relu']}
             self.algo_config_grid  = self.convert_to_list(self.algo_config_grid)
 
-    def calculate_rf_uncertainty(self, forest, X_train, X_test):
+    def calculate_forestci_uncertainty(self, forest, X_train, X_test):
         """
         Calculate uncertainty using forestci for a Random Forest model.
     
@@ -1197,8 +1197,8 @@ class AlgoTrainEval:
             pipe_rf = make_pipeline(rf)                       
             pipe_rf.fit(self.X_train, self.y_train)
             
-            # --- Calculate confidence intervals ---
-            ci = self.calculate_rf_uncertainty(rf, self.X_train, self.X_test)
+            # # --- Calculate confidence intervals ---
+            # ci = self.calculate_rf_uncertainty(rf, self.X_train, self.X_test)
 
             # Calculating rf uncertainty using Bootstrap Aggregating (Bagging)
             mean_pred, std_pred, confidence_intervals = self.rf_Bagging_ci()
@@ -1208,14 +1208,12 @@ class AlgoTrainEval:
                                     'pipeline': pipe_rf,
                                     'type': 'random forest regressor',
                                     'metric': self.metric,
-                                    'forestci': ci,
-                                    'Bagging_mean_pred': mean_pred,
-                                    'Bagging_confidence_intervals': confidence_intervals,
-                                    }
-
+                                    'Uncertainty': {
+                                        'Bagging_mean_pred': mean_pred,
+                                        'Bagging_confidence_intervals': confidence_intervals,
+                                        }
+                }
         if 'mlp' in self.algo_config:  # MULTI-LAYER PERCEPTRON
-            
-            
             if self.verbose:
                 print(f"      Performing Multilayer Perceptron Training")
             mlpcfg = self.algo_config['mlp']
@@ -1238,8 +1236,10 @@ class AlgoTrainEval:
                                      'pipeline': pipe_mlp,
                                      'type': 'multi-layer perceptron regressor',
                                      'metric': self.metric,
-                                     'Bagging_mean_pred': mean_pred,
-                                     'Bagging_confidence_intervals': confidence_intervals,
+                                     'Uncertainty': {
+                                        'Bagging_mean_pred': mean_pred,
+                                        'Bagging_confidence_intervals': confidence_intervals,
+                                        }
                                      }
 
     def train_algos_grid_search(self):
@@ -1422,6 +1422,12 @@ class AlgoTrainEval:
 
         if self.algo_config: # Just run a single simulation for these algos
             self.train_algos()
+
+        # Calculate forestci uncertainty if enabled
+        if 'rf' in self.algo_config and self.algo_config['rf'].get('forestci', False):
+            self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
+                self.algs_dict['rf']['algo'], self.X_train, self.X_test
+            )
 
         # --- Calculate prediction intervals using MAPIE if enabled ---
         if self.mapie:
