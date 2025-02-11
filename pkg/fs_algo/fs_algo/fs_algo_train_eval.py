@@ -1090,78 +1090,123 @@ class AlgoTrainEval:
         )
         return ci
 
-    def rf_Bagging_ci(self):
-        """
-        Calculate uncertainty using Bootstrap Aggregating (Bagging) for a Random Forest model based on what has been defined in the algo config file
+    # def rf_Bagging_ci(self):
+    #     """
+    #     Calculate uncertainty using Bootstrap Aggregating (Bagging) for a Random Forest model based on what has been defined in the algo config file
 
-        .. note::
-                - `rf` for :class:`sklearn.ensemble.RandomForestRegressor`
-        """
-        rf_predictions = []
-        n_models = self.algo_config['rf'].get('n_models_rf_bootstrap',10)
-        for jj in range(n_models):
-            X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
-            rf = RandomForestRegressor(
-                n_estimators=self.algo_config['rf'].get('n_estimators', 300),
-                max_depth=self.algo_config['rf'].get('max_depth', None),
-                min_samples_split=self.algo_config['rf'].get('min_samples_split', 2),
-                min_samples_leaf=self.algo_config['rf'].get('min_samples_leaf', 1),
-                oob_score=False,
-                random_state=self.rs + jj,
-            )
-            rf.fit(X_train_resampled, y_train_resampled)
-            rf_predictions.append(rf.predict(self.X_test))
-        rf_predictions = np.array(rf_predictions)
-        mean_pred = rf_predictions.mean(axis=0)
-        std_pred = rf_predictions.std(axis=0)
+    #     .. note::
+    #             - `rf` for :class:`sklearn.ensemble.RandomForestRegressor`
+    #     """
+    #     rf_predictions = []
+    #     n_models = self.algo_config['rf'].get('n_models_bootstrap',10)
+    #     for jj in range(n_models):
+    #         X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
+    #         rf = RandomForestRegressor(
+    #             n_estimators=self.algo_config['rf'].get('n_estimators', 300),
+    #             max_depth=self.algo_config['rf'].get('max_depth', None),
+    #             min_samples_split=self.algo_config['rf'].get('min_samples_split', 2),
+    #             min_samples_leaf=self.algo_config['rf'].get('min_samples_leaf', 1),
+    #             oob_score=False,
+    #             random_state=self.rs + jj,
+    #         )
+    #         rf.fit(X_train_resampled, y_train_resampled)
+    #         rf_predictions.append(rf.predict(self.X_test))
+    #     rf_predictions = np.array(rf_predictions)
+    #     mean_pred = rf_predictions.mean(axis=0)
+    #     std_pred = rf_predictions.std(axis=0)
         
-        # ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
-        # confidence_intervals = {
-        #     level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
-        #     for level, factor in ci_factors.items()
-        # }
-        confidence_level = self.algo_config['rf'].get('confidence_level', 95)
-        ci_factor = norm.ppf(1 - (1 - confidence_level / 100) / 2)
-        lower_bound = mean_pred - ci_factor * std_pred
-        upper_bound = mean_pred + ci_factor * std_pred
+    #     # ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
+    #     # confidence_intervals = {
+    #     #     level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
+    #     #     for level, factor in ci_factors.items()
+    #     # }
+    #     confidence_level = self.algo_config['rf'].get('confidence_level', 95)
+    #     ci_factor = norm.ppf(1 - (1 - confidence_level / 100) / 2)
+    #     lower_bound = mean_pred - ci_factor * std_pred
+    #     upper_bound = mean_pred + ci_factor * std_pred
         
-        confidence_intervals = {confidence_level: (lower_bound, upper_bound)}        
+    #     confidence_intervals = {confidence_level: (lower_bound, upper_bound)}        
         
-        return mean_pred, std_pred, confidence_intervals
+    #     return mean_pred, std_pred, confidence_intervals
 
-    def mlp_Bagging_ci(self, n_models=10):
-        mlpcfg = self.algo_config['mlp']
-        n_models = self.algo_config['mlp'].get('n_models_mlp_bootstrap',10)
+    # def mlp_Bagging_ci(self):
+    #     mlpcfg = self.algo_config['mlp']
+    #     n_models = self.algo_config['mlp'].get('n_models_bootstrap',10)
+    #     predictions = []
+    #     for ii in range(n_models):
+    #         X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
+    #         mlp_bagging = MLPRegressor(
+    #             random_state=self.rs + ii,
+    #             hidden_layer_sizes=mlpcfg.get('hidden_layer_sizes', (100,)),
+    #             activation=mlpcfg.get('activation', 'relu'),
+    #             solver=mlpcfg.get('solver', 'lbfgs'),
+    #             alpha=mlpcfg.get('alpha', 0.001),
+    #             batch_size=mlpcfg.get('batch_size', 'auto'),
+    #             learning_rate=mlpcfg.get('learning_rate', 'constant'),
+    #             power_t=mlpcfg.get('power_t', 0.5),
+    #             max_iter=mlpcfg.get('max_iter', 200)
+    #         )
+    #         mlp_bagging.fit(X_train_resampled, y_train_resampled)
+    #         predictions.append(mlp_bagging.predict(self.X_test))
+    #     predictions = np.array(predictions)
+    #     mean_pred = predictions.mean(axis=0)
+    #     std_pred = predictions.std(axis=0)
+        
+    #     # ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
+    #     # confidence_intervals = {
+    #     #     level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
+    #     #     for level, factor in ci_factors.items()
+    #     # }
+    #     confidence_level = self.algo_config['mlp'].get('confidence_level', 95)
+    #     ci_factor = norm.ppf(1 - (1 - confidence_level / 100) / 2)
+    #     lower_bound = mean_pred - ci_factor * std_pred
+    #     upper_bound = mean_pred + ci_factor * std_pred
+        
+    #     confidence_intervals = {confidence_level: (lower_bound, upper_bound)}
+        
+    #     return mean_pred, std_pred, confidence_intervals
+
+    def calculate_Bagging_ci(self, model_name, model_class):
+        """
+        Generalized function to calculate Bagging confidence intervals for any model.
+        """
+        model_cfg = self.algo_config[model_name]
+        n_models = model_cfg.get('n_models_bootstrap', 10)
         predictions = []
+        
         for ii in range(n_models):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
-            mlp_bagging = MLPRegressor(
-                random_state=self.rs + ii,
-                hidden_layer_sizes=mlpcfg.get('hidden_layer_sizes', (100,)),
-                activation=mlpcfg.get('activation', 'relu'),
-                solver=mlpcfg.get('solver', 'lbfgs'),
-                alpha=mlpcfg.get('alpha', 0.001),
-                batch_size=mlpcfg.get('batch_size', 'auto'),
-                learning_rate=mlpcfg.get('learning_rate', 'constant'),
-                power_t=mlpcfg.get('power_t', 0.5),
-                max_iter=mlpcfg.get('max_iter', 200)
-            )
-            mlp_bagging.fit(X_train_resampled, y_train_resampled)
-            predictions.append(mlp_bagging.predict(self.X_test))
+            if model_name == 'rf':
+                model = RandomForestRegressor(
+                    n_estimators=model_cfg.get('n_estimators', 300),
+                    max_depth=model_cfg.get('max_depth', None),
+                    min_samples_split=model_cfg.get('min_samples_split', 2),
+                    min_samples_leaf=model_cfg.get('min_samples_leaf', 1),
+                    oob_score=False,
+                    random_state=self.rs + ii,
+                )
+            elif model_name == 'mlp':
+                model = MLPRegressor(
+                    hidden_layer_sizes=model_cfg.get('hidden_layer_sizes', (100,)),
+                    activation=model_cfg.get('activation', 'relu'),
+                    solver=model_cfg.get('solver', 'lbfgs'),
+                    alpha=model_cfg.get('alpha', 0.001),
+                    batch_size=model_cfg.get('batch_size', 'auto'),
+                    learning_rate=model_cfg.get('learning_rate', 'constant'),
+                    power_t=model_cfg.get('power_t', 0.5),
+                    max_iter=model_cfg.get('max_iter', 200),
+                    random_state=self.rs + ii,
+                )
+            model.fit(X_train_resampled, y_train_resampled)
+            predictions.append(model.predict(self.X_test))
+        
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
-        
-        # ci_factors = {90: 1.645, 95: 1.96, 99: 2.576}
-        # confidence_intervals = {
-        #     level: (mean_pred - factor * std_pred, mean_pred + factor * std_pred)
-        #     for level, factor in ci_factors.items()
-        # }
-        confidence_level = self.algo_config['mlp'].get('confidence_level', 95)
+        confidence_level = model_cfg.get('confidence_level', 95)
         ci_factor = norm.ppf(1 - (1 - confidence_level / 100) / 2)
         lower_bound = mean_pred - ci_factor * std_pred
         upper_bound = mean_pred + ci_factor * std_pred
-        
         confidence_intervals = {confidence_level: (lower_bound, upper_bound)}
         
         return mean_pred, std_pred, confidence_intervals
@@ -1201,17 +1246,14 @@ class AlgoTrainEval:
             # ci = self.calculate_rf_uncertainty(rf, self.X_train, self.X_test)
 
             # Calculating rf uncertainty using Bootstrap Aggregating (Bagging)
-            mean_pred, std_pred, confidence_intervals = self.rf_Bagging_ci()
+            # mean_pred, std_pred, confidence_intervals = self.rf_Bagging_ci()
 
             # --- Compare predictions with confidence intervals ---
             self.algs_dict['rf'] = {'algo': rf,
                                     'pipeline': pipe_rf,
                                     'type': 'random forest regressor',
                                     'metric': self.metric,
-                                    'Uncertainty': {
-                                        'Bagging_mean_pred': mean_pred,
-                                        'Bagging_confidence_intervals': confidence_intervals,
-                                        }
+                                    'Uncertainty': {}
                 }
         if 'mlp' in self.algo_config:  # MULTI-LAYER PERCEPTRON
             if self.verbose:
@@ -1230,16 +1272,13 @@ class AlgoTrainEval:
             pipe_mlp.fit(self.X_train, self.y_train)
 
             # Calculating mlp uncertainty using Bootstrap Aggregating (Bagging)
-            mean_pred, std_pred, confidence_intervals = self.mlp_Bagging_ci()
+            # mean_pred, std_pred, confidence_intervals = self.mlp_Bagging_ci()
 
             self.algs_dict['mlp'] = {'algo': mlp,
                                      'pipeline': pipe_mlp,
                                      'type': 'multi-layer perceptron regressor',
                                      'metric': self.metric,
-                                     'Uncertainty': {
-                                        'Bagging_mean_pred': mean_pred,
-                                        'Bagging_confidence_intervals': confidence_intervals,
-                                        }
+                                     'Uncertainty': {}
                                      }
 
     def train_algos_grid_search(self):
@@ -1428,6 +1467,13 @@ class AlgoTrainEval:
             self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
                 self.algs_dict['rf']['algo'], self.X_train, self.X_test
             )
+
+        # Calculate Bagging uncertainty if enabled
+        for model_name in ['rf', 'mlp']:
+            if model_name in self.algo_config and self.algo_config[model_name].get('Bagging_ci', False):
+                mean_pred, _, confidence_intervals = self.calculate_Bagging_ci(model_name, None)
+                self.algs_dict[model_name]['Uncertainty']['Bagging_mean_pred'] = mean_pred
+                self.algs_dict[model_name]['Uncertainty']['Bagging_confidence_intervals'] = confidence_intervals
 
         # --- Calculate prediction intervals using MAPIE if enabled ---
         if self.mapie:
