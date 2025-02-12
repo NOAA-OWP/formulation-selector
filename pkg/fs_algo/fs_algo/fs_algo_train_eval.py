@@ -1101,7 +1101,7 @@ class AlgoTrainEval:
         for ii in range(n_algos):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
             if algo_str == 'rf':
-                model = RandomForestRegressor(
+                algo_tmp = RandomForestRegressor(
                     n_estimators=algo_cfg.get('n_estimators', 300),
                     max_depth=algo_cfg.get('max_depth', None),
                     min_samples_split=algo_cfg.get('min_samples_split', 2),
@@ -1110,7 +1110,7 @@ class AlgoTrainEval:
                     random_state=self.rs + ii,
                 )
             elif algo_str == 'mlp':
-                model = MLPRegressor(
+                algo_tmp = MLPRegressor(
                     hidden_layer_sizes=algo_cfg.get('hidden_layer_sizes', (100,)),
                     activation=algo_cfg.get('activation', 'relu'),
                     solver=algo_cfg.get('solver', 'lbfgs'),
@@ -1121,8 +1121,8 @@ class AlgoTrainEval:
                     max_iter=algo_cfg.get('max_iter', 200),
                     random_state=self.rs + ii,
                 )
-            model.fit(X_train_resampled, y_train_resampled)
-            predictions.append(model.predict(self.X_test))
+            algo_tmp.fit(X_train_resampled, y_train_resampled)
+            predictions.append(algo_tmp.predict(self.X_test))
         
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
@@ -1151,8 +1151,8 @@ class AlgoTrainEval:
     def calculate_mapie(self):
         """Generalized function to calculate prediction uncertainty using MAPIE."""
         for algo_name, algo_data in self.algs_dict.items():
-            model = algo_data['algo']
-            mapie = MapieRegressor(model, cv="prefit", agg_function="median")  
+            algo = algo_data['algo']
+            mapie = MapieRegressor(algo, cv="prefit", agg_function="median")  
             mapie.fit(self.X_train, self.y_train)  
             algo_data['mapie'] = mapie
             
