@@ -5,7 +5,7 @@ algorithms: # REQUIRED. Refer to AlgoTrainEval.train_algos to see what options a
     - forestci: True # Boolean. Forestci model to calculate confidence interval for rf model
     - Bagging_ci: True # Boolean. Calculate uncertainty using Bootstrap Aggregating (Bagging)
     - n_models_bootstrap: 10 # Number of bootstrap runs for rf confidence interval calculation
-    - confidence_level: 95 # Confidence interval for bootstrap ci calculation
+    - confidence_levels: 95 #[90,95,99] # Confidence interval for bootstrap ci calculation
   mlp:  # OPTIONAL. Refer to sklearn.neural_network.MLPRegressor for arguments to pass here. Otherwise defaults will be when 'mlp' is specified here
     - hidden_layer_sizes: (4,) # expect a tuple for hidden_layer_sizes, which will be interpreted as a string literal
     - activation: relu
@@ -17,7 +17,7 @@ algorithms: # REQUIRED. Refer to AlgoTrainEval.train_algos to see what options a
     - max_iter: [20000,80000,160000]
     - Bagging_ci: True # Boolean. Calculate uncertainty using Bootstrap Aggregating (Bagging)
     - n_models_bootstrap: 10 # Number of bootstrap runs for mlp confidence interval calculation
-    - confidence_level: 95 # Confidence interval for bootstrap ci calculation
+    - confidence_levels: 95 #[90,95,99] # Confidence interval for bootstrap ci calculation
 test_size: 0.3 # The proportion of dataset for testing, passed to sklearn.train_test_split
 seed: 32 # the random seed
 name_attr_config: 'xssa_attr_config.yaml'  # REQUIRED. Name of the corresponding dataset's attribute configuration file, which should be in the same directory as this. If not provided, assumes 'attr' may be substituted for this filename's 'algo'

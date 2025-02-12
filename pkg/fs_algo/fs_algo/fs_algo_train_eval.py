@@ -1203,12 +1203,25 @@ class AlgoTrainEval:
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
-        confidence_level = model_cfg.get('confidence_level', 95)
-        ci_factor = norm.ppf(1 - (1 - confidence_level / 100) / 2)
-        lower_bound = mean_pred - ci_factor * std_pred
-        upper_bound = mean_pred + ci_factor * std_pred
-        confidence_intervals = {confidence_level: (lower_bound, upper_bound)}
-        
+        confidence_levels = model_cfg.get('confidence_levels', 95)
+        confidence_intervals = {}
+
+        if isinstance(confidence_levels, (list, np.ndarray)):  # If confidence_level is an array
+            for cl in confidence_levels:
+                ci_factor = norm.ppf(1 - (1 - cl / 100) / 2)
+                lower_bound = mean_pred - ci_factor * std_pred
+                upper_bound = mean_pred + ci_factor * std_pred
+                confidence_intervals[f'ci_{cl}'] = {'lower_limit': lower_bound, 'upper_limit': upper_bound}
+        else:  # If confidence_levels is a single number
+            ci_factor = norm.ppf(1 - (1 - confidence_levels / 100) / 2)
+            lower_bound = mean_pred - ci_factor * std_pred
+            upper_bound = mean_pred + ci_factor * std_pred
+            confidence_intervals[f'ci_{confidence_levels}'] = {'lower_limit': lower_bound, 'upper_limit': upper_bound}
+
+        # for cl in confidence_levels:
+        #     lower_bound, upper_bound = np.percentile(predictions, [(100 - cl) / 2, 100 - (100 - cl) / 2], axis=0)
+        #     confidence_intervals[cl] = (lower_bound, upper_bound)
+
         return mean_pred, std_pred, confidence_intervals
 
     def calculate_mapie(self):
