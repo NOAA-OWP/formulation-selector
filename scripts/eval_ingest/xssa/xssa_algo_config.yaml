@@ -3,8 +3,7 @@ algorithms: # REQUIRED. Refer to AlgoTrainEval.train_algos to see what options a
   rf:  # STRONGLY RECOMMENDED. Refer to sklearn.ensemble.RandomForestRegressor for arguments to pass here. Otherwise defaults will be used
     - n_estimators: 400 #[50,100,200,300,400]
     - forestci: True # Boolean. Forestci model to calculate confidence interval for rf model
-    #- Bagging_ci: True # Boolean. Calculate uncertainty using Bootstrap Aggregating (Bagging)
-    - n_algos: 10 # Number of bootstrap runs for rf confidence interval calculation
+    - n_algos: 10 # Number of bootstrap runs for Bagging confidence interval calculation. Bagging ci calculation is disabled if n_algos is empty.
     - confidence_levels: 95 #[90,95,99] # Confidence interval for bootstrap ci calculation
   mlp:  # OPTIONAL. Refer to sklearn.neural_network.MLPRegressor for arguments to pass here. Otherwise defaults will be when 'mlp' is specified here
     - hidden_layer_sizes: (4,) # expect a tuple for hidden_layer_sizes, which will be interpreted as a string literal
@@ -15,8 +14,7 @@ algorithms: # REQUIRED. Refer to AlgoTrainEval.train_algos to see what options a
     - learning_rate: constant
     - power_t: 0.5
     - max_iter: [20000,80000,160000]
-    #- Bagging_ci: True # Boolean. Calculate uncertainty using Bootstrap Aggregating (Bagging)
-    - n_algos: 10 # Number of bootstrap runs for mlp confidence interval calculation
+    - n_algos: 10 # Number of bootstrap runs for Bagging confidence interval calculation. Bagging ci calculation is disabled if n_algos is empty.
     - confidence_levels: 95 #[90,95,99] # Confidence interval for bootstrap ci calculation
 test_size: 0.3 # The proportion of dataset for testing, passed to sklearn.train_test_split
 seed: 32 # the random seed
@@ -25,5 +23,4 @@ name_attr_csv:  # OPTIONAL. If provided, read this .csv file to define attribute
 colname_attr_csv: # OPTIONAL. But REQUIRED if name_attr_csv provided. The column name containing the attribute names. Default None.
 verbose: True # Boolean. Should the train/test/eval provide printouts on progress?
 read_type: 'filename' # Optional. Default 'all'. Should all parquet files be lazy-loaded, assign 'all' otherwise just files with comids_resp in the file name? assign 'filename'. Defaults to 'all'
-MAPIE: True # Boolean. Calculates prediction interval using MAPIE if it is true.
-MAPIE_alpha: [90, 95, 99] # Confidence levels for MAPIE prediction intervals
+MAPIE_alpha: [90, 95, 99] # Confidence levels for MAPIE prediction intervals. If empty, MAPIE is not calculated.

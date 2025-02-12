@@ -1405,7 +1405,7 @@ class AlgoTrainEval:
                 self.algs_dict[algo_str]['Uncertainty']['Bagging_confidence_intervals'] = confidence_intervals
 
         # --- Calculate prediction intervals using MAPIE if enabled ---
-        if self.mapie:
+        if getattr(self, 'mapie_alpha', None):
             self.calculate_mapie()
 
         # Make predictions  (aka validation) 
