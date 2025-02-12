@@ -1090,12 +1090,12 @@ class AlgoTrainEval:
         )
         return ci
 
-    def calculate_Bagging_ci(self, algo_str):
+    def calculate_Bagging_ci(self, algo_str, n_algos):
         """
         Generalized function to calculate Bagging confidence intervals for any model.
         """
         algo_cfg = self.algo_config[algo_str]
-        n_algos = algo_cfg.get('n_algos', 10)
+        # n_algos = algo_cfg.get('n_algos', None)
         predictions = []
         
         for ii in range(n_algos):
@@ -1127,7 +1127,7 @@ class AlgoTrainEval:
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
-        confidence_levels = algo_cfg.get('confidence_levels', 95)
+        confidence_levels = algo_cfg.get('confidence_levels')
         confidence_intervals = {}
 
         if isinstance(confidence_levels, (list, np.ndarray)):  # If confidence_level is an array
@@ -1398,8 +1398,9 @@ class AlgoTrainEval:
 
         # Calculate Bagging uncertainty if enabled
         for algo_str in ['rf', 'mlp']:
-            if algo_str in self.algo_config and self.algo_config[algo_str].get('Bagging_ci', False):
-                mean_pred, _, confidence_intervals = self.calculate_Bagging_ci(algo_str)
+            if algo_str in self.algo_config and self.algo_config[algo_str].get('n_algos', None):
+                n_algos = self.algo_config[algo_str].get('n_algos', None)
+                mean_pred, _, confidence_intervals = self.calculate_Bagging_ci(algo_str,n_algos)
                 self.algs_dict[algo_str]['Uncertainty']['Bagging_mean_pred'] = mean_pred
                 self.algs_dict[algo_str]['Uncertainty']['Bagging_confidence_intervals'] = confidence_intervals
 
