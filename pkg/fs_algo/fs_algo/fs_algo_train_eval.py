@@ -1095,10 +1095,10 @@ class AlgoTrainEval:
         Generalized function to calculate Bagging confidence intervals for any model.
         """
         algo_cfg = self.algo_config[algo_str]
-        n_models = algo_cfg.get('n_models_bootstrap', 10)
+        n_algos = algo_cfg.get('n_algos', 10)
         predictions = []
         
-        for ii in range(n_models):
+        for ii in range(n_algos):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
             if algo_str == 'rf':
                 model = RandomForestRegressor(
