@@ -1090,17 +1090,17 @@ class AlgoTrainEval:
         )
         return ci
 
-    def calculate_Bagging_ci(self, model_name, model_class):
+    def calculate_Bagging_ci(self, algo_str):
         """
         Generalized function to calculate Bagging confidence intervals for any model.
         """
-        model_cfg = self.algo_config[model_name]
+        model_cfg = self.algo_config[algo_str]
         n_models = model_cfg.get('n_models_bootstrap', 10)
         predictions = []
         
         for ii in range(n_models):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
-            if model_name == 'rf':
+            if algo_str == 'rf':
                 model = RandomForestRegressor(
                     n_estimators=model_cfg.get('n_estimators', 300),
                     max_depth=model_cfg.get('max_depth', None),
@@ -1109,7 +1109,7 @@ class AlgoTrainEval:
                     oob_score=False,
                     random_state=self.rs + ii,
                 )
-            elif model_name == 'mlp':
+            elif algo_str == 'mlp':
                 model = MLPRegressor(
                     hidden_layer_sizes=model_cfg.get('hidden_layer_sizes', (100,)),
                     activation=model_cfg.get('activation', 'relu'),
@@ -1397,11 +1397,11 @@ class AlgoTrainEval:
             )
 
         # Calculate Bagging uncertainty if enabled
-        for model_name in ['rf', 'mlp']:
-            if model_name in self.algo_config and self.algo_config[model_name].get('Bagging_ci', False):
-                mean_pred, _, confidence_intervals = self.calculate_Bagging_ci(model_name, None)
-                self.algs_dict[model_name]['Uncertainty']['Bagging_mean_pred'] = mean_pred
-                self.algs_dict[model_name]['Uncertainty']['Bagging_confidence_intervals'] = confidence_intervals
+        for algo_str in ['rf', 'mlp']:
+            if algo_str in self.algo_config and self.algo_config[algo_str].get('Bagging_ci', False):
+                mean_pred, _, confidence_intervals = self.calculate_Bagging_ci(algo_str)
+                self.algs_dict[algo_str]['Uncertainty']['Bagging_mean_pred'] = mean_pred
+                self.algs_dict[algo_str]['Uncertainty']['Bagging_confidence_intervals'] = confidence_intervals
 
         # --- Calculate prediction intervals using MAPIE if enabled ---
         if self.mapie:
