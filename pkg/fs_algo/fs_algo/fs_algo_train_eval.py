@@ -1094,31 +1094,31 @@ class AlgoTrainEval:
         """
         Generalized function to calculate Bagging confidence intervals for any model.
         """
-        model_cfg = self.algo_config[algo_str]
-        n_models = model_cfg.get('n_models_bootstrap', 10)
+        algo_cfg = self.algo_config[algo_str]
+        n_models = algo_cfg.get('n_models_bootstrap', 10)
         predictions = []
         
         for ii in range(n_models):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
             if algo_str == 'rf':
                 model = RandomForestRegressor(
-                    n_estimators=model_cfg.get('n_estimators', 300),
-                    max_depth=model_cfg.get('max_depth', None),
-                    min_samples_split=model_cfg.get('min_samples_split', 2),
-                    min_samples_leaf=model_cfg.get('min_samples_leaf', 1),
+                    n_estimators=algo_cfg.get('n_estimators', 300),
+                    max_depth=algo_cfg.get('max_depth', None),
+                    min_samples_split=algo_cfg.get('min_samples_split', 2),
+                    min_samples_leaf=algo_cfg.get('min_samples_leaf', 1),
                     oob_score=False,
                     random_state=self.rs + ii,
                 )
             elif algo_str == 'mlp':
                 model = MLPRegressor(
-                    hidden_layer_sizes=model_cfg.get('hidden_layer_sizes', (100,)),
-                    activation=model_cfg.get('activation', 'relu'),
-                    solver=model_cfg.get('solver', 'lbfgs'),
-                    alpha=model_cfg.get('alpha', 0.001),
-                    batch_size=model_cfg.get('batch_size', 'auto'),
-                    learning_rate=model_cfg.get('learning_rate', 'constant'),
-                    power_t=model_cfg.get('power_t', 0.5),
-                    max_iter=model_cfg.get('max_iter', 200),
+                    hidden_layer_sizes=algo_cfg.get('hidden_layer_sizes', (100,)),
+                    activation=algo_cfg.get('activation', 'relu'),
+                    solver=algo_cfg.get('solver', 'lbfgs'),
+                    alpha=algo_cfg.get('alpha', 0.001),
+                    batch_size=algo_cfg.get('batch_size', 'auto'),
+                    learning_rate=algo_cfg.get('learning_rate', 'constant'),
+                    power_t=algo_cfg.get('power_t', 0.5),
+                    max_iter=algo_cfg.get('max_iter', 200),
                     random_state=self.rs + ii,
                 )
             model.fit(X_train_resampled, y_train_resampled)
@@ -1127,7 +1127,7 @@ class AlgoTrainEval:
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
-        confidence_levels = model_cfg.get('confidence_levels', 95)
+        confidence_levels = algo_cfg.get('confidence_levels', 95)
         confidence_intervals = {}
 
         if isinstance(confidence_levels, (list, np.ndarray)):  # If confidence_level is an array
