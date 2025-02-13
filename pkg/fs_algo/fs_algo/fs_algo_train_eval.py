@@ -1090,7 +1090,7 @@ class AlgoTrainEval:
         )
         return ci
 
-    def calculate_Bagging_ci(self, algo_str, n_algos):
+    def calculate_bagging_ci(self, algo_str, n_algos):
         """
         Generalized function to calculate Bagging confidence intervals for any model.
         """
@@ -1399,9 +1399,9 @@ class AlgoTrainEval:
         for algo_str in ['rf', 'mlp']:
             if algo_str in self.algo_config and self.bagging_ci_params.get('n_algos', None):
                 n_algos = self.bagging_ci_params.get('n_algos', None)
-                mean_pred, _, confidence_intervals = self.calculate_Bagging_ci(algo_str,n_algos)
-                self.algs_dict[algo_str]['Uncertainty']['Bagging_mean_pred'] = mean_pred
-                self.algs_dict[algo_str]['Uncertainty']['Bagging_confidence_intervals'] = confidence_intervals
+                mean_pred, _, confidence_intervals = self.calculate_bagging_ci(algo_str,n_algos)
+                self.algs_dict[algo_str]['Uncertainty']['bagging_mean_pred'] = mean_pred
+                self.algs_dict[algo_str]['Uncertainty']['bagging_confidence_intervals'] = confidence_intervals
 
         # --- Calculate prediction intervals using MAPIE if enabled ---
         if getattr(self, 'mapie_alpha', None):
