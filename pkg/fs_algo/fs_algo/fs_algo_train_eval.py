@@ -876,7 +876,6 @@ class AlgoTrainEval:
                  metr: str, test_size: float = 0.3,rs: int = 32,
                  test_ids = None,test_id_col:str = 'comid',
                  verbose: bool = False,
-                 mapie: bool = False,
                  mapie_alpha : float = 95,
                  bagging_ci_params: dict = None):
         """The algorithm training and evaluation class.
@@ -907,8 +906,6 @@ class AlgoTrainEval:
         :type test_id_col: str
         :param verbose: Should print, defaults to False.
         :type verbose: bool, optional
-        :param mapie: Calculate MAPIE, defaults to False.
-        :type verbose: bool, optional
         :param mapie_alpha: Confidence interval(s) for MAPIE, defaults to 95.
         :type test_size: float, optional
         :param bagging_ci: Configuration dictionary for Bagging-based uncertainty estimation. 
@@ -926,7 +923,6 @@ class AlgoTrainEval:
         self.rs = rs
         self.dataset_id = dataset_id
         self.verbose = verbose
-        self.mapie = mapie
         self.mapie_alpha = mapie_alpha
         self.bagging_ci_params = bagging_ci_params
 
