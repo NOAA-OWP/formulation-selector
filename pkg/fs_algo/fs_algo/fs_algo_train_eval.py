@@ -877,7 +877,8 @@ class AlgoTrainEval:
                  test_ids = None,test_id_col:str = 'comid',
                  verbose: bool = False,
                  mapie: bool = False,
-                 mapie_alpha : float = 95):
+                 mapie_alpha : float = 95,
+                 bagging_ci_params: dict = None):
         """The algorithm training and evaluation class.
 
         :param df: The combined response variable and predictor variables DataFrame.
@@ -910,6 +911,8 @@ class AlgoTrainEval:
         :type verbose: bool, optional
         :param mapie_alpha: Confidence interval(s) for MAPIE, defaults to 95.
         :type test_size: float, optional
+        :param bagging_ci: Configuration dictionary for Bagging-based uncertainty estimation. 
+        :type bagging_ci: dict or None, optional
         """
         # class args
         self.df = df
@@ -925,6 +928,7 @@ class AlgoTrainEval:
         self.verbose = verbose
         self.mapie = mapie
         self.mapie_alpha = mapie_alpha
+        self.bagging_ci_params = bagging_ci_params
 
         # train/test split
         self.X_train = pd.DataFrame()
@@ -1095,7 +1099,6 @@ class AlgoTrainEval:
         Generalized function to calculate Bagging confidence intervals for any model.
         """
         algo_cfg = self.algo_config[algo_str]
-        # n_algos = algo_cfg.get('n_algos', None)
         predictions = []
         
         for ii in range(n_algos):
@@ -1127,24 +1130,24 @@ class AlgoTrainEval:
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
-        confidence_levels = algo_cfg.get('confidence_levels')
+        confidence_levels = self.bagging_ci_params.get('confidence_levels')
         confidence_intervals = {}
 
-        if isinstance(confidence_levels, (list, np.ndarray)):  # If confidence_level is an array
-            for cl in confidence_levels:
-                ci_factor = norm.ppf(1 - (1 - cl / 100) / 2)
-                lower_bound = mean_pred - ci_factor * std_pred
-                upper_bound = mean_pred + ci_factor * std_pred
-                confidence_intervals[f'ci_{cl}'] = {'lower_limit': lower_bound, 'upper_limit': upper_bound}
-        else:  # If confidence_levels is a single number
-            ci_factor = norm.ppf(1 - (1 - confidence_levels / 100) / 2)
-            lower_bound = mean_pred - ci_factor * std_pred
-            upper_bound = mean_pred + ci_factor * std_pred
-            confidence_intervals[f'ci_{confidence_levels}'] = {'lower_limit': lower_bound, 'upper_limit': upper_bound}
+        # if isinstance(confidence_levels, (list, np.ndarray)):  # If confidence_level is an array
+        #     for cl in confidence_levels:
+        #         ci_factor = norm.ppf(1 - (1 - cl / 100) / 2)
+        #         lower_bound = mean_pred - ci_factor * std_pred
+        #         upper_bound = mean_pred + ci_factor * std_pred
+        #         confidence_intervals[f'ci_{cl}'] = {'lower_limit': lower_bound, 'upper_limit': upper_bound}
+        # else:  # If confidence_levels is a single number
+        #     ci_factor = norm.ppf(1 - (1 - confidence_levels / 100) / 2)
+        #     lower_bound = mean_pred - ci_factor * std_pred
+        #     upper_bound = mean_pred + ci_factor * std_pred
+        #     confidence_intervals[f'ci_{confidence_levels}'] = {'lower_limit': lower_bound, 'upper_limit': upper_bound}
 
-        # for cl in confidence_levels:
-        #     lower_bound, upper_bound = np.percentile(predictions, [(100 - cl) / 2, 100 - (100 - cl) / 2], axis=0)
-        #     confidence_intervals[cl] = (lower_bound, upper_bound)
+        for cl in confidence_levels:
+            lower_bound, upper_bound = np.percentile(predictions, [(100 - cl) / 2, 100 - (100 - cl) / 2], axis=0)
+            confidence_intervals[cl] = (lower_bound, upper_bound)
 
         return mean_pred, std_pred, confidence_intervals
 
@@ -1398,8 +1401,8 @@ class AlgoTrainEval:
 
         # Calculate Bagging uncertainty if enabled
         for algo_str in ['rf', 'mlp']:
-            if algo_str in self.algo_config and self.algo_config[algo_str].get('n_algos', None):
-                n_algos = self.algo_config[algo_str].get('n_algos', None)
+            if algo_str in self.algo_config and self.bagging_ci_params.get('n_algos', None):
+                n_algos = self.bagging_ci_params.get('n_algos', None)
                 mean_pred, _, confidence_intervals = self.calculate_Bagging_ci(algo_str,n_algos)
                 self.algs_dict[algo_str]['Uncertainty']['Bagging_mean_pred'] = mean_pred
                 self.algs_dict[algo_str]['Uncertainty']['Bagging_confidence_intervals'] = confidence_intervals
