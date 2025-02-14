@@ -1284,7 +1284,7 @@ class AlgoTrainEval:
             
             y_pred = pipe.predict(self.X_test)
             if 'mapie' in v:
-                y_test_pred, y_test_pis = v['mapie'].predict(self.X_test, alpha=1-np.array(self.mapie_alpha)/100) 
+                y_test_pred, y_test_pis = v['mapie'].predict(self.X_test, alpha=self.mapie_alpha) 
                 
                 # Rename rows
                 row_labels = ['lower_limit', 'upper_limit']
