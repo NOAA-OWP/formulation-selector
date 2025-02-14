@@ -101,6 +101,7 @@ if __name__ == "__main__":
         comids_resp = gdf_comid['comid']
         
         dat_resp = dat_resp.assign_coords(comid = comids_resp)
+        
         # Remove the unknown comids:
         dat_resp = dat_resp.dropna(dim='comid',how='any')
         comids_resp = [x for x in comids_resp if x is not np.nan]
