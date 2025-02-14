@@ -35,6 +35,7 @@ import forestci as fci
 from sklearn.utils import resample
 from mapie.regression import MapieRegressor
 from scipy.stats import norm
+import random
 
 # %% BASIN ATTRIBUTES (PREDICTORS) & RESPONSE VARIABLES (e.g. METRICS)
 class AttrConfigAndVars:
@@ -876,6 +877,7 @@ class AlgoTrainEval:
                  metr: str, test_size: float = 0.3,rs: int = 32,
                  test_ids = None,test_id_col:str = 'comid',
                  verbose: bool = False,
+                 forestci: bool = False,
                  mapie_alpha : float = 95,
                  bagging_ci_params: dict = None):
         """The algorithm training and evaluation class.
@@ -923,6 +925,7 @@ class AlgoTrainEval:
         self.rs = rs
         self.dataset_id = dataset_id
         self.verbose = verbose
+        self.forestci = forestci
         self.mapie_alpha = mapie_alpha
         self.bagging_ci_params = bagging_ci_params
 
@@ -1097,29 +1100,45 @@ class AlgoTrainEval:
         algo_cfg = self.algo_config[algo_str]
         predictions = []
         
-        for ii in range(n_algos):
+        # Initialize the base model
+        if algo_str == 'rf':
+            base_algo = RandomForestRegressor(**algo_cfg)
+        elif algo_str == 'mlp':
+            base_algo = MLPRegressor(**algo_cfg)
+        else:
+            raise ValueError(f"Unsupported algorithm: {algo_str}")
+
+        # for ii in range(n_algos):
+        #     X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
+        #     if algo_str == 'rf':
+        #         algo_tmp = RandomForestRegressor(
+        #             n_estimators=algo_cfg.get('n_estimators', 300),
+        #             max_depth=algo_cfg.get('max_depth', None),
+        #             min_samples_split=algo_cfg.get('min_samples_split', 2),
+        #             min_samples_leaf=algo_cfg.get('min_samples_leaf', 1),
+        #             oob_score=False,
+        #             random_state=self.rs + ii,
+        #         )
+        #     elif algo_str == 'mlp':
+        #         algo_tmp = MLPRegressor(
+        #             hidden_layer_sizes=algo_cfg.get('hidden_layer_sizes', (100,)),
+        #             activation=algo_cfg.get('activation', 'relu'),
+        #             solver=algo_cfg.get('solver', 'lbfgs'),
+        #             alpha=algo_cfg.get('alpha', 0.001),
+        #             batch_size=algo_cfg.get('batch_size', 'auto'),
+        #             learning_rate=algo_cfg.get('learning_rate', 'constant'),
+        #             power_t=algo_cfg.get('power_t', 0.5),
+        #             max_iter=algo_cfg.get('max_iter', 200),
+        #             random_state=self.rs + ii,
+        #         )
+
+        for _ in range(n_algos):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
-            if algo_str == 'rf':
-                algo_tmp = RandomForestRegressor(
-                    n_estimators=algo_cfg.get('n_estimators', 300),
-                    max_depth=algo_cfg.get('max_depth', None),
-                    min_samples_split=algo_cfg.get('min_samples_split', 2),
-                    min_samples_leaf=algo_cfg.get('min_samples_leaf', 1),
-                    oob_score=False,
-                    random_state=self.rs + ii,
-                )
-            elif algo_str == 'mlp':
-                algo_tmp = MLPRegressor(
-                    hidden_layer_sizes=algo_cfg.get('hidden_layer_sizes', (100,)),
-                    activation=algo_cfg.get('activation', 'relu'),
-                    solver=algo_cfg.get('solver', 'lbfgs'),
-                    alpha=algo_cfg.get('alpha', 0.001),
-                    batch_size=algo_cfg.get('batch_size', 'auto'),
-                    learning_rate=algo_cfg.get('learning_rate', 'constant'),
-                    power_t=algo_cfg.get('power_t', 0.5),
-                    max_iter=algo_cfg.get('max_iter', 200),
-                    random_state=self.rs + ii,
-                )
+            
+            # Create a new model with the same parameters but a different random_state
+            new_random_state = random.randint(1, 100)
+            algo_tmp = type(base_algo)(**{**base_algo.get_params(), "random_state": new_random_state})
+
             algo_tmp.fit(X_train_resampled, y_train_resampled)
             predictions.append(algo_tmp.predict(self.X_test))
         
@@ -1390,7 +1409,7 @@ class AlgoTrainEval:
             self.train_algos()
 
         # Calculate forestci uncertainty if enabled
-        if 'rf' in self.algo_config and self.algo_config['rf'].get('forestci', False):
+        if 'rf' in self.algo_config and self.forestci: #self.algo_config['rf'].get('forestci', False):
             self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
                 self.algs_dict['rf']['algo'], self.X_train, self.X_test
             )
