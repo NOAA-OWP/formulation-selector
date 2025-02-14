@@ -20,7 +20,7 @@ colname_attr_csv: # OPTIONAL. But REQUIRED if name_attr_csv provided. The column
 verbose: True # Boolean. Should the train/test/eval provide printouts on progress?
 read_type: 'filename' # Optional. Default 'all'. Should all parquet files be lazy-loaded, assign 'all' otherwise just files with comids_resp in the file name? assign 'filename'. Defaults to 'all'
 forestci: True # Boolean. Forestci model to calculate confidence interval for rf model.
-MAPIE_alpha: [0.01, 0.05, 0.32] # OPTIONAL. Enabled if not empty. Alpha parameter (0 < α < 1) in an array format to calculate MAPIE prediction intervals. If empty, MAPIE is not calculated.
+MAPIE_alpha: [0.05, 0.32] # OPTIONAL. Enabled if not empty. Alpha parameter (0 < α < 1) in an array format to calculate MAPIE prediction intervals. If empty, MAPIE is not calculated. Note: 1/α (or 1/(1 - α)) must be lower than the number of samples.
 Bagging_uncertainty:  # 
     - n_algos: 10 # OPTIONAL. Enabled if not empty. Number of bootstrap runs for Bagging confidence interval calculation. Bagging ci calculation is disabled if n_algos is empty.
     - confidence_levels: [90,95,99] # OPTIONAL. But REQUIRED if a value is assinged to n_algos. Confidence levels between 50 and 100 for bootstrap ci calculation in an array format.
