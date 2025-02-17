@@ -20,13 +20,9 @@ library(tidyr)
 library(tools)
 library(curl)
 library(jsonlite)
-<<<<<<< HEAD
 library(tibble)
 library(stringr)
 library(fs)
-=======
-
->>>>>>> 9e842917 (feat: add metadata retrieval based on NOAA RFC ID)
 
 attr_cfig_parse <- function(path_attr_config){
   #' @title Read and parse the attribute config yaml file to create parameter
@@ -39,7 +35,7 @@ attr_cfig_parse <- function(path_attr_config){
 
   # Define directory paths from the config file
   # Determine if home_dir. Either defined in attribute config file or assumed to be system default.
-<<<<<<< HEAD
+
   home_dir_read <- tryCatch({glue::glue(
     base::unlist(raw_config$file_io)[['home_dir']])},
     error = function(e) {NULL})
@@ -47,12 +43,6 @@ attr_cfig_parse <- function(path_attr_config){
     home_dir <- Sys.getenv("HOME")
   } else if (!dir.exists(home_dir_read)){
     warning(glue::glue("The user-defined home_dir does not exist. Assigning system default."))
-=======
-  home_dir_read <- glue::glue(base::unlist(raw_config$file_io)[['home_dir']])
-  if (length(home_dir_read)==0){
-    home_dir <- Sys.getenv("HOME")
-  } else if (!dir.exists(home_dir_read)){
->>>>>>> 51bd4ec (refactor: add option for home_dir to be manually defined in the attribute config, otherwise assume system default)
     home_dir <- Sys.getenv("HOME")
   } else {
     home_dir <- home_dir_read
@@ -1329,7 +1319,6 @@ retr_comids <- function(gage_ids,featureSource,featureID,dir_db_attrs,
   #'  featureID="{gage_id}". In other instances, conversions may be necessary,
   #'  e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
   #'  that the term 'gage_id' is used as a variable in glue syntax to create featureID
-<<<<<<< HEAD
   #'  Refer to ?dataRetrieval::get_nldi_sources() for options to use with nldi_feature
   #' @param dir_db_attrs Attribute directory path, where the standardized
   #' comid-gage_id will be stored as a .csv
@@ -1337,9 +1326,6 @@ retr_comids <- function(gage_ids,featureSource,featureID,dir_db_attrs,
   #' comid-gageid-geometry mappings are saved. Default NULL, but strongly recommended
   #' to use!
   #' @note 2025-03-07 This needs a deeper refactoring
-=======
-  #'  Refer to ?dataRetrieval::get_nldi_sources() for options to use with nldi_featre
->>>>>>> 9e842917 (feat: add metadata retrieval based on NOAA RFC ID)
   #' @export
   #'
   # Changelog/Contributions
@@ -2366,37 +2352,3 @@ fs_attrs_miss_mlti_wrap <- function(path_attr_config){
   }
 }
 
-
-<<<<<<< HEAD
-=======
-######################### NOAA-specific functions #############################
-
-retr_noaa_gauges_meta <- function(gauge_ids,
-                             gauge_url_base = "https://api.water.noaa.gov/nwps/v1/gauges",
-                             retr_ids = c("lid","usgsId","name","latitude","longitude")){
-  #' @title Retrieve metadata based on a NOAA RFC gauge ID, aka lid
-  #' @description Uses the NWPS api to retrieve gauge metadata
-  #' @param gauge_ids list of NOAA gauge ids of interest
-  #' @param gauge_url_base the base api url for NWPS
-  #' @param retr_ids The desired data to retrieve from the api
-  #' @export
-  ls_all_resp <- list()
-  for(gid in gauge_ids){
-    url <- file.path(gauge_url_base,gid)
-    resp <- curl::curl_fetch_memory(url)
-
-    if (resp$status_code == 200) {
-      # Parse the JSON data
-      data <- jsonlite::fromJSON(rawToChar(resp$content))
-      dt_resp <- data.table::data.table(data.frame(data[retr_ids]))
-      ls_all_resp[[url]] <- dt_resp
-    } else {
-      ls_all_resp[[url]] <- data.table::data.table(lid=gid)
-      cat(glue::glue("Request for {gid} failed with status code:",
-                     resp$status_code, "\n"))
-    }
-  }
-  dt_all <- data.table::rbindlist(ls_all_resp,fill=TRUE)
-  return(dt_all)
-}
->>>>>>> 9e842917 (feat: add metadata retrieval based on NOAA RFC ID)
