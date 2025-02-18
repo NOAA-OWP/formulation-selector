@@ -1174,11 +1174,11 @@ class AlgoTrainEval:
     
     def calculate_mapie(self):
         """Generalized function to calculate prediction uncertainty using MAPIE."""
-        for algo_name, algo_data in self.algs_dict.items():
+        for algo_str, algo_data in self.algs_dict.items():
             algo = algo_data['algo']
             mapie = MapieRegressor(algo, cv="prefit", agg_function="median")  
             mapie.fit(self.X_train, self.y_train)  
-            algo_data['mapie'] = mapie
+            self.algs_dict[algo_str]['mapie'] = mapie
             
     def train_algos(self):
         """Train algorithms based on what has been defined in the algo config file
