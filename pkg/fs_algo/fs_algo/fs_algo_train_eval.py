@@ -1109,30 +1109,6 @@ class AlgoTrainEval:
         else:
             raise ValueError(f"Unsupported algorithm: {algo_str}")
 
-        # for ii in range(n_algos):
-        #     X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
-        #     if algo_str == 'rf':
-        #         algo_tmp = RandomForestRegressor(
-        #             n_estimators=algo_cfg.get('n_estimators', 300),
-        #             max_depth=algo_cfg.get('max_depth', None),
-        #             min_samples_split=algo_cfg.get('min_samples_split', 2),
-        #             min_samples_leaf=algo_cfg.get('min_samples_leaf', 1),
-        #             oob_score=False,
-        #             random_state=self.rs + ii,
-        #         )
-        #     elif algo_str == 'mlp':
-        #         algo_tmp = MLPRegressor(
-        #             hidden_layer_sizes=algo_cfg.get('hidden_layer_sizes', (100,)),
-        #             activation=algo_cfg.get('activation', 'relu'),
-        #             solver=algo_cfg.get('solver', 'lbfgs'),
-        #             alpha=algo_cfg.get('alpha', 0.001),
-        #             batch_size=algo_cfg.get('batch_size', 'auto'),
-        #             learning_rate=algo_cfg.get('learning_rate', 'constant'),
-        #             power_t=algo_cfg.get('power_t', 0.5),
-        #             max_iter=algo_cfg.get('max_iter', 200),
-        #             random_state=self.rs + ii,
-        #         )
-
         for _ in range(n_algos):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
             
@@ -1148,18 +1124,6 @@ class AlgoTrainEval:
         std_pred = predictions.std(axis=0)
         confidence_levels = self.bagging_ci_params.get('confidence_levels')
         confidence_intervals = {}
-
-        # if isinstance(confidence_levels, (list, np.ndarray)):  # If confidence_level is an array
-        #     for cl in confidence_levels:
-        #         ci_factor = norm.ppf(1 - (1 - cl / 100) / 2)
-        #         lower_bound = mean_pred - ci_factor * std_pred
-        #         upper_bound = mean_pred + ci_factor * std_pred
-        #         confidence_intervals[f'ci_{cl}'] = {'lower_limit': lower_bound, 'upper_limit': upper_bound}
-        # else:  # If confidence_levels is a single number
-        #     ci_factor = norm.ppf(1 - (1 - confidence_levels / 100) / 2)
-        #     lower_bound = mean_pred - ci_factor * std_pred
-        #     upper_bound = mean_pred + ci_factor * std_pred
-        #     confidence_intervals[f'ci_{confidence_levels}'] = {'lower_limit': lower_bound, 'upper_limit': upper_bound}
 
         for cl in confidence_levels:
             lower_bound, upper_bound = np.percentile(predictions, [(100 - cl) / 2, 100 - (100 - cl) / 2], axis=0)
