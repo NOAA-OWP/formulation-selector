@@ -1093,11 +1093,12 @@ class AlgoTrainEval:
         )
         return ci
 
-    def calculate_bagging_ci(self, algo_str, n_algos):
+    def calculate_bagging_ci(self, algo_str):
         """
         Generalized function to calculate Bagging confidence intervals for any model.
         """
         algo_cfg = self.algo_config[algo_str]
+        n_algos = self.bagging_ci_params['n_algos']
         predictions = []
         
         # Initialize the base model
@@ -1164,8 +1165,13 @@ class AlgoTrainEval:
             lower_bound, upper_bound = np.percentile(predictions, [(100 - cl) / 2, 100 - (100 - cl) / 2], axis=0)
             confidence_intervals[cl] = (lower_bound, upper_bound)
 
-        return mean_pred, std_pred, confidence_intervals
-
+        if 'Uncertainty' not in self.algs_dict[algo_str]:
+            self.algs_dict[algo_str]['Uncertainty'] = {}
+    
+        self.algs_dict[algo_str]['Uncertainty']['bagging_mean_pred'] = mean_pred
+        self.algs_dict[algo_str]['Uncertainty']['bagging_std_pred'] = std_pred
+        self.algs_dict[algo_str]['Uncertainty']['bagging_confidence_intervals'] = confidence_intervals
+    
     def calculate_mapie(self):
         """Generalized function to calculate prediction uncertainty using MAPIE."""
         for algo_name, algo_data in self.algs_dict.items():
@@ -1415,12 +1421,9 @@ class AlgoTrainEval:
             )
 
         # Calculate Bagging uncertainty if enabled
-        for algo_str in ['rf', 'mlp']:
-            if algo_str in self.algo_config and self.bagging_ci_params.get('n_algos', None):
-                n_algos = self.bagging_ci_params.get('n_algos', None)
-                mean_pred, _, confidence_intervals = self.calculate_bagging_ci(algo_str,n_algos)
-                self.algs_dict[algo_str]['Uncertainty']['bagging_mean_pred'] = mean_pred
-                self.algs_dict[algo_str]['Uncertainty']['bagging_confidence_intervals'] = confidence_intervals
+        for algo_str in self.algo_config.keys():  
+            if self.bagging_ci_params.get('n_algos', None):
+                self.calculate_bagging_ci(algo_str)
 
         # --- Calculate prediction intervals using MAPIE if enabled ---
         if getattr(self, 'mapie_alpha', None):
