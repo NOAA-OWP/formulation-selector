@@ -653,6 +653,18 @@ def std_test_pred_obs_path(dir_out_anlys_base:str|os.PathLike,ds:str, metr:str
     path_pred_obs.parent.mkdir(exist_ok=True,parents=True)
     return path_pred_obs
 
+def save_Xtrain_to_csv(X_train, dir_out_alg_ds, dataset_id):
+    """
+    Save X_train as a CSV file.
+
+    :param X_train: Training data.
+    :param dir_out_alg_ds: Directory where the output should be stored.
+    :param dataset_id: Identifier for the dataset.
+    """
+    path_Xtrain = std_Xtrain_path(dir_out_alg_ds, dataset_id)
+    X_train_df = pd.DataFrame(X_train)
+    X_train_df.to_csv(path_Xtrain, index=False)
+
 def _read_pred_comid(path_pred_locs: str | os.PathLike, comid_pred_col:str ) -> list[str]:
     """Read the comids from a prediction file formatted as .csv
 
@@ -1394,6 +1406,8 @@ class AlgoTrainEval:
             self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
                 self.algs_dict['rf']['algo'], self.X_train, self.X_test
             )
+            # Save X_train as a CSV file
+            save_Xtrain_to_csv(self.X_train, self.dir_out_alg_ds,self.dataset_id)
 
         # Calculate Bagging uncertainty if enabled
         for algo_str in self.algo_config.keys():  

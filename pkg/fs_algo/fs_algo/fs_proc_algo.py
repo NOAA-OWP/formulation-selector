@@ -141,12 +141,6 @@ if __name__ == "__main__":
                                         bagging_ci_params=bagging_ci_params)
             train_eval.train_eval() # Train, test, eval wrapper
 
-            X_train = train_eval.X_train
-            X_train_df = pd.DataFrame(X_train)
-            # Save X_train as a CSV file
-            path_Xtrain = fsate.std_Xtrain_path(dir_out_alg_ds,  dataset_id=ds)
-            X_train_df.to_csv(path_Xtrain, index=False)            
-
             # Retrieve evaluation metrics dataframe
             rslt_eval[metr] = train_eval.eval_df
             path_eval_metr = fsate.std_eval_metrs_path(dir_out_alg_ds, ds,metr)
