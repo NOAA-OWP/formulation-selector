@@ -104,9 +104,12 @@ if __name__ == "__main__":
                     raise FileNotFoundError(f"The following algorithm path does not exist: \n{path_algo}")
 
                 # Read in the algorithm's pipeline
-                pipe = joblib.load(path_algo)
-                # pipeline_with_ci = joblib.load(path_algo)
-                # pipe = pipeline_with_ci['pipe']  # Assign the actual pipeline (pipe) to 'pipe'
+                # pipe = joblib.load(path_algo)
+                pipeline_data = joblib.load(path_algo)
+                
+                pipe = pipeline_data['pipeline']
+                X_train_shape = pipeline_data['X_train_shape']  # Retrieve X_train.shape
+
                 rf_model = pipe.named_steps['randomforestregressor']  # Use the correct step name
                 feat_names = list(pipe.feature_names_in_)
                 df_attr_sub = df_attr_wide[feat_names]
@@ -125,9 +128,7 @@ if __name__ == "__main__":
 
                 if algo == 'rf':
                     # Calculate confidence intervals for the predictions using forestci
-                    path_Xtrain = fsate.std_Xtrain_path(dir_out_alg_ds,  dataset_id=ds) 
-                    X_train = pd.read_csv(path_Xtrain)                  
-                    forest_ci = fci.random_forest_error(forest=rf_model, X_train_shape=X_train.shape, X_test=df_attr_sub.to_numpy())
+                    forest_ci = fci.random_forest_error(forest=rf_model, X_train_shape=X_train_shape, X_test=df_attr_sub.to_numpy())
     
                     # compile prediction results:
                     df_pred =pd.DataFrame({'comid':comids_pred,
