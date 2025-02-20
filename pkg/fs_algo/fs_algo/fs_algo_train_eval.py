@@ -1408,9 +1408,9 @@ class AlgoTrainEval:
             self.train_algos()
 
         # Calculate forestci uncertainty if enabled
-        if 'rf' in self.algo_config and self.forestci: #self.algo_config['rf'].get('forestci', False):
+        if 'rf' in self.algo_config and self.forestci:
             self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
-                self.algs_dict['rf']['algo'], self.X_train, self.X_test
+                self.algs_dict['rf']['algo'], np.array(self.X_train), np.array(self.X_test)
             )
             # Save X_train as a CSV file
             save_Xtrain_to_csv(self.X_train, self.dir_out_alg_ds,self.dataset_id)
