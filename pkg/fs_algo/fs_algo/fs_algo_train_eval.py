@@ -1329,15 +1329,6 @@ class AlgoTrainEval:
             # write trained algorithm
             # joblib.dump(self.algs_dict[algo]['pipeline'], path_algo)
             
-            # # --- Modified part: Combine rf model and ci into a single dictionary ---
-            # pipeline_with_ci = {
-            # 'pipe': self.algs_dict[algo]['pipeline'],   # The trained model
-            # 'confidence_intervals': self.algs_dict[algo].get('ci',None)  # The ci object if it exists
-            # }
-            
-            # # Save the combined pipeline (model + ci) using joblib
-            # joblib.dump(pipeline_with_ci, path_algo)
-
             # Save pipeline and metadata in a dictionary
             pipeline_data = {
                 'pipeline': self.algs_dict[algo]['pipeline'],  # The trained model pipeline
