@@ -601,21 +601,6 @@ def std_pred_path(dir_out: str | os.PathLike, algo: str, metric: str, dataset_id
     path_pred_rslt = Path(dir_preds_ds)/Path(basename_pred_alg_ds_metr)
     return path_pred_rslt
 
-def std_Xtrain_path(dir_out_alg_ds:str | os.PathLike, dataset_id: str
-                    ) -> pathlib.PosixPath:
-    """Standardize the algorithm save path
-    :param dir_out_alg_ds:  Directory where algorithm's output stored.
-    :type dir_out_alg_ds: str | os.PathLike
-    :param metric:  The metric or hydrologic signature identifier of interest
-    :type metric: str
-    :return: full save path for joblib object
-    :rtype: str
-    """
-    Path(dir_out_alg_ds).mkdir(exist_ok=True,parents=True)
-    basename_alg_ds = f'Xtrain__{dataset_id}'
-    path_Xtrain = Path(dir_out_alg_ds) / Path(basename_alg_ds + '.csv')
-    return path_Xtrain
-
 def std_eval_metrs_path(dir_out_viz_base: str|os.PathLike,
                       ds:str, metr:str
                       ) -> pathlib.PosixPath:
@@ -652,18 +637,6 @@ def std_test_pred_obs_path(dir_out_anlys_base:str|os.PathLike,ds:str, metr:str
     path_pred_obs = Path(f"{dir_out_anlys_base}/{ds}/pred_obs_{ds}_{metr}.csv")
     path_pred_obs.parent.mkdir(exist_ok=True,parents=True)
     return path_pred_obs
-
-def save_Xtrain_to_csv(X_train, dir_out_alg_ds, dataset_id):
-    """
-    Save X_train as a CSV file.
-
-    :param X_train: Training data.
-    :param dir_out_alg_ds: Directory where the output should be stored.
-    :param dataset_id: Identifier for the dataset.
-    """
-    path_Xtrain = std_Xtrain_path(dir_out_alg_ds, dataset_id)
-    X_train_df = pd.DataFrame(X_train)
-    X_train_df.to_csv(path_Xtrain, index=False)
 
 def _read_pred_comid(path_pred_locs: str | os.PathLike, comid_pred_col:str ) -> list[str]:
     """Read the comids from a prediction file formatted as .csv
@@ -1412,8 +1385,6 @@ class AlgoTrainEval:
             self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
                 self.algs_dict['rf']['algo'], np.array(self.X_train), np.array(self.X_test)
             )
-            # Save X_train as a CSV file
-            save_Xtrain_to_csv(self.X_train, self.dir_out_alg_ds,self.dataset_id)
 
         # Calculate Bagging uncertainty if enabled
         for algo_str in self.algo_config.keys():  
