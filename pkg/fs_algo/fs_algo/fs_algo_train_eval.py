@@ -1354,7 +1354,7 @@ class AlgoTrainEval:
             # path_algo = Path(self.dir_out_alg_ds) / Path(basename_alg_ds_metr + '.joblib')
             
             # write trained algorithm
-            joblib.dump(self.algs_dict[algo]['pipeline'], path_algo)
+            # joblib.dump(self.algs_dict[algo]['pipeline'], path_algo)
             
             # # --- Modified part: Combine rf model and ci into a single dictionary ---
             # pipeline_with_ci = {
@@ -1362,10 +1362,16 @@ class AlgoTrainEval:
             # 'confidence_intervals': self.algs_dict[algo].get('ci',None)  # The ci object if it exists
             # }
             
-            # # print(self.algs_dict[algo].get('ci'))
-            
             # # Save the combined pipeline (model + ci) using joblib
             # joblib.dump(pipeline_with_ci, path_algo)
+
+            # Save pipeline and metadata in a dictionary
+            pipeline_data = {
+                'pipeline': self.algs_dict[algo]['pipeline'],  # The trained model pipeline
+                'X_train_shape': self.X_train.shape  # Store the shape of X_train
+            }
+
+            joblib.dump(pipeline_data, path_algo)  # Save pipeline + X_train shape
             
             self.algs_dict[algo]['file_pipe'] = str(path_algo.name)
    
