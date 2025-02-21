@@ -863,7 +863,8 @@ class AlgoTrainEval:
                  test_ids = None,test_id_col:str = 'comid',
                  verbose: bool = False,
                  forestci: bool = False,
-                 mapie_alpha : float = 95,
+                 confidence_levels: int = 95,
+                 mapie_alpha : float = 0.05,
                  bagging_ci_params: dict = None):
         """The algorithm training and evaluation class.
 
@@ -893,7 +894,9 @@ class AlgoTrainEval:
         :type test_id_col: str
         :param verbose: Should print, defaults to False.
         :type verbose: bool, optional
-        :param mapie_alpha: Confidence interval(s) for MAPIE, defaults to 95.
+        :param: confidence_levels: confidence levels for ci calculation, defaults to 95
+        :type confidence_levels: int, optional
+        :param mapie_alpha: alpha for MAPIE, defaults to 0.05.
         :type test_size: float, optional
         :param bagging_ci: Configuration dictionary for Bagging-based uncertainty estimation. 
         :type bagging_ci: dict or None, optional
@@ -911,6 +914,7 @@ class AlgoTrainEval:
         self.dataset_id = dataset_id
         self.verbose = verbose
         self.forestci = forestci
+        self.confidence_levels = confidence_levels
         self.mapie_alpha = mapie_alpha
         self.bagging_ci_params = bagging_ci_params
 
@@ -1125,7 +1129,7 @@ class AlgoTrainEval:
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
-        confidence_levels = self.bagging_ci_params.get('confidence_levels')
+        confidence_levels = self.confidence_levels #self.bagging_ci_params.get('confidence_levels')
         confidence_intervals = {}
 
         for cl in confidence_levels:
