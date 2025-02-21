@@ -3,7 +3,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler, FunctionTransformer
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.model_selection import GridSearchCV,learning_curve
 import numpy as np
 import pandas as pd
@@ -1078,21 +1078,39 @@ class AlgoTrainEval:
         )
         return ci
 
-    def calculate_bagging_ci(self, algo_str):
+    def calculate_bagging_ci(self, algo_str,best_algo):
         """
         Generalized function to calculate Bagging confidence intervals for any model.
         """
-        algo_cfg = self.algo_config[algo_str]
+        # algo_cfg = self.algo_config[algo_str]
+        algo_cfg = self.algo_config.get(algo_str, self.algo_config_grid.get(algo_str))
+        if algo_cfg is None:
+            raise KeyError(f"Algorithm {algo_str} not found in configurations.")
+
         n_algos = self.bagging_ci_params['n_algos']
         predictions = []
-        
-        # Initialize the base model
-        if algo_str == 'rf':
-            base_algo = RandomForestRegressor(**algo_cfg)
-        elif algo_str == 'mlp':
-            base_algo = MLPRegressor(**algo_cfg)
+        # Extract the model if it's inside a pipeline
+        if isinstance(best_algo, Pipeline):
+            # Try to find the model step
+            algo_step = None
+            for name, step in best_algo.named_steps.items():
+                if isinstance(step, (RandomForestRegressor, MLPRegressor)):  # Extend if more models are used
+                    algo_step = step
+                    break
+            if algo_step is None:
+                raise ValueError(f"Could not find '{algo_str}' in the pipeline steps.")
         else:
-            raise ValueError(f"Unsupported algorithm: {algo_str}")
+            algo_step = best_algo  # Direct model
+    
+        base_algo = algo_step  # Now we have the extracted model
+        
+        # # Initialize the base model
+        # if algo_str == 'rf':
+        #     base_algo = RandomForestRegressor(**algo_cfg)
+        # elif algo_str == 'mlp':
+        #     base_algo = MLPRegressor(**algo_cfg)
+        # else:
+        #     raise ValueError(f"Unsupported algorithm: {algo_str}")
 
         for _ in range(n_algos):
             X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
@@ -1371,10 +1389,22 @@ class AlgoTrainEval:
         )
 
         # Calculate Bagging uncertainty if enabled
-        for algo_str in self.algo_config.keys():  
-            if self.bagging_ci_params.get('n_algos', None):
-                self.calculate_bagging_ci(algo_str)
-
+        # for algo_str in self.algo_config.keys():  
+        #     if self.bagging_ci_params.get('n_algos', None):
+        #         self.calculate_bagging_ci(algo_str)
+        if self.bagging_ci_params.get('n_algos', None):
+            for algo_dict in [self.algo_config, self.algo_config_grid]:  # Iterate over both configurations
+                for algo_str in algo_dict.keys():  # algo_str is the correct algorithm name
+                    # Select the best model if Grid Search was performed
+                    best_algo = (
+                        self.algs_dict[algo_str]['gridsearchcv'].best_estimator_
+                        if self.grid_search_algs and 'gridsearchcv' in self.algs_dict[algo_str]
+                        else self.algs_dict[algo_str]['algo']
+                    )
+    
+                    # Compute Bagging CI (pass correct algorithm name + best model)
+                    self.calculate_bagging_ci(algo_str, best_algo)
+                
         # --- Calculate prediction intervals using MAPIE if enabled ---
         if getattr(self, 'mapie_alpha', None):
             self.calculate_mapie()
