@@ -1319,19 +1319,16 @@ retr_comids <- function(gage_ids,featureSource,featureID,dir_db_attrs,
   #'  e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
   #'  that the term 'gage_id' is used as a variable in glue syntax to create featureID
   #'  Refer to ?dataRetrieval::get_nldi_sources() for options to use with nldi_feature
-<<<<<<< HEAD
   #' @param dir_db_attrs Attribute directory path, where the standardized
   #' comid-gage_id will be stored as a .csv
   #' @param path_save_gpkg The filepath where the geopackage containing
   #' comid-gageid-geometry mappings are saved. Default NULL, but strongly recommended
   #' to use!
   #' @note 2025-03-07 This needs a deeper refactoring
-=======
->>>>>>> a7bc84b (feat: add R^2 to regression plots)
   #' @export
   #'
   # Changelog/Contributions
-  #  2025-03-07 Refactor: add in the geometry retrieval & return nested list
+  #  2025-03-07 Refactor: add in the geometry retrsieval & return nested list
   #   with sf_comid from fs_retr_nhdp_comids_geom_wrap, GL
   # ---------------- COMID & COORDINATE RETRIEVAL ---------------- #
   # Populate the comids & coordinates for each gage_id
