@@ -1072,6 +1072,21 @@ class AlgoTrainEval:
         :return: Confidence intervals for each prediction.
         :rtype: ndarray
         """
+<<<<<<< HEAD
+=======
+        # ci = fci.random_forest_error(
+        #     forest=forest,
+        #     X_train_shape=X_train.shape,
+        #     X_test=X_test,
+        #     inbag=None, 
+        #     calibrate=True, 
+        #     memory_constrained=False, 
+        #     memory_limit=None, 
+        #     y_output=0  # Change this if multi-output
+        # )
+        # return ci
+
+>>>>>>> c6f4554 (implement forestci with user-defined confidence intervals)
         # Compute standard deviation of prediction errors
 
         confidence_levels = self.confidence_levels
