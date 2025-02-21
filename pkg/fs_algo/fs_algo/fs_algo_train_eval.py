@@ -1284,7 +1284,7 @@ class AlgoTrainEval:
                 row_labels = ['lower_limit', 'upper_limit']
                 
                 # Rename columns based on mapie_alpha values
-                col_labels = [f'pi_{int(alpha)}' for alpha in self.mapie_alpha]  # Convert to percentage
+                col_labels = [f'alpha_{alpha:.2f}' for alpha in self.mapie_alpha]  
                 
                 # Convert to DataFrame
                 y_pis_list = [pd.DataFrame(y_test_pis[i], index=row_labels, columns=col_labels) for i in range(y_test_pis.shape[0])]
