@@ -1130,7 +1130,10 @@ class AlgoTrainEval:
 
         for cl in confidence_levels:
             lower_bound, upper_bound = np.percentile(predictions, [(100 - cl) / 2, 100 - (100 - cl) / 2], axis=0)
-            confidence_intervals[cl] = (lower_bound, upper_bound)
+            confidence_intervals[f"confidence_level_{cl}"] = {
+                "lower_bound": lower_bound,
+                "upper_bound": upper_bound
+            }  
 
         if 'Uncertainty' not in self.algs_dict[algo_str]:
             self.algs_dict[algo_str]['Uncertainty'] = {}
