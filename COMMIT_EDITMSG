@@ -1,0 +1,17 @@
+Xfeat: add automatic R2 to regression plots
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# interactive rebase in progress; onto 013c0b3
+# Last commands done (12 commands done):
+#    pick af7ae6f fix: correct home_dir logic when provided in attr_config file. Add line example of attr config file for xssa case
+#    pick 69ccfb8 feat: add automatic R2 to regression plots
+# Next commands to do (21 remaining commands):
+#    pick a7bc84b feat: add R^2 to regression plots
+#    pick a44cce5 doc: update function description
+# You are currently rebasing branch 'less_comid_retr' on '013c0b3'.
+#
+# Changes to be committed:
+#	modified:   pkg/fs_algo/fs_algo/fs_algo_train_eval.py
+#
