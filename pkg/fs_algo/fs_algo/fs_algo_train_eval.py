@@ -36,6 +36,7 @@ from sklearn.utils import resample
 from mapie.regression import MapieRegressor
 from scipy.stats import norm
 import random
+import scipy.stats as st
 
 # %% BASIN ATTRIBUTES (PREDICTORS) & RESPONSE VARIABLES (e.g. METRICS)
 class AttrConfigAndVars:
@@ -1070,7 +1071,22 @@ class AlgoTrainEval:
         :return: Confidence intervals for each prediction.
         :rtype: ndarray
         """
-        ci = fci.random_forest_error(
+        # ci = fci.random_forest_error(
+        #     forest=forest,
+        #     X_train_shape=X_train.shape,
+        #     X_test=X_test,
+        #     inbag=None, 
+        #     calibrate=True, 
+        #     memory_constrained=False, 
+        #     memory_limit=None, 
+        #     y_output=0  # Change this if multi-output
+        # )
+        # return ci
+
+        # Compute standard deviation of prediction errors
+
+        confidence_levels = self.confidence_levels
+        ci_std = np.sqrt(fci.random_forest_error(
             forest=forest,
             X_train_shape=X_train.shape,
             X_test=np.array(X_test),
@@ -1078,9 +1094,21 @@ class AlgoTrainEval:
             calibrate=True, 
             memory_constrained=False, 
             memory_limit=None, 
-            y_output=0  # Change this if multi-output
-        )
-        return ci
+            y_output=0  
+        ))        
+    
+        # Compute confidence intervals for each level
+        ci_dict = {}
+        for alpha in confidence_levels:
+            z_value = st.norm.ppf(1 - (1 - alpha/100) / 2)  # Get z-score for two-tailed CI
+            ci_lower = -z_value * ci_std
+            ci_upper = z_value * ci_std
+            ci_dict[f'ci_{int(alpha)}'] = {
+                "lower_bound": ci_lower,
+                "upper_bound": ci_upper
+            }
+    
+        return ci_dict
 
     def calculate_bagging_ci(self, algo_str,best_algo):
         """
