@@ -1373,7 +1373,8 @@ class AlgoTrainEval:
             # Save pipeline and metadata in a dictionary
             pipeline_data = {
                 'pipeline': self.algs_dict[algo]['pipeline'],  # The trained model pipeline
-                'X_train_shape': self.X_train.shape  # Store the shape of X_train
+                'X_train_shape': self.X_train.shape,  # Store the shape of X_train
+                'Uncertainty': self.algs_dict[algo]['Uncertainty']
             }
 
             joblib.dump(pipeline_data, path_algo)  # Save pipeline + X_train shape
