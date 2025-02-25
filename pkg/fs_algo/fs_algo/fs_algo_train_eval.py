@@ -1136,24 +1136,32 @@ class AlgoTrainEval:
     
         base_algo = algo_step  # Now we have the extracted model
         
-        # # Initialize the base model
-        # if algo_str == 'rf':
-        #     base_algo = RandomForestRegressor(**algo_cfg)
-        # elif algo_str == 'mlp':
-        #     base_algo = MLPRegressor(**algo_cfg)
-        # else:
-        #     raise ValueError(f"Unsupported algorithm: {algo_str}")
-
-        for _ in range(n_algos):
-            X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
+        # for _ in range(n_algos):
+        #     X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
             
-            # Create a new model with the same parameters but a different random_state
-            new_random_state = random.randint(1, 100)
-            algo_tmp = type(base_algo)(**{**base_algo.get_params(), "random_state": new_random_state})
+        #     # Create a new model with the same parameters but a different random_state
+        #     new_random_state = random.randint(1, 100)
+        #     algo_tmp = type(base_algo)(**{**base_algo.get_params(), "random_state": new_random_state})
 
+        #     algo_tmp.fit(X_train_resampled, y_train_resampled)
+        #     predictions.append(algo_tmp.predict(self.X_test))
+
+        # Generate `n_algos` unique random states using self.rs as the seed
+        random.seed(self.rs)
+        random_states = [random.randint(1, 10000) for _ in range(n_algos)]
+    
+        for rand_state in random_states:
+            # Resample data with a fixed random state for reproducibility
+            X_train_resampled, y_train_resampled = resample(
+                self.X_train, self.y_train, random_state=rand_state
+            )
+    
+            # Create a new model with the same parameters but a different random_state
+            algo_tmp = type(base_algo)(**{**base_algo.get_params(), "random_state": rand_state})
+    
             algo_tmp.fit(X_train_resampled, y_train_resampled)
-            predictions.append(algo_tmp.predict(self.X_test))
-        
+            predictions.append(algo_tmp.predict(self.X_test))        
+
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
