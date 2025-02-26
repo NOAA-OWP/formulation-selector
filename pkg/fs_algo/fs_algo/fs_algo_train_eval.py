@@ -917,7 +917,7 @@ class AlgoTrainEval:
         self.forestci = forestci
         self.confidence_levels = confidence_levels
         self.mapie_alpha = mapie_alpha
-        self.bagging_ci_params = bagging_ci_params
+        self.bagging_ci_params = bagging_ci_params if bagging_ci_params is not None else {} 
 
         # train/test split
         self.X_train = pd.DataFrame()
