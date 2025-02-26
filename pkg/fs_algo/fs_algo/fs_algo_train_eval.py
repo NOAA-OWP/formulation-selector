@@ -864,7 +864,7 @@ class AlgoTrainEval:
                  test_ids = None,test_id_col:str = 'comid',
                  verbose: bool = False,
                  forestci: bool = False,
-                 confidence_levels: int = 95,
+                 confidence_levels: list[int] = [95],
                  mapie_alpha : float = 0.05,
                  bagging_ci_params: dict = None):
         """The algorithm training and evaluation class.
