@@ -18,9 +18,9 @@ import unittest
 from unittest.mock import patch, MagicMock, mock_open
 import pandas as pd
 import dask.dataframe as dd
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, BaggingRegressor
 from sklearn.neural_network import MLPRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_squared_error, r2_score
 import tempfile
 from pathlib import Path
@@ -32,6 +32,8 @@ import os
 import numpy as np
 import forestci as fci
 from scipy import stats as st
+from sklearn.utils import resample
+from sklearn.pipeline import Pipeline
 
 # %% UNIT TESTING FOR AttrConfigAndVars
 
@@ -360,6 +362,7 @@ class TestAlgoTrainEval(unittest.TestCase):
             'rf': {'n_estimators': 10},
             'mlp': {'hidden_layer_sizes': (10,), 'max_iter': 2000}
         }
+        self.bagging_ci_params = {'n_algos': 5}  # Example parameters
         self.dataset_id = 'test_dataset'
         self.metric = 'metric1'
         self.verbose = False
@@ -370,6 +373,8 @@ class TestAlgoTrainEval(unittest.TestCase):
         self.train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
                                  dir_out_alg_ds=self.dir_out_alg_ds, dataset_id=self.dataset_id,
                                  metr=self.metric, test_size=0.4, rs=42)
+        self.train_eval.confidence_levels = [90, 95]  # Example parameters
+        self.train_eval.bagging_ci_params = self.bagging_ci_params  # Set bagging parameters
 
     def test_split_data(self):
         # Test data splitting
@@ -463,6 +468,30 @@ class TestAlgoTrainEval(unittest.TestCase):
         self.assertIn('upper_bound', ci_dict['ci_95'])
         self.assertEqual(len(ci_dict['ci_95']['lower_bound']), len(self.train_eval.X_test))
         self.assertEqual(len(ci_dict['ci_95']['upper_bound']), len(self.train_eval.X_test))
+
+    def test_calculate_bagging_ci(self):
+        # Test the calculate_bagging_ci method
+        self.train_eval.split_data()
+        self.train_eval.train_algos()
+
+        best_algo = self.train_eval.algs_dict['rf']['algo']  # Use the trained RF model
+        self.train_eval.calculate_bagging_ci('rf', best_algo)
+
+        # Check if uncertainty data is stored
+        self.assertIn('Uncertainty', self.train_eval.algs_dict['rf'])
+        self.assertIn('bagging_mean_pred', self.train_eval.algs_dict['rf']['Uncertainty'])
+        self.assertIn('bagging_std_pred', self.train_eval.algs_dict['rf']['Uncertainty'])
+        self.assertIn('bagging_confidence_intervals', self.train_eval.algs_dict['rf']['Uncertainty'])
+        
+        # Check confidence intervals
+        ci = self.train_eval.algs_dict['rf']['Uncertainty']['bagging_confidence_intervals']
+        self.assertIn('confidence_level_90', ci)
+        self.assertIn('confidence_level_95', ci)
+        
+        self.assertEqual(len(ci['confidence_level_90']['lower_bound']), len(self.train_eval.X_test))
+        self.assertEqual(len(ci['confidence_level_90']['upper_bound']), len(self.train_eval.X_test))
+        self.assertEqual(len(ci['confidence_level_95']['lower_bound']), len(self.train_eval.X_test))
+        self.assertEqual(len(ci['confidence_level_95']['upper_bound']), len(self.train_eval.X_test))
 
 class TestAlgoTrainEvalMlti(unittest.TestCase):
 
