@@ -34,6 +34,8 @@ import forestci as fci
 from scipy import stats as st
 from sklearn.utils import resample
 from sklearn.pipeline import Pipeline
+# from sklearn.linear_model import LinearRegression
+from mapie.regression import MapieRegressor
 
 # %% UNIT TESTING FOR AttrConfigAndVars
 
@@ -375,6 +377,7 @@ class TestAlgoTrainEval(unittest.TestCase):
                                  metr=self.metric, test_size=0.4, rs=42)
         self.train_eval.confidence_levels = [90, 95]  # Example parameters
         self.train_eval.bagging_ci_params = self.bagging_ci_params  # Set bagging parameters
+        self.mapie_alpha = [0.1, 0.2]
 
     def test_split_data(self):
         # Test data splitting
@@ -492,6 +495,28 @@ class TestAlgoTrainEval(unittest.TestCase):
         self.assertEqual(len(ci['confidence_level_90']['upper_bound']), len(self.train_eval.X_test))
         self.assertEqual(len(ci['confidence_level_95']['lower_bound']), len(self.train_eval.X_test))
         self.assertEqual(len(ci['confidence_level_95']['upper_bound']), len(self.train_eval.X_test))
+
+    def test_calculate_mapie(self):
+        """Test that calculate_mapie correctly fits MapieRegressor and stores it in algs_dict."""
+        self.train_eval.calculate_mapie()
+        
+        # Debugging: print algs_dict to check its structure
+        print("algs_dict content:", self.train_eval.algs_dict)
+    
+        # Ensure 'rf' exists in algs_dict before accessing it
+        self.assertIn('rf', self.train_eval.algs_dict, "Key 'rf' not found in algs_dict")
+    
+        # Ensure 'mapie' is stored correctly under 'rf'
+        self.assertIn('mapie', self.train_eval.algs_dict['rf'], "Key 'mapie' not found under 'rf' in algs_dict")
+        self.assertIsInstance(self.train_eval.algs_dict['rf']['mapie'], MapieRegressor)
+        
+        # Check that MapieRegressor is fitted
+        mapie = self.train_eval.algs_dict['rf']['mapie']
+        self.assertTrue(
+            hasattr(mapie, 'fitted_'),
+            "MapieRegressor should be fitted after calling calculate_mapie()"
+        )
+
 
 class TestAlgoTrainEvalMlti(unittest.TestCase):
 
