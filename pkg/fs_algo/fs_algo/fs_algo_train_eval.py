@@ -1136,17 +1136,6 @@ class AlgoTrainEval:
     
         base_algo = algo_step  # Now we have the extracted model
         
-        # for _ in range(n_algos):
-        #     X_train_resampled, y_train_resampled = resample(self.X_train, self.y_train)
-            
-        #     # Create a new model with the same parameters but a different random_state
-        #     new_random_state = random.randint(1, 100)
-        #     algo_tmp = type(base_algo)(**{**base_algo.get_params(), "random_state": new_random_state})
-
-        #     algo_tmp.fit(X_train_resampled, y_train_resampled)
-        #     predictions.append(algo_tmp.predict(self.X_test))
-
-        # Generate `n_algos` unique random states using self.rs as the seed
         random.seed(self.rs)
         random_states = [random.randint(1, 10000) for _ in range(n_algos)]
     
@@ -1434,9 +1423,6 @@ class AlgoTrainEval:
             )
 
         # Calculate Bagging uncertainty if enabled
-        # for algo_str in self.algo_config.keys():  
-        #     if self.bagging_ci_params.get('n_algos', None):
-        #         self.calculate_bagging_ci(algo_str)
         if self.bagging_ci_params.get('n_algos', None):
             for algo_dict in [self.algo_config, self.algo_config_grid]:  # Iterate over both configurations
                 for algo_str in algo_dict.keys():  # algo_str is the correct algorithm name
