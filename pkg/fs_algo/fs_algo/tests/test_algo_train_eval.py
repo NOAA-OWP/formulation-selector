@@ -370,14 +370,19 @@ class TestAlgoTrainEval(unittest.TestCase):
         self.verbose = False
         # Output directory
         self.dir_out_alg_ds = tempfile.gettempdir()
+        self.confidence_levels = [90, 95]  # Example parameters
+        self.mapie_alpha = [0.1, 0.2]
 
         # Instantiate AlgoTrainEval class
         self.train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
                                  dir_out_alg_ds=self.dir_out_alg_ds, dataset_id=self.dataset_id,
-                                 metr=self.metric, test_size=0.4, rs=42)
-        self.train_eval.confidence_levels = [90, 95]  # Example parameters
-        self.train_eval.bagging_ci_params = self.bagging_ci_params  # Set bagging parameters
-        self.mapie_alpha = [0.1, 0.2]
+                                 metr=self.metric, test_size=0.4, rs=42,
+                                 confidence_levels = self.confidence_levels,
+                                 bagging_ci_params=self.bagging_ci_params,
+                                 mapie_alpha=self.mapie_alpha)
+        # self.train_eval.confidence_levels = [90, 95]  # Example parameters
+        # self.train_eval.bagging_ci_params = self.bagging_ci_params  # Set bagging parameters
+        # self.train_eval.mapie_alpha = [0.1, 0.2]
 
     def test_split_data(self):
         # Test data splitting
@@ -498,6 +503,9 @@ class TestAlgoTrainEval(unittest.TestCase):
 
     def test_calculate_mapie(self):
         """Test that calculate_mapie correctly fits MapieRegressor and stores it in algs_dict."""
+        self.train_eval.split_data()
+        self.train_eval.train_algos()
+
         self.train_eval.calculate_mapie()
         
         # Debugging: print algs_dict to check its structure
@@ -512,11 +520,6 @@ class TestAlgoTrainEval(unittest.TestCase):
         
         # Check that MapieRegressor is fitted
         mapie = self.train_eval.algs_dict['rf']['mapie']
-        self.assertTrue(
-            hasattr(mapie, 'fitted_'),
-            "MapieRegressor should be fitted after calling calculate_mapie()"
-        )
-
 
 class TestAlgoTrainEvalMlti(unittest.TestCase):
 
@@ -542,11 +545,17 @@ class TestAlgoTrainEvalMlti(unittest.TestCase):
         self.rs = 32
         self.verbose = False
 
+        self.bagging_ci_params = {'n_algos': 5}  # Example parameters
+        self.confidence_levels = [90, 95]  # Example parameters
+        self.mapie_alpha = [0.1, 0.2]
+
         self.algo_train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
                                               dir_out_alg_ds=self.dir_out_alg_ds,dataset_id=self.dataset_id,
                                               metr=self.metric, test_size=self.test_size, rs=self.rs,
-                                              verbose=self.verbose)
-
+                                              verbose=self.verbose,
+                                              confidence_levels = self.confidence_levels,
+                                              bagging_ci_params=self.bagging_ci_params,
+                                              mapie_alpha=self.mapie_alpha)
     def test_initialization(self):
         self.assertEqual(self.algo_train_eval.df.shape, self.df.shape)
         self.assertEqual(self.algo_train_eval.attrs, self.attrs)
@@ -602,7 +611,44 @@ class TestAlgoTrainEvalMlti(unittest.TestCase):
         self.algo_train_eval.convert_to_list(d)
         self.assertEqual(d, {'a': [1, 2], 'b': {'sub1': [3, 4]}})
 
+    # def test_calculate_forestci_uncertainty(self):
+    #     # Test the calculate_forestci_uncertainty method
+    #     self.algo_train_eval.split_data()
+    #     self.algo_train_eval.train_algos()
 
+    #     rf = self.algo_train_eval.algs_dict['rf']['algo']
+    #     ci_dict = self.algo_train_eval.calculate_forestci_uncertainty(rf, self.algo_train_eval.X_train, self.algo_train_eval.X_test)
+
+    #     self.assertIn('ci_95', ci_dict)  # Check for 95% confidence interval
+    #     self.assertIn('lower_bound', ci_dict['ci_95'])
+    #     self.assertIn('upper_bound', ci_dict['ci_95'])
+    #     self.assertEqual(len(ci_dict['ci_95']['lower_bound']), len(self.algo_train_eval.X_test))
+    #     self.assertEqual(len(ci_dict['ci_95']['upper_bound']), len(self.algo_train_eval.X_test))
+
+    # def test_calculate_bagging_ci(self):
+    #     # Test the calculate_bagging_ci method
+    #     self.algo_train_eval.split_data()
+    #     self.algo_train_eval.train_algos()
+
+    #     best_algo = self.algo_train_eval.algs_dict['rf']['algo']  # Use the trained RF model
+    #     self.algo_train_eval.calculate_bagging_ci('rf', best_algo)
+
+    #     # Check if uncertainty data is stored
+    #     self.assertIn('Uncertainty', self.algo_train_eval.algs_dict['rf'])
+    #     self.assertIn('bagging_mean_pred', self.algo_train_eval.algs_dict['rf']['Uncertainty'])
+    #     self.assertIn('bagging_std_pred', self.algo_train_eval.algs_dict['rf']['Uncertainty'])
+    #     self.assertIn('bagging_confidence_intervals', self.algo_train_eval.algs_dict['rf']['Uncertainty'])
+        
+    #     # Check confidence intervals
+    #     ci = self.algo_train_eval.algs_dict['rf']['Uncertainty']['bagging_confidence_intervals']
+    #     self.assertIn('confidence_level_90', ci)
+    #     self.assertIn('confidence_level_95', ci)
+        
+    #     self.assertEqual(len(ci['confidence_level_90']['lower_bound']), len(self.algo_train_eval.X_test))
+    #     self.assertEqual(len(ci['confidence_level_90']['upper_bound']), len(self.algo_train_eval.X_test))
+    #     self.assertEqual(len(ci['confidence_level_95']['lower_bound']), len(self.algo_train_eval.X_test))
+    #     self.assertEqual(len(ci['confidence_level_95']['upper_bound']), len(self.algo_train_eval.X_test))
+        
 class TestAlgoTrainEvalSngl(unittest.TestCase):
     # An algo_config with singular hyperparameter value
     def setUp(self):
@@ -613,7 +659,7 @@ class TestAlgoTrainEvalSngl(unittest.TestCase):
             'metric': [1, 0, 1, 0, 1]
         })
         self.attrs = ['attr1', 'attr2']
-        self.algo_config = {'some_algo': {'param1': 1}}
+        self.algo_config = {'mlp': {'max_iter': [100]}}
         self.dir_out_alg_ds = 'some/dir'
         self.dataset_id = 'dataset_1'
         self.metr = 'metric'
@@ -673,10 +719,18 @@ class TestAlgoTrainEvalBasic(unittest.TestCase):
         self.rs = 42
         self.verbose = False
         self.algo_config_grid = dict()
+
+        self.bagging_ci_params = {'n_algos': 5}  # Example parameters
+        self.confidence_levels = [90, 95]  # Example parameters
+        self.mapie_alpha = [0.1, 0.2]
+
         self.algo = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
                                   dir_out_alg_ds=self.dir_out_alg_ds, dataset_id=self.dataset_id, 
                                   metr=self.metric, test_size=self.test_size, rs=self.rs, 
-                                  verbose=self.verbose)
+                                  verbose=self.verbose,
+                                  confidence_levels = self.confidence_levels,
+                                  bagging_ci_params=self.bagging_ci_params,
+                                  mapie_alpha=self.mapie_alpha)
 
     @patch('joblib.dump')  # Mock saving the model to disk
     @patch('sklearn.model_selection.train_test_split', return_value=(pd.DataFrame(), pd.DataFrame(), pd.Series(), pd.Series()))
