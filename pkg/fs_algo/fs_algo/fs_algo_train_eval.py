@@ -1423,14 +1423,15 @@ class AlgoTrainEval:
 
         # Calculate forestci uncertainty if enabled
         # Determine the best Random Forest model
-        if self.grid_search_algs and 'gridsearchcv' in self.algs_dict['rf']:
-            best_rf_algo = self.algs_dict['rf']['gridsearchcv'].best_estimator_.named_steps['randomforestregressor']
-        else:
-            best_rf_algo = self.algs_dict['rf']['algo']
-        # Compute forestci uncertainty with the best RF model
-        self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
-            best_rf_algo, np.array(self.X_train), np.array(self.X_test)
-        )
+        if 'rf' in self.algs_dict:  # Ensure 'rf' is in selected algorithms
+            if self.grid_search_algs and 'gridsearchcv' in self.algs_dict['rf']:
+                best_rf_algo = self.algs_dict['rf']['gridsearchcv'].best_estimator_.named_steps['randomforestregressor']
+            else:
+                best_rf_algo = self.algs_dict['rf']['algo']
+            # Compute forestci uncertainty with the best RF model
+            self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
+                best_rf_algo, np.array(self.X_train), np.array(self.X_test)
+            )
 
         # Calculate Bagging uncertainty if enabled
         # for algo_str in self.algo_config.keys():  
