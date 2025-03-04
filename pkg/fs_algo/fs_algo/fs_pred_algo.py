@@ -24,6 +24,8 @@ if __name__ == "__main__":
     path_pred_config = Path(args.path_pred_config) #Path(f'~/git/formulation-selector/scripts/eval_ingest/xssa/xssa_pred_config.yaml') 
     with open(path_pred_config, 'r') as file:
         pred_cfg = yaml.safe_load(file)
+    
+    mapie_alpha = pred_cfg.get('MAPIE_alpha', None)  
 
     #%%  READ CONTENTS FROM THE ATTRIBUTE CONFIG
     path_attr_config = fsate.build_cfig_path(path_pred_config,pred_cfg.get('name_attr_config',None))
@@ -84,8 +86,11 @@ if __name__ == "__main__":
 
                 # Read in the algorithm's pipeline
                 # pipe = joblib.load(path_algo)
-                pipeline_with_ci = joblib.load(path_algo)
-                pipe = pipeline_with_ci['pipe']  # Assign the actual pipeline (pipe) to 'pipe'
+                pipeline_data = joblib.load(path_algo)
+                
+                pipe = pipeline_data['pipeline']
+                X_train_shape = pipeline_data['X_train_shape']  # Retrieve X_train.shape
+
                 rf_model = pipe.named_steps['randomforestregressor']  # Use the correct step name
                 feat_names = list(pipe.feature_names_in_)
                 df_attr_sub = df_attr_wide[feat_names]
@@ -93,19 +98,44 @@ if __name__ == "__main__":
                 # Perform prediction
                 resp_pred = pipe.predict(df_attr_sub)
 
-                # Calculate confidence intervals for the predictions using forestci
-                path_Xtrain = fsate.std_Xtrain_path(dir_out_alg_ds,  dataset_id=ds) 
-                X_train = pd.read_csv(path_Xtrain)                  
-                pred_ci = fci.random_forest_error(forest=rf_model, X_train_shape=X_train.shape, X_test=df_attr_sub.to_numpy())
+                # if algo == 'rf':
+                #     # Calculate confidence intervals for the predictions using forestci
+                #     forest_ci = fci.random_forest_error(forest=rf_model, X_train_shape=X_train_shape, X_test=df_attr_sub.to_numpy())
+    
+                #     # compile prediction results:
+                #     df_pred =pd.DataFrame({'comid':comids_pred,
+                #                  'prediction':resp_pred,
+                #                  'forestci': forest_ci,
+                #                  'metric':metric,
+                #                  'dataset':ds,
+                #                  'algo':algo,
+                #                  'name_algo':Path(path_algo).name})
+                # else:
+                #     # compile prediction results:
+                #     df_pred =pd.DataFrame({'comid':comids_pred,
+                #                  'prediction':resp_pred,
+                #                  'metric':metric,
+                #                  'dataset':ds,
+                #                  'algo':algo,
+                #                  'name_algo':Path(path_algo).name})                        
 
-                # compile prediction results:
-                df_pred =pd.DataFrame({'comid':comids_pred,
-                             'prediction':resp_pred,
-                             'ci': pred_ci,
-                             'metric':metric,
-                             'dataset':ds,
-                             'algo':algo,
-                             'name_algo':Path(path_algo).name})
+                # Initialize DataFrame for storing results
+                df_pred = pd.DataFrame({'comid': comids_pred, 'prediction': resp_pred, 'metric': metric, 'dataset': ds, 'algo': algo, 'name_algo': Path(path_algo).name})
+        
+                # If using RandomForest, calculate confidence intervals using forestci
+                if algo == 'rf':
+                    forest_ci = fci.random_forest_error(forest=rf_model, X_train_shape=X_train_shape, X_test=df_attr_sub.to_numpy())
+                    df_pred['forestci'] = forest_ci
+        
+                # If MAPIE is available, compute prediction intervals
+                if 'mapie' in pipeline_data and mapie_alpha:
+                    mapie = pipeline_data['mapie']
+                    y_pred_mapie, y_pis = mapie.predict(df_attr_sub, alpha=mapie_alpha)
+        
+                    # Rename columns based on self.mapie_alpha values
+                    for i, alpha in enumerate(mapie_alpha):
+                        df_pred[f'mapie_lower_{alpha:.2f}'] = y_pis[:, 0, i]
+                        df_pred[f'mapie_upper_{alpha:.2f}'] = y_pis[:, 1, i]
                 
                 path_pred_out = fsate.std_pred_path(dir_out,algo=algo,metric=metric,dataset_id=ds)
                 # Write prediction results

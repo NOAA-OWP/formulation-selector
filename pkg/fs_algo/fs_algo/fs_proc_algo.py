@@ -34,6 +34,16 @@ if __name__ == "__main__":
     test_size = algo_cfg['test_size']
     seed = algo_cfg['seed']
     read_type = algo_cfg.get('read_type','all') # Arg for how to read attribute data using comids in fs_read_attr_comid(). May be 'all' or 'filename'.
+    mapie_alpha = algo_cfg['MAPIE_alpha']
+    forestci = algo_cfg['forestci']
+    confidence_levels = algo_cfg['confidence_levels']
+    
+    bagging_ci_params_list = algo_cfg['Bagging_uncertainty']
+    bagging_ci_params = {}
+    if isinstance(bagging_ci_params_list, list):
+        for param_dict in bagging_ci_params_list:
+            if isinstance(param_dict, dict):  # Ensure each item is a dictionary
+                bagging_ci_params.update(param_dict)
 
     #%% Attribute configuration
     name_attr_config = algo_cfg.get('name_attr_config', Path(path_algo_config).name.replace('algo','attr')) 
@@ -89,7 +99,7 @@ if __name__ == "__main__":
                                             featureID=featureID,
                                             gage_ids=dat_resp['gage_id'].values)
         comids_resp = gdf_comid['comid']
-        dat_resp = dat_resp.assign_coords(comid = comids_resp)
+        
         # Remove the unknown comids:
         dat_resp = dat_resp.dropna(dim='comid',how='any')
         comids_resp = [x for x in comids_resp if x is not np.nan]
@@ -122,14 +132,12 @@ if __name__ == "__main__":
                                         algo_config=algo_config,
                                         dir_out_alg_ds=dir_out_alg_ds, dataset_id=ds,
                                         metr=metr,test_size=test_size, rs = seed,
-                                        verbose=verbose)
+                                        verbose=verbose,
+                                        forestci=forestci,
+                                        confidence_levels=confidence_levels,
+                                        mapie_alpha=mapie_alpha,
+                                        bagging_ci_params=bagging_ci_params)
             train_eval.train_eval() # Train, test, eval wrapper
-
-            X_train = train_eval.X_train
-            X_train_df = pd.DataFrame(X_train)
-            # Save X_train as a CSV file
-            path_Xtrain = fsate.std_Xtrain_path(dir_out_alg_ds,  dataset_id=ds)
-            X_train_df.to_csv(path_Xtrain, index=False)            
 
             # Retrieve evaluation metrics dataframe
             rslt_eval[metr] = train_eval.eval_df

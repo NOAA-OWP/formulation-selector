@@ -39,6 +39,14 @@ if __name__ == "__main__":
     metrics = algo_cfg.get('metrics',None)
     make_plots = algo_cfg.get('make_plots',False)
     same_test_ids = algo_cfg.get('same_test_ids',True)
+    
+    mapie_alpha = algo_cfg['MAPIE_alpha']    
+    bagging_ci_params_list = algo_cfg['Bagging_uncertainty']
+    bagging_ci_params = {}
+    if isinstance(bagging_ci_params_list, list):
+        for param_dict in bagging_ci_params_list:
+            if isinstance(param_dict, dict):  # Ensure each item is a dictionary
+                bagging_ci_params.update(param_dict)    
 
     #%% Attribute configuration
     name_attr_config = algo_cfg.get('name_attr_config', Path(path_algo_config).name.replace('algo','attr')) 
@@ -186,7 +194,9 @@ if __name__ == "__main__":
                                         dir_out_alg_ds=dir_out_alg_ds, dataset_id=ds,
                                         metr=metr,test_size=test_size, rs = seed,
                                         test_ids=test_ids,
-                                        verbose=verbose)
+                                        verbose=verbose,
+                                        mapie_alpha=mapie_alpha,
+                                        bagging_ci_params=bagging_ci_params)
             train_eval.train_eval() # Train, test, eval wrapper
 
             # Get the comids corresponding to the testing data/run QA checks
