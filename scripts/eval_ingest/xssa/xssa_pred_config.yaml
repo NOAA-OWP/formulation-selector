@@ -12,4 +12,5 @@ algo_response_vars: # List out the desired response variables (e.g. metrics, hyd
   - 'KGE'
 algo_type: # List out the regressor rr43walgorithms desired for prediction (e.g. rf, mlp).  # TODO offer 'all'
   - 'rf'
+MAPIE_alpha: [0.05, 0.32] # OPTIONAL. Enabled if not empty. Alpha parameter (0 < α < 1) in an array format to calculate MAPIE prediction intervals. If empty, MAPIE is not calculated. Note: 1/α (or 1/(1 - α)) must be lower than the number of samples.
 
