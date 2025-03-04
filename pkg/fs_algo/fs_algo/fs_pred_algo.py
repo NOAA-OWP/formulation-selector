@@ -128,27 +128,6 @@ if __name__ == "__main__":
                 # Perform prediction
                 resp_pred = pipe.predict(df_attr_sub_rmna)
 
-                # if algo == 'rf':
-                #     # Calculate confidence intervals for the predictions using forestci
-                #     forest_ci = fci.random_forest_error(forest=rf_model, X_train_shape=X_train_shape, X_test=df_attr_sub.to_numpy())
-    
-                #     # compile prediction results:
-                #     df_pred =pd.DataFrame({'comid':comids_pred,
-                #                  'prediction':resp_pred,
-                #                  'forestci': forest_ci,
-                #                  'metric':metric,
-                #                  'dataset':ds,
-                #                  'algo':algo,
-                #                  'name_algo':Path(path_algo).name})
-                # else:
-                #     # compile prediction results:
-                #     df_pred =pd.DataFrame({'comid':comids_pred,
-                #                  'prediction':resp_pred,
-                #                  'metric':metric,
-                #                  'dataset':ds,
-                #                  'algo':algo,
-                #                  'name_algo':Path(path_algo).name})                        
-
                 # Initialize DataFrame for storing results
                 df_pred = pd.DataFrame({'comid': comids_pred, 'prediction': resp_pred, 'metric': metric, 'dataset': ds, 'algo': algo, 'name_algo': Path(path_algo).name})
         
