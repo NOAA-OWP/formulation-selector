@@ -1,0 +1,31 @@
+# setup for the Julie Mai xSSA datasets from 2022 Nature Comm pub
+col_schema:   # required column mappings in the evaluation metrics dataset
+  - 'gage_id': 'basin_id' # The basin identifier/gage id used for each modeled location in the evaluation metrics dataset
+  - 'featureID': 'USGS-{gage_id}' # python f-string / R glue() format; converting the 'gage_id' to the standardized featureID used by nhdplusTools. Must use '{gage_id}' e.g. 'USGS-{gage_id}'
+  - 'featureSource': 'nwissite' # The standardized nhdplusTools featureSource. Possible featureSources might be 'nwissite', 'comid'.
+  - 'metric_cols': 'W_wt_precip_corr|V_wt_rainsnow_part|U_wt_perc|T_wt_pot_melt|S_wt_delay_ro|R_wt_srfc_ro|Q_wt_snow_bal|O_evap|P_wt_baseflow|N_wt_quickflow|M_wt_infilt' # Column(s) in the dataset corresponding to the evaluation metrics. If multiple exist, separate each string by '|' e.g. 'rmse|kge|nse'
+  - 'metric_mappings': 'W_wt_precip_corr|V_wt_rainsnow_part|U_wt_perc|T_wt_pot_melt|S_wt_delay_ro|R_wt_srfc_ro|Q_wt_snow_bal|O_evap|P_wt_baseflow|N_wt_quickflow|M_wt_infilt' # The mapping of metric_cols to the standardized format as specified in fs_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
+file_io: # May define {home_dir} for python's '{home_dir}/string_path'.format(home_dir =str(Path.home())) functionality
+  - 'dir_data': '{home_dir}/noaa/regionalization/data/julemai-xSSA/scripts/data/xSSA_analysis' # Where the raw input data are stored.
+  - 'dir_save': '{home_dir}/noaa/regionalization/data/input' # Required. The save location of standardized output
+  - 'save_type': 'netcdf' #  Required. Save as hierarchical files 'netcdf' or 'zarr'. Default 'netcdf' until attribute 
+  - 'save_loc': 'local' #  Required.  Use 'local' for saving to a local path via dir_save. Future work will create an approach for 'aws' or other cloud saving methods
+formulation_metadata:  
+  - 'dataset_name': 'xSSA_proc_sens_wt' # Required. 
+  - 'formulation_base': 'Raven_blended' # Required. Basename of formulation. the rr, sp, and gw will be added to this if 'formulation_id' is left empty
+  - 'formulation_id': 'Raven_blended' # Optional alternative in lieu of generating a formulation_id based on 'formulation_base'. Should leave empty if automatic formulation_id generation desired.
+  - 'formulation_ver': # Optional. The version of the formulation
+  - 'temporal_res': 'daily' # The temporal resolution corresponding to the modeled data
+  - 'target_var': 'Q' # Required. The target variable modeled. This is standardized. See target_var_mappings in fs_categories.yaml
+  - 'start_date': '1971-01-01' # Required. The YYYY-MM-DD start date corresponding to the evaluation metric's modeled timeseries
+  - 'end_date':  '1990-12-31' # Required. The YYYY-MM-DD end date corresponding to the evaluation metric's modeled timeseries
+  - 'modeled notes': 'Validation for basins with more than 5 years observed streamflow data'
+  - 'cal_status': 'Y' # Required. Was the formulation model fully calibrated? Options include 'Y','N', or 'S' (yes/no/somewhat)
+  - 'start_date_cal': '1991-01-01' # The YYYY-MM-DD start date corresponding to the calibration period
+  - 'end_date_cal': '2010-12-31' # The YYYY-MM-DD end date corresponding to the calibration period
+  - 'cal_notes': 'Calibration on basins larger than 300 km2 and more than 5 years observed streamflow data'
+references: # All optional but **very** helpful metadata
+  - 'input_filepath': '{base_dir}/julemai-xSSA/data_in/basin_metadata/basin_validation_results.txt'
+  - 'source_url': 'https://zenodo.org/records/5730428'
+  - 'dataset_doi': '10.5281/zenodo.5730428'
+  - 'literature_doi': 'https://doi.org/10.1038/s41467-022-28010-7'
