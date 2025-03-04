@@ -1362,6 +1362,10 @@ class AlgoTrainEval:
                 'Uncertainty': self.algs_dict[algo]['Uncertainty']
             }
 
+            # If mapie_alpha exists and is not empty, save mapie
+            if getattr(self, 'mapie_alpha', None):
+                pipeline_data['mapie'] = self.algs_dict[algo].get('mapie', None)
+
             joblib.dump(pipeline_data, path_algo)  # Save pipeline + X_train shape
             
             self.algs_dict[algo]['file_pipe'] = str(path_algo.name)
