@@ -274,10 +274,16 @@ if __name__ == "__main__":
                 #%% Evaluation: learning curves
                 y_pred = train_eval.preds_dict[algo_str]['y_pred']
                 y_obs = train_eval.y_test.values
+                y_pis = train_eval.preds_dict[algo_str]['y_pis']
                 if make_plots:
                     # Regression of testing holdout's prediction vs observation
                     fsate.plot_pred_vs_obs_wrap(y_pred, y_obs, dir_out_viz_base,
                             ds, metr, algo_str=algo_str,split_type=f'testing{test_size}')
+                    for alpha_val in mapie_alpha:
+                        fsate.plot_pred_vs_obs_wrap_mapie(y_pred, y_obs, dir_out_viz_base,
+                                ds, metr, algo_str=algo_str,
+                                y_pis = y_pis, alpha_val = alpha_val,
+                                split_type=f'testing{test_size}')
 
                 # PREPARE THE GDF TO ALIGN PREDICTION VALUES BY COMIDS/COORDS
                 test_gdf = gdf_comid.loc[test_ids.index]#[gdf_comid['comid'].isin(comids_test)].copy()
