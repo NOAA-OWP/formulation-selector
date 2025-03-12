@@ -34,11 +34,6 @@ if __name__ == "__main__":
     test_size = algo_cfg['test_size']
     seed = algo_cfg['seed']
     read_type = algo_cfg.get('read_type','all') # Arg for how to read attribute data using comids in fs_read_attr_comid(). May be 'all' or 'filename'.
-<<<<<<< HEAD
-=======
-    mapie_alpha = algo_cfg['MAPIE_alpha']
-    forestci = algo_cfg['forestci']
->>>>>>> c6f4554 (implement forestci with user-defined confidence intervals)
     confidence_levels = algo_cfg['confidence_levels']
     
     uncertainty_cfg = algo_cfg.get('uncertainty', {})
@@ -136,15 +131,8 @@ if __name__ == "__main__":
                                         dir_out_alg_ds=dir_out_alg_ds, dataset_id=ds,
                                         metr=metr,test_size=test_size, rs = seed,
                                         verbose=verbose,
-<<<<<<< HEAD
                                         confidence_levels=confidence_levels,
                                         )
-=======
-                                        forestci=forestci,
-                                        confidence_levels=confidence_levels,
-                                        mapie_alpha=mapie_alpha,
-                                        bagging_ci_params=bagging_ci_params)
->>>>>>> c6f4554 (implement forestci with user-defined confidence intervals)
             train_eval.train_eval() # Train, test, eval wrapper
 
             X_train = train_eval.X_train

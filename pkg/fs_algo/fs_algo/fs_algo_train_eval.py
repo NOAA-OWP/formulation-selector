@@ -1183,6 +1183,7 @@ class AlgoTrainEval:
         mapie_agg_function = next((d['agg_function'] for d in self.uncertainty.get('mapie', []) if 'agg_function' in d), None)
         for algo_str, algo_data in self.algs_dict.items():
             algo = algo_data['algo']
+<<<<<<< HEAD
             # mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
             if mapie_method == 'plus':
                 mapie = MapieRegressor(algo, method="plus", cv=mapie_cv, agg_function=mapie_agg_function)
@@ -1191,6 +1192,11 @@ class AlgoTrainEval:
             else:
                 raise ValueError("Invalid MAPIE_method. Please select either 'plus' (CV+) or 'minmax' (CV-minmax).")
 
+=======
+            mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
+            # mapie = MapieQuantileRegressor(algo, cv="split", method="quantile")
+            # mapie = MapieRegressor(algo, cv=10, agg_function="median")
+>>>>>>> 44c8923 (_viz: added 3 functions for mapie error bars on scatter plots)
             mapie.fit(self.X_train, self.y_train)  
             self.algs_dict[algo_str]['mapie'] = mapie
             
@@ -2160,11 +2166,16 @@ def plot_pred_vs_obs_regr_mapie(y_pred: np.ndarray, y_obs: np.ndarray, ds:str,
     max_vals = (max_val_rnd,max_val_rnd)
 
     # Extract error bars (lower and upper limits) for the first alpha value
+<<<<<<< HEAD
     lower_err = np.abs(y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]))
     upper_err = np.abs(np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred)
     
     # lower_err = np.maximum(0, y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]))
     # upper_err = np.maximum(0, np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred)
+=======
+    lower_err = y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))])
+    upper_err = np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred
+>>>>>>> 44c8923 (_viz: added 3 functions for mapie error bars on scatter plots)
 
     # Adapted from plot in bolotinl's fs_perf_viz.py
     plt.errorbar(y_obs, y_pred, yerr=[lower_err, upper_err], fmt='o', alpha=0.3, ecolor='gray', capsize=3)
