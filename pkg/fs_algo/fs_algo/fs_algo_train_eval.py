@@ -33,7 +33,7 @@ import zipfile
 import re
 import forestci as fci
 from sklearn.utils import resample
-from mapie.regression import MapieRegressor
+from mapie.regression import MapieRegressor, MapieQuantileRegressor
 from scipy.stats import norm
 import random
 import scipy.stats as st
@@ -1163,7 +1163,9 @@ class AlgoTrainEval:
         """Generalized function to calculate prediction uncertainty using MAPIE."""
         for algo_str, algo_data in self.algs_dict.items():
             algo = algo_data['algo']
-            mapie = MapieRegressor(algo, cv="prefit", agg_function="median")  
+            mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
+            # mapie = MapieQuantileRegressor(algo, cv="split", method="quantile")
+            # mapie = MapieRegressor(algo, cv=10, agg_function="median")
             mapie.fit(self.X_train, self.y_train)  
             self.algs_dict[algo_str]['mapie'] = mapie
             
@@ -1989,6 +1991,29 @@ def std_regr_pred_obs_path(dir_out_viz_base:str|os.PathLike, ds:str,
     path_regr_pred_plot.parent.mkdir(parents=True,exist_ok=True)
     return path_regr_pred_plot
 
+def std_regr_pred_obs_path_mapie(dir_out_viz_base:str|os.PathLike, ds:str,
+                            metr:str,algo_str:str,alpha_val:float,
+                            split_type:str='') -> pathlib.PosixPath:
+    """Generate a filepath of the predicted vs observed regresion plot
+
+    :param dir_out_viz_base: The base directory for saving plots
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable of interest
+    :type metr: str
+    :param algo_str: The type of algorithm used to create predictions
+    :type algo_str: str
+    :param split_type: The type of data being displayed (e.g. training, testing), defaults to ''
+    :type split_type: str, optional
+    :return: The path to save the regression of predicted vs observed values.
+    :rtype: pathlib.PosixPath
+    """
+
+    path_regr_pred_plot = Path(f"{dir_out_viz_base}/{ds}/regr_pred_obs_{ds}_{metr}_{algo_str}_{split_type}_alpha{alpha_val}.png")
+    path_regr_pred_plot.parent.mkdir(parents=True,exist_ok=True)
+    return path_regr_pred_plot
+
 def _estimate_decimals_for_plotting(val:float)-> int:
     """Determine how many decimals should be used when rounding
     :param val: The value of interest for rounding
@@ -2072,6 +2097,79 @@ def plot_pred_vs_obs_wrap(y_pred: np.ndarray, y_obs:np.ndarray, dir_out_viz_base
     # Generate filepath for saving figure
     path_regr_plot = std_regr_pred_obs_path(dir_out_viz_base, ds,
                             metr,algo_str,split_type)
+    # Save the plot as a .png file
+    fig_regr.savefig(path_regr_plot, dpi=300, bbox_inches='tight')
+    plt.clf()
+    plt.close()
+
+def plot_pred_vs_obs_regr_mapie(y_pred: np.ndarray, y_obs: np.ndarray, ds:str,
+                                metr:str, y_pis: list, alpha_val:float)->Figure:
+    """Plot the observed vs. predicted module performance
+
+    :param y_pred: The predicted response variable
+    :type y_pred: np.ndarray
+    :param y_obs: The observed response variable
+    :type y_obs: np.ndarray
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable name of interest
+    :type metr: str
+    :return: THe predicted vs observed regression plot
+    :rtype: Figure
+    """
+    max_val = np.max([y_pred,y_obs])
+    tot_rnd_max = _estimate_decimals_for_plotting(max_val)
+    min_val = np.min([y_pred,y_obs])
+    tot_rnd_min = _estimate_decimals_for_plotting(min_val)
+    tot_rnd = np.max([tot_rnd_max,tot_rnd_min])
+    min_val_rnd = np.round(np.min([min_val,0]),tot_rnd)
+    max_val_rnd = np.round(max_val,tot_rnd)
+    min_vals = (min_val_rnd,min_val_rnd)
+    max_vals = (max_val_rnd,max_val_rnd)
+
+    # Extract error bars (lower and upper limits) for the first alpha value
+    lower_err = y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))])
+    upper_err = np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred
+
+    # Adapted from plot in bolotinl's fs_perf_viz.py
+    plt.errorbar(y_obs, y_pred, yerr=[lower_err, upper_err], fmt='o', alpha=0.3, ecolor='gray', capsize=3)
+    plt.axline(min_vals, max_vals, color='black', linestyle='--')
+    plt.ylabel('Predicted {}'.format(metr))
+    plt.xlabel('Actual {}'.format(metr))
+    plt.title('Observed vs. RaFTS Predicted Values: {}'.format(ds))
+
+    # Add alpha values as text box
+    plt.gca().text(0.05, 0.95, f'alpha = {alpha_val:.2f}', transform=plt.gca().transAxes,
+                   fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
+
+    fig = plt.gcf()
+    return fig
+
+def plot_pred_vs_obs_wrap_mapie(y_pred: np.ndarray, y_obs:np.ndarray, dir_out_viz_base:str|os.PathLike,
+                           ds:str, metr:str, algo_str:str,y_pis: list, alpha_val:float,
+                           split_type:str=''):
+    """Wrapper to create & save predicted vs. observed regression plot
+
+    :param y_pred: The predicted response variable
+    :type y_pred: np.ndarray
+    :param y_obs: The observed response variable
+    :type y_obs: np.ndarray
+    :param dir_out_viz_base: The base directory for saving plots
+    :type dir_out_viz_base: str | os.PathLike
+    :param ds: The unique dataset name
+    :type ds: str
+    :param metr: The metric/response variable name of interest
+    :type metr: str
+    :param algo_str: The type of algorithm used to create predictions
+    :type algo_str: str
+    :param split_type: The type of data being displayed (e.g. training, testing), defaults to ''
+    :type split_type: str, optional
+    """
+    # Generate figure
+    fig_regr = plot_pred_vs_obs_regr_mapie(y_pred, y_obs, ds, metr, y_pis, alpha_val)
+    # Generate filepath for saving figure
+    path_regr_plot = std_regr_pred_obs_path_mapie(dir_out_viz_base, ds,
+                            metr,algo_str,alpha_val,split_type)
     # Save the plot as a .png file
     fig_regr.savefig(path_regr_plot, dpi=300, bbox_inches='tight')
     plt.clf()
