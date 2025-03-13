@@ -507,7 +507,7 @@ fs_retr_nhdp_comids_geom <- function(gage_ids,featureSource='nwissite',
   # Rename columns
   name_lookup = c(featureID = 'identifier')
   dt_comid_geom <- dt_all_geom %>%
-    dplyr::rename(dplyr::any_of(name_lookup)) # any_of allows situations when 'identifier' doesn't exist
+    dplyr::rename(dplyr::any_of(name_lookup),) # any_of allows situations when 'identifier' doesn't exist
   dt_comid_geom$featureSource <- featureSource
   dt_comid_geom$gage_id <- base::as.character(gage_ids)
   return(dt_comid_geom)
@@ -1378,6 +1378,10 @@ proc_attr_gageids <- function(gage_ids,featureSource,featureID,Retr_Params,
   #   2024-07-29 Originally created, GL
   #.  2025-03-07 add path_save_gpkg capability, GL
   # Path checker/maker of anything that's a directory not formatted for later glue::glue() calls
+
+  if(!is.null(path_save_gpkg)){ # Add path save gpkg to parameter object
+    Retr_Params$paths$path_save_gpkg <- path_save_gpkg
+  } # Now we're ready for creating non-existent directories!
   for(dir in Retr_Params$paths){
     if(base::grepl('dir',dir)){
       if(!base::dir.exists(dir) && !base::grepl("\\{",dir)){
