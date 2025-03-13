@@ -24,7 +24,7 @@ names that will be downloaded.
 }
 }
 \seealso{
-\link{proc_attr_wrap}
+\link[proc.attr.hydfab]{proc_attr_wrap}
 }
 \author{
 Guy Litt \email{guy.litt@noaa.gov}

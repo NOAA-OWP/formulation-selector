@@ -17,5 +17,5 @@ using proc.attr.hydfab::proc_attr_gageids}
 A short description...
 }
 \seealso{
-\link{proc_attr_gageids}
+\link[proc.attr.hydfab]{proc_attr_gageids}
 }

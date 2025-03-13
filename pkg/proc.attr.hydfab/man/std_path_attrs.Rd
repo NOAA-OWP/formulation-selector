@@ -15,8 +15,8 @@ std_path_attrs(comid, dir_db_attrs)
 standardized path to attribute parquet file
 }
 \seealso{
-\link{proc_attr_wrap}
+\link[proc.attr.hydfab]{proc_attr_wrap}
 
-fs_algo.fs_algo_train_eval.fs_read_attr_comid() python function
+\code{fs_algo.fs_algo_train_eval.fs_read_attr_comid()} python function
 that reads these files
 }

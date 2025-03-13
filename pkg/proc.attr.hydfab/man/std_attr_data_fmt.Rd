@@ -13,5 +13,5 @@ std_attr_data_fmt(attr_data)
 Standardize the catchment attribute data to read/write in parquet files
 }
 \seealso{
-\link{retr_attr_new}
+\link[proc.attr.hydfab]{retr_attr_new}
 }

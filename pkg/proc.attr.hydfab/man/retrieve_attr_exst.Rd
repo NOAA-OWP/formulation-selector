@@ -28,5 +28,5 @@ Runs checks on input arguments and retrieved contents, generating warnings
 if requested comids and/or variables were completely absent from the dataset
 }
 \seealso{
-\link{proc_attr_wrap}
+\link[proc.attr.hydfab]{proc_attr_wrap}
 }

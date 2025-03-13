@@ -134,6 +134,7 @@ main <- function(){
                                                    featureSource='nwissite',
                                                    featureID='USGS-{gage_id}',
                                                    Retr_Params=Retr_Params,
+                                                   path_save_gpkg = Retr_Params$paths$path_meta
                                                    lyrs=lyrs,
                                                    overwrite=overwrite)
 

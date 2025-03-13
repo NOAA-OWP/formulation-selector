@@ -17,7 +17,7 @@ retr_attr_new(comids, need_vars, Retr_Params)
 Retrieve new attributes that haven't been acquired yet
 }
 \seealso{
-\link{proc_attr_wrap}
+\link[proc.attr.hydfab]{proc_attr_wrap}
 
-\link{proc_attr_mlti_wrap}
+\link[proc.attr.hydfab]{proc_attr_mlti_wrap}
 }

@@ -32,7 +32,7 @@ attribute - the variable identifier used in a particular dataset
 value - the value of the identifier
 }
 \seealso{
-\link{proc_attrs_gageids}
+\link[proc.attr.hydfab]{proc_attrs_gageids}
 }
 \author{
 Guy Litt \email{guy.litt@noaa.gov}

@@ -24,5 +24,5 @@ featureSource: The type of nhdplus feature source corresponding to gage_id
 featureID: The method of converting gage_id into a standardized featureSource's featureID
 }
 \seealso{
-\link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature}
+\link[nhdplusTools]{get_nldi_feature}
 }
