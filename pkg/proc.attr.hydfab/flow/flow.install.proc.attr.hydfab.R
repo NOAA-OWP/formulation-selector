@@ -16,7 +16,7 @@ lapply(c("devtools","roxygen2","testthat","covr"), library, character.only = TRU
 
 # ---------------------------------------------------------------------------- #
 #  Define user-specific paths for installation
-if ('bolotin' %in% Sys.getenv("HOME")) {
+if ('bolotin' %in% Sys.getenv("HOME")) {rm
   # if you have a different path to formulation-selector, add it here, otherwise remove
 } else if ('choat' %in% Sys.getenv("HOME")){
   # if you have a different path to formulation-selector, add it here, otherwise remove
@@ -24,7 +24,7 @@ if ('bolotin' %in% Sys.getenv("HOME")) {
   fs_dir <- file.path(Sys.getenv("HOME"),"git","formulation-selector")
 }
 # Run unit tests?
-RunTest <- FALSE #TRUE Default FALSE prevents s3 data downloading in unit testing (FALSE=fast)
+RunTest <- T#FALSE #TRUE Default FALSE prevents s3 data downloading in unit testing (FALSE=fast)
 ShowTestCovr <- FALSE # Only possible if RunTest==TRUE. Even slower though.
 # ---------------------------------------------------------------------------- #
 # Enter in all R packages here

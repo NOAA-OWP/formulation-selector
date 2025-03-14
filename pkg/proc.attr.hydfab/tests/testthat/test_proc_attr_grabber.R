@@ -456,7 +456,7 @@ testthat::test_that("proc_attr_hf not a comid",{
                                                         dir_db_hydfab,
                                                         custom_name="{lyrs}_",fileext = 'gpkg',
                                                         lyrs=c('divides','network')[2],
-                                                        hf_cat_sel=TRUE, overwrite=FALSE))
+                                                        hf_cat_sel=TRUE, overwrite=FALSE)) %>% suppress_warnings()
 })
 
 

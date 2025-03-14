@@ -176,7 +176,7 @@ retrieve_attr_exst <- function(comids, vars, dir_db_attrs, bucket_conn=NA){
                            dplyr::filter(featureID %in% !!comids) %>%
                            dplyr::filter(attribute %in% !!vars) %>%
                            dplyr::distinct() %>%
-                           dplyr::collect())
+                           dplyr::collect(),silent=TRUE)
 
     if('try-error' %in% base::class(dat_all_attrs)){
       stop(glue::glue("Could not acquire attribute data from {dir_db_attrs}"))
@@ -254,7 +254,7 @@ proc_attr_hydatl <- function(hf_id, path_ha, ha_vars,
   #  in a form adapted to the hydrofabric
 
   if(base::grepl("s3",path_ha)){ # Run a check that the bucket connection works
-    bucket <- try(arrow::s3_bucket(path_ha))
+    bucket <- try(arrow::s3_bucket(path_ha),silent=TRUE)
     if('try-error' %in% base::class(bucket)){
       stop(glue::glue("Could not connect to an s3 bucket path for hydroatlas
                       data retrieval. Reconsider the path_ha of {path_ha}"))
@@ -311,7 +311,7 @@ std_path_retr_gpkg <- function(path_fs_proc){
   new_name_loc <- base::paste0(fs::path_file(sub_name_loc), "_loc")
   new_name_gpkg <- fs::path_ext_set(new_name_loc, "gpkg")
   # Create the new path with the updated name
-  path_gpkg_fs_proc <- path(path_dir(path_fs_proc), new_name_gpkg)
+  path_gpkg_fs_proc <- fs::path(fs::path_dir(path_fs_proc), new_name_gpkg)
   return(path_gpkg_fs_proc)
 }
 
@@ -394,12 +394,16 @@ fs_retr_nhdp_comids_geom_wrap <- function(path_save_gpkg,
 
   sf_comid_in <- proc.attr.hydfab::read_fs_retr_gpkg(path_save_gpkg)
 
-  if(!base::is.null(sf_comid_in)){
+  if(!base::is.null(sf_comid_in)){ # Read in
     # TODO address what to do when gage_id not a column
     idxs_gage_ids <- base::which(gage_ids %in% sf_comid_in$gage_id)
     if(base::length(idxs_gage_ids) == base::length(gage_ids)){
       # All gage ids present, subset to the gage_ids of interest
-      sf_comid <- sf_comid_in[idxs_gage_ids,] %>% sf::st_as_sf()
+      sf_comid <- sf_comid_in[idxs_gage_ids,] %>%
+        # MUST PROVIDE GAGE_IDS in the same dimension as originally provided,
+        # as expected in proc_attr_gageids
+        dplyr::slice(base::match(gage_ids,gage_id)) %>%
+        sf::st_as_sf(crs=4326)
     } else { # Need comids for additional locations
       need_gids <- gage_ids[base::which(!gage_ids %in% sf_comid_in$gage_id)]
 
@@ -411,25 +415,47 @@ fs_retr_nhdp_comids_geom_wrap <- function(path_save_gpkg,
 
       sf_cmbo <- data.table::rbindlist(base::list(sf_comid_need,
                                         sf_comid_in),use.names=TRUE,fill=TRUE)
-      # Count total NA, pick least-NA rows when duplicates exist
-      sf_cmbo$tot_na <- base::rowSums(is.na(sf_cmbo))
-      sf_cmbo_ordr <- sf_cmbo[base::order(sf_cmbo$gage_id,sf_cmbo$tot_na),]
-      sf_cmbo_no_dupe <- sf_cmbo_ordr[!base::duplicated(sf_cmbo_ordr$gage_id),]
-      # Update geopackage with new data!
-      sf::write_sf(sf_cmbo_no_dupe,path_save_gpkg,layer = "outlet")
-
-      # Re-order to original gage_ids
+      # Count total NA, pick least-NA rows when duplicates exist & write to file
+      sf_cmbo_no_dupe <- proc.attr.hydfab::std_write_geom_map_gpkg(sf_cmbo,path_save_gpkg)
+      # Reorder to original gage_ids (adding in dupes in case they were removed)
       sf_comid <- sf_cmbo_no_dupe %>%
-        dplyr::filter(gage_id %in% gage_ids) %>% sf::st_as_sf()
+        # MUST PROVIDE GAGE_IDS in the same dimension as originally provided,
+        # as expected in proc_attr_gageids
+        dplyr::slice(base::match(gage_ids,gage_id)) %>%
+        sf::st_as_sf(crs=4326)
     }
   } else { # An entirely new geopackage
     sf_comid <- proc.attr.hydfab::fs_retr_nhdp_comids_geom(gage_ids = gage_ids,
                                                 featureSource=featureSource,
                                                 featureID=featureID) %>%
                 sf::st_as_sf(crs=4326)
-    sf::write_sf(sf_comid,path_save_gpkg,layer="outlet")
+    # Write to file, DO NOT use df b/c it may not have 1:1 match with gage_ids
+    # as expected in proc_attr_gageids
+    sf_comid_no_dupes <- proc.attr.hydfab::std_write_geom_map_gpkg(sf_comid,
+                                                          path_save_gpkg)
   }
   return(sf_comid)
+}
+
+std_write_geom_map_gpkg <- function(sf_comid,path_save_gpkg){
+  #' @title Remove duplicates and write comid-geometry mappings to file
+  #' @description Removes the duplicate item corresponding to the most NA values
+  #' in a row, but only for duplicated gage_id values. This is just-in-case
+  #' a secondary attempt at grabbing a comid was successful.
+  #' @details This can change the exact 1:1 match of gage_ids, which is expected
+  #' in \link[proc.attr.hydfab]{proc_attr_gageids}
+  #' @param sf_comid sf class data.frame of comid/gage_id/geometry mappings
+  #' @seealso \link[proc.attr.hydfab]{fs_retr_nhdp_comids_geom_wrap}
+  #' @seealso \link[proc.attr.hydfab]{proc_attr_gageids}
+  #' @export
+
+  # Count total NA, pick least-NA rows when duplicates exist
+  sf_comid$tot_na <- base::rowSums(is.na(sf_comid))
+  sf_cmbo_ordr <- sf_comid[base::order(sf_comid$gage_id,sf_comid$tot_na),]
+  sf_cmbo_no_dupe <- sf_cmbo_ordr[!base::duplicated(sf_cmbo_ordr$gage_id),]
+  # Update geopackage with new data!
+  sf::write_sf(sf_cmbo_no_dupe,path_save_gpkg,layer = "outlet")
+  return(sf_cmbo_no_dupe)
 }
 
 
@@ -478,21 +504,19 @@ fs_retr_nhdp_comids_geom <- function(gage_ids,featureSource='nwissite',
                  revisit the configuration yaml file that processes this dataset in
                 fs_proc: \n {featureSource}, and featureID={featureID}"))
     } else if (base::is.null(site_feature)){ # Try again with discover_nhdplus_id
-      warning(glue::glue("Could not retrieve geometry for {nldi_feat$featureID}."))
+      warning(glue::glue("^^ Could not retrieve geometry for {nldi_feat$featureID}."))
       comid <- try(nhdplusTools::discover_nhdplus_id(point=site_feature$geometry))
       if("try-error" %in% base::class(comid)){ # Assign NA values for everything
-        site_feature <- tibble::tibble(featureID=nldi_feat$featureID,comid=NA,
-                                 X=NA,Y=NA,
+        site_feature <- tibble::tibble(identifier=nldi_feat$featureID,comid=NA,
                                  geometry=sf::st_sfc(sf::st_point(),crs=4326))
-      } else { # Assign NA vlaues for X, Y, & geometry
-        site_feature <- tibble::tibble(featureID=nldi_feat$featureID,comid=comid,
-                                 X=NA,Y=NA,
+      } else { # Assign NA values for geometry
+        site_feature <- tibble::tibble(identifier=nldi_feat$featureID,comid=comid,
                                  geometry = sf::st_sfc(sf::st_point(),crs=4326))
       }
     }
     if("sfc_LINESTRING" %in% base::class(site_feature$geometry)){
       # We want a singular point for the comid, so pick the middle point
-      if (length(site_feature$geometry) > 1){
+      if (base::length(site_feature$geometry) > 1){
         stop("Unexpected format - anticipating just one row in site_feature sf/df")
       } else {
         site_feature$geometry <- sf::st_line_sample(site_feature$geometry[[1]],
@@ -505,7 +529,7 @@ fs_retr_nhdp_comids_geom <- function(gage_ids,featureSource='nwissite',
 
   dt_all_geom <- data.table::rbindlist(ls_sitefeat,fill = TRUE,use.names = TRUE)
   # Rename columns
-  name_lookup = c(featureID = 'identifier')
+  name_lookup = base::c(featureID = 'identifier')
   dt_comid_geom <- dt_all_geom %>%
     dplyr::rename(dplyr::any_of(name_lookup),) # any_of allows situations when 'identifier' doesn't exist
   dt_comid_geom$featureSource <- featureSource
@@ -814,7 +838,7 @@ io_attr_dat <- function(dt_new_dat,path_attrs,
 
   logl_write_parq <- TRUE
   # Double-check by first reading a possible dataset
-  dt_exist <- try(arrow::read_parquet(path_attrs))
+  dt_exist <- try(arrow::read_parquet(path_attrs),silent = TRUE)
   if ('try-error' %in% base::class(dt_exist)){
     dt_cmbo <- dt_new_dat
   } else if(base::nrow(dt_exist)>0 && base::nrow(dt_new_dat)>0){
@@ -839,7 +863,7 @@ io_attr_dat <- function(dt_new_dat,path_attrs,
   }
 
   if(logl_write_parq){ # Write update to file
-    try_to_write <- try(arrow::write_parquet(dt_cmbo,sink=path_attrs))
+    try_to_write <- try(arrow::write_parquet(dt_cmbo,sink=path_attrs),silent=TRUE)
     if("try-error" %in% class(try_to_write)){
       # Try deleting the file first, then writing it.
       # We can do this because of merge.data.table(dt_exist,dt_new_dat)
@@ -1226,7 +1250,7 @@ retr_comids <- function(gage_ids,featureSource,featureID,dir_db_attrs,
   # ---------------- COMID & COORDINATE RETRIEVAL ---------------- #
   # Populate the comids & coordinates for each gage_id
   if(base::is.null(path_save_gpkg)){
-    warning("Strongly recommended to provide a path_save_gpkg to proc.attr.hydfab::retr_comids()!!")
+    warning("Strongly recommended to provide a path_save_gpkg to proc.attr.hydfab::retr_comids!!")
     sf_comid <- data.table::data.table()
   } else {
     sf_comid <- proc.attr.hydfab::fs_retr_nhdp_comids_geom_wrap(
@@ -1379,7 +1403,7 @@ proc_attr_gageids <- function(gage_ids,featureSource,featureID,Retr_Params,
   #.  2025-03-07 add path_save_gpkg capability, GL
   # Path checker/maker of anything that's a directory not formatted for later glue::glue() calls
 
-  if(!is.null(path_save_gpkg)){ # Add path save gpkg to parameter object
+  if(!base::is.null(path_save_gpkg)){ # Add path save gpkg to parameter object
     Retr_Params$paths$path_save_gpkg <- path_save_gpkg
   } # Now we're ready for creating non-existent directories!
   for(dir in Retr_Params$paths){
