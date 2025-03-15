@@ -4,10 +4,15 @@
 \alias{std_write_geom_map_gpkg}
 \title{Remove duplicates and write comid-geometry mappings to file}
 \usage{
-std_write_geom_map_gpkg(sf_comid, path_save_gpkg)
+std_write_geom_map_gpkg(sf_comid, path_save_gpkg, epsg = NULL)
 }
 \arguments{
 \item{sf_comid}{sf class data.frame of comid/gage_id/geometry mappings}
+
+\item{path_save_gpkg}{The full filepath to write .gpkg}
+
+\item{epsg}{The EPSG code to use for the CRS; Default NULL means
+no assignment. Note that nhdplus defaults to 4326.}
 }
 \description{
 Removes the duplicate item corresponding to the most NA values
@@ -16,7 +21,7 @@ a secondary attempt at grabbing a comid was successful.
 }
 \details{
 This can change the exact 1:1 match of gage_ids, which is expected
-in \link[proc.attr.hydfab]{proc_attr_gageids}
+in \link[proc.attr.hydfab]{proc_attr_gageids}. May set epsg to NULL
 }
 \seealso{
 \link[proc.attr.hydfab]{fs_retr_nhdp_comids_geom_wrap}

@@ -9,7 +9,8 @@ fs_retr_nhdp_comids_geom_wrap(
   path_save_gpkg,
   gage_ids,
   featureSource = "nwissite",
-  featureID = "USGS-{gage_id}"
+  featureID = "USGS-{gage_id}",
+  epsg = 4326
 )
 }
 \arguments{
@@ -26,6 +27,8 @@ represents exactly what the nldi_feature$featureID should be, then
 featureID="{gage_id}". In other instances, conversions may be necessary,
 e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
 that the term 'gage_id' is used as a variable in glue syntax to create featureID}
+
+\item{epsg}{The EPSG code to use for the CRS; nhdplus default is 4326}
 }
 \description{
 Try reading geopackage file, if it doesn't exist or is missing

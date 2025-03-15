@@ -7,7 +7,8 @@
 fs_retr_nhdp_comids_geom(
   gage_ids,
   featureSource = "nwissite",
-  featureID = "USGS-{gage_id}"
+  featureID = "USGS-{gage_id}",
+  epsg = 4326
 )
 }
 \arguments{
@@ -23,6 +24,8 @@ featureID="{gage_id}". In other instances, conversions may be necessary,
 e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
 that the term 'gage_id' is used as a variable in glue syntax to create featureID
 Refer to ?dataRetrieval::get_nldi_sources() for options to use with nldi_feature}
+
+\item{epsg}{The EPSG code to use for the CRS; nhdplus defaults 4326}
 }
 \value{
 data.table of comid and geometric point in epsg 4326

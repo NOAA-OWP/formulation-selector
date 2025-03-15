@@ -368,7 +368,8 @@ read_fs_retr_gpkg <- function(path_save_gpkg, verbose = FALSE){
 
 fs_retr_nhdp_comids_geom_wrap <- function(path_save_gpkg,
                                           gage_ids,featureSource='nwissite',
-                                          featureID='USGS-{gage_id}'){
+                                          featureID='USGS-{gage_id}',
+                                          epsg=4326){
   #' @title Read or generate a sf object from NHDplus queries for comid, and
   #'.  update file with any newly retrieved locations
   #' @description Try reading geopackage file, if it doesn't exist or is missing
@@ -384,6 +385,7 @@ fs_retr_nhdp_comids_geom_wrap <- function(path_save_gpkg,
   #'  featureID="{gage_id}". In other instances, conversions may be necessary,
   #'  e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
   #'  that the term 'gage_id' is used as a variable in glue syntax to create featureID
+  #' @param epsg The EPSG code to use for the CRS; nhdplus default is 4326
   #' @seealso \link[proc.attr.hydfab]{proc_attr_read_gage_ids_fs}
   #' @seealso \link[proc.attr.hydfab]{fs_retr_nhdp_comids_geom}
   #' @seealso `fs_algo.fs_algo_train_eval.fs_retr_nhdp_comids_geom_wrap`
@@ -403,7 +405,7 @@ fs_retr_nhdp_comids_geom_wrap <- function(path_save_gpkg,
         # MUST PROVIDE GAGE_IDS in the same dimension as originally provided,
         # as expected in proc_attr_gageids
         dplyr::slice(base::match(gage_ids,gage_id)) %>%
-        sf::st_as_sf(crs=4326)
+        sf::st_as_sf(crs=epsg)
     } else { # Need comids for additional locations
       need_gids <- gage_ids[base::which(!gage_ids %in% sf_comid_in$gage_id)]
 
@@ -416,35 +418,41 @@ fs_retr_nhdp_comids_geom_wrap <- function(path_save_gpkg,
       sf_cmbo <- data.table::rbindlist(base::list(sf_comid_need,
                                         sf_comid_in),use.names=TRUE,fill=TRUE)
       # Count total NA, pick least-NA rows when duplicates exist & write to file
-      sf_cmbo_no_dupe <- proc.attr.hydfab::std_write_geom_map_gpkg(sf_cmbo,path_save_gpkg)
+      sf_cmbo_no_dupe <- proc.attr.hydfab::std_write_geom_map_gpkg(sf_cmbo,
+                                                                   path_save_gpkg,
+                                                                   epsg=epsg)
       # Reorder to original gage_ids (adding in dupes in case they were removed)
       sf_comid <- sf_cmbo_no_dupe %>%
         # MUST PROVIDE GAGE_IDS in the same dimension as originally provided,
         # as expected in proc_attr_gageids
         dplyr::slice(base::match(gage_ids,gage_id)) %>%
-        sf::st_as_sf(crs=4326)
+        sf::st_as_sf(crs=epsg)
     }
   } else { # An entirely new geopackage
     sf_comid <- proc.attr.hydfab::fs_retr_nhdp_comids_geom(gage_ids = gage_ids,
                                                 featureSource=featureSource,
                                                 featureID=featureID) %>%
-                sf::st_as_sf(crs=4326)
+                sf::st_as_sf(crs=epsg)
     # Write to file, DO NOT use df b/c it may not have 1:1 match with gage_ids
     # as expected in proc_attr_gageids
     sf_comid_no_dupes <- proc.attr.hydfab::std_write_geom_map_gpkg(sf_comid,
-                                                          path_save_gpkg)
+                                                          path_save_gpkg,
+                                                          epsg=epsg)
   }
   return(sf_comid)
 }
 
-std_write_geom_map_gpkg <- function(sf_comid,path_save_gpkg){
+std_write_geom_map_gpkg <- function(sf_comid,path_save_gpkg,epsg=NULL){
   #' @title Remove duplicates and write comid-geometry mappings to file
   #' @description Removes the duplicate item corresponding to the most NA values
   #' in a row, but only for duplicated gage_id values. This is just-in-case
   #' a secondary attempt at grabbing a comid was successful.
   #' @details This can change the exact 1:1 match of gage_ids, which is expected
-  #' in \link[proc.attr.hydfab]{proc_attr_gageids}
+  #' in \link[proc.attr.hydfab]{proc_attr_gageids}. May set epsg to NULL
   #' @param sf_comid sf class data.frame of comid/gage_id/geometry mappings
+  #' @param path_save_gpkg The full filepath to write .gpkg
+  #' @param epsg The EPSG code to use for the CRS; Default NULL means
+  #' no assignment. Note that nhdplus defaults to 4326.
   #' @seealso \link[proc.attr.hydfab]{fs_retr_nhdp_comids_geom_wrap}
   #' @seealso \link[proc.attr.hydfab]{proc_attr_gageids}
   #' @export
@@ -453,6 +461,11 @@ std_write_geom_map_gpkg <- function(sf_comid,path_save_gpkg){
   sf_comid$tot_na <- base::rowSums(is.na(sf_comid))
   sf_cmbo_ordr <- sf_comid[base::order(sf_comid$gage_id,sf_comid$tot_na),]
   sf_cmbo_no_dupe <- sf_cmbo_ordr[!base::duplicated(sf_cmbo_ordr$gage_id),]
+
+  if(!base::is.null(epsg)){ # Ensure assigned epsg
+    sf_cmbo_no_dupe <- sf_cmbo_no_dupe %>% sf::st_as_sf(crs=epsg)
+  }
+
   # Update geopackage with new data!
   sf::write_sf(sf_cmbo_no_dupe,path_save_gpkg,layer = "outlet")
   return(sf_cmbo_no_dupe)
@@ -460,7 +473,7 @@ std_write_geom_map_gpkg <- function(sf_comid,path_save_gpkg){
 
 
 fs_retr_nhdp_comids_geom <- function(gage_ids,featureSource='nwissite',
-                                     featureID="USGS-{gage_id}"){
+                                     featureID="USGS-{gage_id}",epsg=4326){
   #' @title Retrieve comids & point geometry based on nldi_feature identifiers
   #' @param gage_ids vector of USGS gage_ids
   #' @param featureSource The [nhdplusTools::get_nldi_feature] feature
@@ -472,6 +485,7 @@ fs_retr_nhdp_comids_geom <- function(gage_ids,featureSource='nwissite',
   #'  e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
   #'  that the term 'gage_id' is used as a variable in glue syntax to create featureID
   #'  Refer to ?dataRetrieval::get_nldi_sources() for options to use with nldi_feature
+  #' @param epsg The EPSG code to use for the CRS; nhdplus defaults 4326
   #' @seealso \link[proc.attr.hydfab]{proc_attr_read_gage_ids_fs}
   #' @seealso \link[proc.attr.hydfab]{fs_retr_nhdp_comids_geom_wrap}
   #' @seealso `fs_algo.fs_algo_train_eval.fs_retr_nhdp_comids_geom`
@@ -508,10 +522,10 @@ fs_retr_nhdp_comids_geom <- function(gage_ids,featureSource='nwissite',
       comid <- try(nhdplusTools::discover_nhdplus_id(point=site_feature$geometry))
       if("try-error" %in% base::class(comid)){ # Assign NA values for everything
         site_feature <- tibble::tibble(identifier=nldi_feat$featureID,comid=NA,
-                                 geometry=sf::st_sfc(sf::st_point(),crs=4326))
+                                 geometry=sf::st_sfc(sf::st_point(),crs=epsg))
       } else { # Assign NA values for geometry
         site_feature <- tibble::tibble(identifier=nldi_feat$featureID,comid=comid,
-                                 geometry = sf::st_sfc(sf::st_point(),crs=4326))
+                                 geometry = sf::st_sfc(sf::st_point(),crs=epsg))
       }
     }
     if("sfc_LINESTRING" %in% base::class(site_feature$geometry)){
