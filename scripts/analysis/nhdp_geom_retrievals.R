@@ -1,3 +1,11 @@
+#' @title Retrieve the catchment, flowline, and outlet geometries for each comid
+#' @author Guy Litt
+#' @description Given the 400 queries per hour limit for NLDI database, this 
+#' script makes fewer connections (e.g. 390) every 61 minutes
+#' @details Originally designed to retrieve the geometries for all RFC locations
+# Changelog/contributions
+#. 2025-03-16 Originally created, GL
+
 library(nhdplusTools)
 library(data.table)
 library(dplyr)
@@ -34,7 +42,6 @@ for(seq_num in seq_nums){
     begn_seq <- seq_nums[ctr_seq-1] + 1
     sub_df <- df[begn_seq:seq_num,]
   }
-  
   
   # The unique comids for each location
   comids_sub <- base::unique(sub_df[[col_comid]])
