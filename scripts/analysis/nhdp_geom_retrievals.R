@@ -68,7 +68,7 @@ for(seq_num in seq_nums){
   sf_flowlines <- lapply(ls_nhdp_chunk, function(x) x$flowline) %>% 
     data.table::rbindlist(fill=TRUE,use.names=TRUE,ignore.attr=TRUE)%>% 
     sf::st_as_sf(crs=4326)
-  sf_outlets <- lapply(ls_nhdp_chunk, function(x) x$ outlet) %>% 
+  sf_outlets <- lapply(ls_nhdp_chunk, function(x) x$outlet) %>% 
     data.table::rbindlist(fill=TRUE,use.names=TRUE,ignore.attr=TRUE)%>% 
     sf::st_as_sf(crs=4326)
    
@@ -87,6 +87,38 @@ for(seq_num in seq_nums){
   Sys.sleep(60*61) # 400 NLDI queries per hour
 } # End loop over chunks
 
-# TODO Compile entire dataset
+# Compile entire dataset
+all_files_rds <- base::list.files(dir_save_nhdp_chunk,pattern = "rds")
+ls_nhdp_all <- base::lapply(all_files_rds, function(x) 
+  base::readRDS(base::file.path(dir_save_nhdp_chunk,x)))
+sf_cats_all <- base::lapply(ls_nhdp_all, function(x) x$catchment) %>% 
+  data.table::rbindlist(fill=TRUE,use.names=TRUE,ignore.attr=TRUE) %>% 
+  sf::st_as_sf(crs=4326)
+sf_flowlines_all <- base::lapply(ls_nhdp_all, function(x) x$flowline) %>% 
+  data.table::rbindlist(fill=TRUE,use.names=TRUE,ignore.attr=TRUE) %>% 
+  sf::st_as_sf(crs=4326)
+sf_outlets_all <- lapply(ls_nhdp_all, function(x) x$outlet) %>% 
+  data.table::rbindlist(fill=TRUE,use.names=TRUE,ignore.attr=TRUE)%>% 
+  sf::st_as_sf(crs=4326)
+
+
+# Munging: catchment may contain multipolygons. These should be singular:
+tot_polys <- lapply(sf_cats_all$geometry, function(x) length(x)) %>% unlist()
+idxs_polys <- which(tot_polys>1) # The multipolygon rows
+ls_poly <- lapply(idxs_polys, function(i) sf_cats_all$geometry[i] %>% sf::st_union() %>%
+         sf::st_cast("POLYGON") %>% unique())
+sf_cats_union <- sf_cats_all
+ctr <- 0
+for(idx_poly in idxs_polys){
+  ctr <- ctr+1
+  sf_cats_union$geometry[idx_poly] <- ls_poly[[ctr]]
+}
+
+
+# Write complete geopackage:
+path_save_gpkg_all <- file.path(dir_save_nhdp,glue::glue("nhdp_cat_line_out.gpkg"))
+try(sf::st_write(sf_cats_union,path_save_gpkg_all,layer="catchment"))
+try(sf::st_write(sf_flowlines_all,path_save_gpkg_all,layer="flowlines"))
+try(sf::st_write(sf_outlets_all,path_save_gpkg_all,layer="outlet"))
 
 
