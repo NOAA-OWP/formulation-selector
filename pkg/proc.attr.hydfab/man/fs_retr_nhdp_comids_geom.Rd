@@ -14,11 +14,11 @@ fs_retr_nhdp_comids_geom(
 \arguments{
 \item{gage_ids}{vector of USGS gage_ids}
 
-\item{featureSource}{The \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature} feature
+\item{featureSource}{The  \link[nhdplusTools]{get_nldi_feature} feature
 featureSource, default 'nwissite'}
 
 \item{featureID}{a glue-configured conversion of gage_id into a recognized
-featureID for \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature}. E.g. if gage_id
+featureID for  \link[nhdplusTools]{get_nldi_feature}. E.g. if gage_id
 represents exactly what the nldi_feature$featureID should be, then
 featureID="{gage_id}". In other instances, conversions may be necessary,
 e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected

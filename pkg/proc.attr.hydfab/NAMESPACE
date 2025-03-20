@@ -3,6 +3,7 @@
 export(attr_cfig_parse)
 export(check_attr_selection)
 export(check_miss_attrs_comid_io)
+export(dl_nhdplus_geoms_wrap)
 export(fs_attrs_miss_mlti_wrap)
 export(fs_attrs_miss_wrap)
 export(fs_retr_nhdp_comids_geom)

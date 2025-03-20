@@ -1,9 +1,8 @@
 # Functions to grab catchment attributes using hydrofabric and connected datasets
-
+# @seealso rafts_utils.R for additional package functions independent of those stored here
 # Changelog / Contributions
-#   2024-07-24 Originally created, GL
-
-
+#.   2024-07-24 Originally created, GL
+#.   2025-03 Expanded and ongoing feature additions/refactoring throughout FY25
 library(glue)
 library(tidync)
 library(dplyr)
@@ -121,108 +120,6 @@ attr_cfig_parse <- function(path_attr_config){
     write_type = write_type
   )
   return(Retr_Params)
-}
-
-
-retrieve_attr_exst <- function(comids, vars, dir_db_attrs, bucket_conn=NA){
-  #' @title Grab previously-aggregated attributes from locations of interest
-  #' @description Retrieves existing attribute data already stored in the
-  #' dir_db_attrs directory as .parquet files & return tbl of all comids and
-  #' attributes of interest.
-  #' @details Only considers data already generated inside dir_db_attrs. If
-  #' more data are needed, acquire attribute data acquisition using proc_attr_wrap().
-  #' Runs checks on input arguments and retrieved contents, generating warnings
-  #' if requested comids and/or variables were completely absent from the dataset
-  #' @param comids character class. The comids of interest.
-  #' @param vars character class. The attribute variables of interest.
-  #' @param dir_db_attrs character class. The path where data
-  #' @param bucket_conn Default NA. Placeholder in case a bucket connection is
-  #' ever created
-  #' @seealso \link[proc.attr.hydfab]{proc_attr_wrap}
-  #' @export
-  # Changelog/Contributions
-  #  2024-07-26 Originally created, GL
-
-  # Run checks on input args
-  if(!'character' %in% base::class(comids) ){
-    # Let's try unlisting and unnaming just-in-case
-    comids <- comids %>% base::unlist() %>% base::unname()
-    if(!'character' %in% base::class(comids) ){
-      warning("comids expected to be character class. converting")
-      comids <- base::as.character(comids)
-    }
-  }
-  if(!'character' %in% base::class(vars)){
-    # Let's try unlisting and unnaming just-in-case
-    vars <- vars %>% base::unlist() %>% base::unname()
-    if(!'character' %in% base::class(vars)){
-      stop("vars expected to be character class")
-    }
-  }
-  if(!base::dir.exists(dir_db_attrs)){
-    stop(glue::glue("The attribute database path does not exist:
-                      {dir_db_attrs}"))
-  }
-  if(!any(base::grepl(".parquet", base::list.files(dir_db_attrs)))){
-    warning(glue::glue("The following path does not contain expected
-                          .parquet files: {dir_db_attrs}"))
-  }
-
-  if(base::is.na(bucket_conn)){
-    # Query based on COMID & variables, then retrieve data
-    parq_files <- file.path(dir_db_attrs,list.files(dir_db_attrs, pattern = "parquet"))
-    dat_all_attrs <- try(arrow::open_dataset(parq_files, format = 'parquet') %>%
-                           dplyr::mutate(across(where(is.factor), as.character)) %>% # factors are a pain!!
-                           dplyr::filter(featureID %in% !!comids) %>%
-                           dplyr::filter(attribute %in% !!vars) %>%
-                           dplyr::distinct() %>%
-                           dplyr::collect(),silent=TRUE)
-
-    if('try-error' %in% base::class(dat_all_attrs)){
-      stop(glue::glue("Could not acquire attribute data from {dir_db_attrs}"))
-    }
-  } else {# TODO add bucket connection here if it ever becomes a thing
-    stop("Need to accommodate a different type of source here, e.g. s3")
-  }
-
-  # Run simple checks on retrieved data
-  if (base::any(!comids %in% dat_all_attrs$featureID)){
-    missing_comids <- comids[base::which(!comids %in% dat_all_attrs$featureID)]
-    if (length(missing_comids) > 0){
-      warning(base::paste0("Datasets missing the following comids: ",
-                           base::paste(missing_comids,collapse=","),
-                           "\nConsider running proc.attr.hydfab::proc_attr_wrap()"))
-    } else {
-      message("There's a logic issue on missing_comids inside retrieve_attr_exst")
-    }
-
-
-  }
-
-  if (base::any(!vars %in% dat_all_attrs$attribute)){
-    missing_vars <- vars[base::which(!vars %in% dat_all_attrs$attribute)]
-    if(length(missing_vars) >0 ){
-      warning(base::paste0("Datasets entirely missing the following vars: ",
-                           base::paste(missing_vars,collapse=","),
-                           "\nConsider running proc.attr.hydfab::proc_attr_wrap()"))
-    } else {
-      message("There's a logic issue on missing_vars inside retrieve_attr_exst")
-    }
-
-  }
-
-  # Run check on all comid-attribute pairings by counting comid-var pairings
-  sum_var_df <- dat_all_attrs %>%
-    dplyr::group_by(featureID) %>%
-    dplyr::summarise(dplyr::n_distinct(attribute))
-  idxs_miss_vars <- base::which(sum_var_df$`n_distinct(attribute)` != length(vars))
-  if(base::length(idxs_miss_vars)>0){
-    warning(glue::glue("The following comids are missing desired variables:
-              {paste(sum_var_df$featureID[idxs_miss_vars],collapse='\n')}
-                       \nConsider running proc.attr.hydfab::proc_attr_wrap()"))
-  }
-
-  return(dat_all_attrs)
 }
 
 
@@ -377,10 +274,10 @@ fs_retr_nhdp_comids_geom_wrap <- function(path_save_gpkg,
   #' geopackage file
   #' @param path_save_gpkg The filepath where the geopackage file should live
   #' @param gage_ids array of gage_id values to be queried for catchment attributes
-  #' @param featureSource The [nhdplusTools::get_nldi_feature]feature featureSource,
+  #' @param featureSource The \link[nhdplusTools]{get_nldi_feature}feature featureSource,
   #' e.g. 'nwissite'
   #' @param featureID a glue-configured conversion of gage_id into a recognized
-  #' featureID for [nhdplusTools::get_nldi_feature]. E.g. if gage_id
+  #' featureID for  \link[nhdplusTools]{get_nldi_feature}. E.g. if gage_id
   #' represents exactly what the nldi_feature$featureID should be, then
   #'  featureID="{gage_id}". In other instances, conversions may be necessary,
   #'  e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
@@ -476,10 +373,10 @@ fs_retr_nhdp_comids_geom <- function(gage_ids,featureSource='nwissite',
                                      featureID="USGS-{gage_id}",epsg=4326){
   #' @title Retrieve comids & point geometry based on nldi_feature identifiers
   #' @param gage_ids vector of USGS gage_ids
-  #' @param featureSource The [nhdplusTools::get_nldi_feature] feature
+  #' @param featureSource The  \link[nhdplusTools]{get_nldi_feature} feature
   #' featureSource, default 'nwissite'
   #' @param featureID a glue-configured conversion of gage_id into a recognized
-  #' featureID for [nhdplusTools::get_nldi_feature]. E.g. if gage_id
+  #' featureID for  \link[nhdplusTools]{get_nldi_feature}. E.g. if gage_id
   #' represents exactly what the nldi_feature$featureID should be, then
   #'  featureID="{gage_id}". In other instances, conversions may be necessary,
   #'  e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
@@ -774,11 +671,11 @@ std_attr_data_fmt <- function(attr_data){
   return(attr_data_ls)
 }
 
-retr_attr_new <- function(comids,need_vars,Retr_Params){
+retr_attr_new <- function(comids,need_vars,path_ha){
   #' @title Retrieve new attributes that haven't been acquired yet
   #' @param comids The list of of the comid identifier
   #' @param need_vars The needed attributes that haven't been acquired yet
-  #' @param Retr_Params list. List of list structure with parameters/paths needed to acquire variables of interest
+  #' @param path_ha character, the filepath where hydroatlas data.
   #' @seealso \link[proc.attr.hydfab]{proc_attr_wrap}
   #' @seealso \link[proc.attr.hydfab]{proc_attr_mlti_wrap}
   #' @export
@@ -791,7 +688,7 @@ retr_attr_new <- function(comids,need_vars,Retr_Params){
       (base::all(!base::is.na(need_vars$ha_vars)))){
     # Hydroatlas variable query; list name formatted as {dataset_name}__v{ver_num}
     attr_data[['hydroatlas__v1']] <- proc.attr.hydfab::proc_attr_hydatl(
-        path_ha=Retr_Params$paths$s3_path_hydatl,
+        path_ha=path_ha,
         hf_id=comids,
         ha_vars=need_vars$ha_vars) %>%
       # ensures 'COMID' exists as colname
@@ -964,7 +861,7 @@ proc_attr_mlti_wrap <- function(comids, Retr_Params,lyrs="network",
     ls_attr_data[['new_comid']] <- proc.attr.hydfab::retr_attr_new(
                                           comids=comids_attrs_need,
                                           need_vars=Retr_Params$vars,
-                                          Retr_Params=Retr_Params)
+                                          path_ha=Retr_Params$paths$s3_path_hydatl)
     # Compile all locations into a single datatable
     dt_new_dat <- data.table::rbindlist(ls_attr_data[['new_comid']],
                                         use.names = TRUE,fill=TRUE)
@@ -989,7 +886,7 @@ proc_attr_mlti_wrap <- function(comids, Retr_Params,lyrs="network",
     ls_attr_data[['pre-exist']] <- proc.attr.hydfab::retr_attr_new(
                                                 comids=comids_attrs_have,
                                                  need_vars=need_vars,
-                                                 Retr_Params=Retr_Params)
+                                                 path_ha=Retr_Params$paths$s3_path_hydatl)
 
     dt_prexst_dat <- data.table::rbindlist(ls_attr_data[['pre-exist']],
                                            use.names = TRUE,fill=TRUE )
@@ -1173,7 +1070,7 @@ proc_attr_wrap <- function(comid, Retr_Params, lyrs='network',overwrite=FALSE,hf
   #                                                               usgs_vars=need_vars$usgs_vars)
   # }
   attr_data <- proc.attr.hydfab::retr_attr_new(comids=net$hf_id,need_vars=need_vars,
-                             Retr_Params=Retr_Params)
+                             path_ha=Retr_Params$paths$s3_path_hydatl)
 
   ########## May add more data sources here and append to attr_data ###########
   # ----------- dataset standardization ------------ #

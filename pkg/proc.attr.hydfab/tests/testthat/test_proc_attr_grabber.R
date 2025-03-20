@@ -99,7 +99,7 @@ testthat::test_that("retr_attr_new",{
   need_vars <- list(usgs_vars = c("CAT_TWI","CAT_BFI"))
 
   rslt <- proc.attr.hydfab::retr_attr_new(comids = comids, need_vars=need_vars,
-                                  Retr_Params = Retr_Params)
+                                  Retr_Params = Retr_Params$paths$s3_path_hydatl)
 
   testthat::expect_contains(rslt[['usgs_nhdplus__v2']]$featureID,comids)
   testthat::expect_contains(rslt[['usgs_nhdplus__v2']]$attribute,need_vars$usgs_vars)
@@ -114,7 +114,7 @@ testthat::test_that("check_miss_attrs_comid_io",{
   Retr_Params_pkg <- Retr_Params
   Retr_Params_pkg$paths$dir_db_attrs <- dir_db_attrs_pkg
   dt_all <- proc.attr.hydfab::retr_attr_new(comids = comids, need_vars=need_vars,
-                                            Retr_Params = Retr_Params_pkg)[['usgs_nhdplus__v2']]
+                                            path_ha = Retr_Params_pkg$paths$s3_path_hydatl)[['usgs_nhdplus__v2']]
   # Add in an extra usgs var that wasn't retrieved, TOT_ELEV_MAX
   attr_vars <- list(usgs_vars = c("TOT_TWI","TOT_PRSNOW","TOT_ELEV_MAX"))
   rslt <- testthat::capture_warning(proc.attr.hydfab::check_miss_attrs_comid_io(dt_all,

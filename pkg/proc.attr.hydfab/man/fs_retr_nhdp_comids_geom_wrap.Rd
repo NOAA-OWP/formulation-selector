@@ -18,11 +18,11 @@ fs_retr_nhdp_comids_geom_wrap(
 
 \item{gage_ids}{array of gage_id values to be queried for catchment attributes}
 
-\item{featureSource}{The \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature}feature featureSource,
+\item{featureSource}{The \link[nhdplusTools]{get_nldi_feature}feature featureSource,
 e.g. 'nwissite'}
 
 \item{featureID}{a glue-configured conversion of gage_id into a recognized
-featureID for \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature}. E.g. if gage_id
+featureID for  \link[nhdplusTools]{get_nldi_feature}. E.g. if gage_id
 represents exactly what the nldi_feature$featureID should be, then
 featureID="{gage_id}". In other instances, conversions may be necessary,
 e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected

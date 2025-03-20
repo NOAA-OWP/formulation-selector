@@ -4,14 +4,14 @@
 \alias{retr_attr_new}
 \title{Retrieve new attributes that haven't been acquired yet}
 \usage{
-retr_attr_new(comids, need_vars, Retr_Params)
+retr_attr_new(comids, need_vars, path_ha)
 }
 \arguments{
 \item{comids}{The list of of the comid identifier}
 
 \item{need_vars}{The needed attributes that haven't been acquired yet}
 
-\item{Retr_Params}{list. List of list structure with parameters/paths needed to acquire variables of interest}
+\item{path_ha}{character, the filepath where hydroatlas data.}
 }
 \description{
 Retrieve new attributes that haven't been acquired yet
