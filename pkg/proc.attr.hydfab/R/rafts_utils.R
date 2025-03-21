@@ -185,7 +185,7 @@ compile_chunks_ndplus_geoms <- function(dir_save_nhdp_chunk,seq_nums=NULL,
     ls_input_df <- lapply(ls_nhdp_all, function(ls) ls[['input_df']])
     input_dt <- data.table::rbindlist(ls_input_df,fill=TRUE, use.names=TRUE,
                                          ignore.attr=TRUE)
-    try(sf::st_write(dt_input_df,path_save_gpkg_all,layer='input_df',append=FALSE))
+    try(sf::st_write(ls_input_df,path_save_gpkg_all,layer='input_df',append=FALSE))
   } else {
     input_dt <- data.table()
   }
