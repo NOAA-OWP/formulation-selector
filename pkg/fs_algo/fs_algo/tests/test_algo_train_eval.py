@@ -158,7 +158,7 @@ class TestFsRetrNhdpComids(unittest.TestCase):
 
         # Assertions
         self.assertListEqual(result['comid'].tolist(), ['1722317', '1520007'])
-        self.assertEqual(result.columns.tolist(), ['comid', 'geometry'])
+        self.assertEqual(result.columns.tolist(), ['comid','gage_id', 'geometry'])
 
 class TestFindFeatSrceId(unittest.TestCase):
 
