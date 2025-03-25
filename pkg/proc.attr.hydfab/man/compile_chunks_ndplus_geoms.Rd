@@ -2,16 +2,16 @@
 % Please edit documentation in R/rafts_utils.R
 \name{compile_chunks_ndplus_geoms}
 \alias{compile_chunks_ndplus_geoms}
-\title{Compile chunked datasets}
+\title{Compile chunked NHDPlus-retrieved geospatial datasets}
 \usage{
 compile_chunks_ndplus_geoms(
-  dir_save_nhdp_chunk,
+  dir_save_nhdp,
   seq_nums = NULL,
   filename_str = NULL
 )
 }
 \arguments{
-\item{dir_save_nhdp_chunk}{The chunked file directory}
+\item{dir_save_nhdp}{The base directory location to store data}
 
 \item{seq_nums}{The numbers expected in each chunked filename}
 
@@ -26,7 +26,7 @@ A compiled list of the geospatial data, containing:
 \list{path_gpkg_compiled} File path of the saved geopackage
 }
 \description{
-Compile chunked datasets
+Compile chunked NHDPlus-retrieved geospatial datasets
 }
 \seealso{
 \link[proc.attr.hydfab]{dl_nhdplus_geoms_wrap}

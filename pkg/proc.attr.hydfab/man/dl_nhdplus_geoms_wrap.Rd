@@ -11,7 +11,6 @@ dl_nhdplus_geoms_wrap(
   filename_str,
   id_type = c("comid", "AOI")[1],
   keep_cols = c(NULL, "all")[1],
-  keep_layer = "input_df",
   seq_size = 390,
   overwrite_chunk = FALSE
 )
@@ -28,8 +27,6 @@ dl_nhdplus_geoms_wrap(
 \item{id_type}{the type of id corresponding to \code{col_id}. Default 'comid'. 'AOI' may be used for geospatial queries}
 
 \item{keep_cols}{the columns inside \code{df} to also save. May be 'all'. Default NULL means no df data written to file}
-
-\item{keep_layer}{the layer name for saving \code{df} to file alongside the layers returned by \code{get_nhdplus}. Default 'input_df'.}
 
 \item{seq_size}{the size of the sequence of ids to query within an hour. Recommend <400}
 

@@ -109,10 +109,95 @@ retrieve_attr_exst <- function(comids, vars, dir_db_attrs, bucket_conn=NA){
   return(dat_all_attrs)
 }
 
-compile_chunks_ndplus_geoms <- function(dir_save_nhdp_chunk,seq_nums=NULL,
+std_dir_gpkg_chunk_nhdp_geom <- function(dir_save_nhdp){
+  #' @title Generate the chunk subdirectory for temporarily storing results
+  #' @description Recursively creates the chunk directory if it doesn't exist
+  #' @param dir_save_nhdp The base directory location containing the chunk dir
+  #' @seealso \link[proc.attr.hydfab]{dl_nhdplus_geoms_wrap}
+  # Place the geopackage chunks here
+  dir_save_nhdp_chunk <- file.path(dir_save_nhdp,"chunk")
+
+  if(!base::dir.exists(dir_save_nhdp_chunk)){
+    base::dir.create(dir_save_nhdp_chunk,recursive = TRUE)
+  }
+
+  return(dir_save_nhdp_chunk)
+}
+
+std_path_gpkg_chunk_nhdp_geom <- function(dir_save_nhdp,seq_num){
+  #' @title standardize each chunked filepath
+  #' @param dir_save_nhdp The base directory location containing the chunk dir
+  #' @param seq_num The unique number defining the chunk sequence (expected to
+  #' integer from 1 to n number of chunked files)
+  #' @seealso \link[proc.attr.hydfab]{dl_nhdplus_geoms_wrap}
+  dir_save_nhdp_chunk <- proc.attr.hydfab:::std_dir_gpkg_chunk_nhdp_geom(dir_save_nhdp)
+  path_gpkg_chunk <- glue::glue(base::file.path(dir_save_nhdp_chunk,
+                             "nhdp_chunked_{seq_num}.gpkg"))
+  return(path_gpkg_chunk)
+}
+
+std_path_rds_chunk_nhdp_geom <- function(path_gpkg_chunk){
+  #' @title the standardized filepath for chunked RDS files
+  #' @param path_gpkg_chunk The full filepath to a chunked .gpkg
+  #' @seealso \link[proc.attr.hydfab]{dl_nhdplus_geoms_wrap}
+  #' @seealso \link[proc.attr.hydfab]{std_path_gpkg_chunk_nhdp_geom}
+  path_rds <- base::gsub(pattern="gpkg",replacement="rds",path_gpkg_chunk)
+  return(path_rds)
+}
+
+
+
+std_path_gpkg_all_nhdp_geom <- function(dir_save_nhdp,filename_str){
+  #' @title the standardized path for saving all geopackages
+  #' @param dir_save_nhdp The directory location to store data
+  #' @param filename_str The filename string to use for compiled output data
+  #' @seealso \link[proc.attr.hydfab]{dl_nhdplus_geoms_wrap}
+  if(!is.null(filename_str)){
+    custom_filename <- glue::glue("nhdp_cat_line_out_{filename_str}.gpkg")
+  } else {
+    custom_filename <- glue::glue("nhdp_cat_line_out.gpkg")
+  }
+
+  # Write complete geopackage:
+  path_save_gpkg_all <- file.path(dir_save_nhdp,custom_filename)
+  return(path_save_gpkg_all)
+}
+
+std_write_gpkg_all_nhdp_geom <- function(df_obj,path_save_gpkg_all,layer_save =
+                                 c('catchment','flowlines','outlet','input_df')[4]){
+  #' @title Write standardized .gpkg file, enforcing expected layer names
+  #' @param df_obj The dataframe/sf nhdplus geometry or input data
+  #' @param path_save_gpkg_all The gpkg filepath for writing
+  #' @param layer_save The standardized names for saving different types of
+  #' layers to the geopackage file.
+  #' @seealso \link[proc.attr.hydfab]{dl_nhdplus_geoms_wrap}
+  if(!base::grepl(".gpkg",path_save_gpkg_all)){
+    stop("Expect `path_save_gpkg_all` to be a .gpkg filepath")
+  }
+  if(base::length(layer_save) !=1){
+    stop("Expecting only one layer name. Refer to `layer_save` in
+         std_write_gpkg_all_nhdp_geom" )
+  }
+  accepted_layers <- c('catchment','flowlines','outlet','input_df')
+  if(!any(layer_save %in% accepted_layers)){
+    newline_layer_names <- paste0(accepted_layers,collapse="\n")
+    stop(glue::glue("Must provide layer_save as one of the following names:
+                    {newline_layer_names}"))
+  }
+
+  rslt <- try(sf::st_write(df_obj,path_save_gpkg_all,layer=layer_save,
+                           append=FALSE))
+
+  if('try-error' %in% base::class(rslt)){
+    warning(glue::glue("COULD NOT WRITE {layer_save} to {path_save_gpkg_all}!"))
+  }
+}
+
+
+compile_chunks_ndplus_geoms <- function(dir_save_nhdp,seq_nums=NULL,
                                         filename_str=NULL){
-  #' @title Compile chunked datasets
-  #' @param dir_save_nhdp_chunk The chunked file directory
+  #' @title Compile chunked NHDPlus-retrieved geospatial datasets
+  #' @param dir_save_nhdp The base directory location to store data
   #' @param seq_nums The numbers expected in each chunked filename
   #' @param filename_str The custom string for writing data to file
   #' @return A compiled list of the geospatial data, containing:
@@ -125,6 +210,9 @@ compile_chunks_ndplus_geoms <- function(dir_save_nhdp_chunk,seq_nums=NULL,
   # Changelog/contributions
   #. 2025-03-20 Originall created, GL
   # Compile entire dataset
+
+  dir_save_nhdp_chunk <- proc.attr.hydfab:::std_dir_gpkg_chunk_nhdp_geom(dir_save_nhdp)
+
   all_files_rds <- base::list.files(dir_save_nhdp_chunk,pattern = "rds")
 
   # Subset to seq_nums of interest:
@@ -139,7 +227,6 @@ compile_chunks_ndplus_geoms <- function(dir_save_nhdp_chunk,seq_nums=NULL,
     warning("Not all expected chunked files present.")
   }
 
-
   ls_nhdp_all <- base::lapply(all_files_rds, function(x)
     base::readRDS(base::file.path(dir_save_nhdp_chunk,x)))
   sf_cats_all <- base::lapply(ls_nhdp_all, function(x) x$catchment) %>%
@@ -151,7 +238,6 @@ compile_chunks_ndplus_geoms <- function(dir_save_nhdp_chunk,seq_nums=NULL,
   sf_outlets_all <- lapply(ls_nhdp_all, function(x) x$outlet) %>%
     data.table::rbindlist(fill=TRUE,use.names=TRUE,ignore.attr=TRUE)#%>%
   #sf::st_as_sf(crs=4326)
-
 
 
   # Munging: catchment may contain multipolygons. These should be singular:
@@ -166,17 +252,19 @@ compile_chunks_ndplus_geoms <- function(dir_save_nhdp_chunk,seq_nums=NULL,
     sf_cats_union$geometry[idx_poly] <- ls_poly[[ctr]]
   }
 
-  if(!is.null(filename_str)){
-    custom_filename <- glue::glue("nhdp_cat_line_out_{filename_str}.gpkg")
-  } else {
-    custom_filename <- glue::glue("nhdp_cat_line_out.gpkg")
-  }
 
+  path_save_gpkg_all <- proc.attr.hydfab:::std_path_gpkg_all_nhdp_geom(dir_save_nhdp,
+                                                             filename_str)
   # Write complete geopackage:
-  path_save_gpkg_all <- file.path(dir_save_nhdp,custom_filename)
-  try(sf::st_write(sf_cats_union,path_save_gpkg_all,layer="catchment",append=FALSE))
-  try(sf::st_write(sf_flowlines_all,path_save_gpkg_all,layer="flowlines",append=FALSE))
-  try(sf::st_write(sf_outlets_all,path_save_gpkg_all,layer="outlet",append=FALSE))
+  proc.attr.hydfab:::std_write_gpkg_all_nhdp_geom(df_obj=sf_cats_union,
+                                                  path_save_gpkg_all,
+                                                  layer_save = 'catchment')
+  proc.attr.hydfab:::std_write_gpkg_all_nhdp_geom(df_obj=sf_flowlines_all,
+                                                  path_save_gpkg_all,
+                                                  layer_save = 'flowlines')
+  proc.attr.hydfab:::std_write_gpkg_all_nhdp_geom(df_obj=sf_outlets_all,
+                                                  path_save_gpkg_all,
+                                                  layer_save = 'outlet')
 
   # Write the input dataframe
   all_list_names <- lapply(ls_nhdp_all, function(ls) names(ls)) %>%
@@ -185,7 +273,7 @@ compile_chunks_ndplus_geoms <- function(dir_save_nhdp_chunk,seq_nums=NULL,
     ls_input_df <- lapply(ls_nhdp_all, function(ls) ls[['input_df']])
     input_dt <- data.table::rbindlist(ls_input_df,fill=TRUE, use.names=TRUE,
                                          ignore.attr=TRUE)
-    try(sf::st_write(ls_input_df,path_save_gpkg_all,layer='input_df',append=FALSE))
+    try(sf::st_write(input_dt,path_save_gpkg_all,layer='input_df',append=FALSE))
   } else {
     input_dt <- data.table()
   }
@@ -199,10 +287,12 @@ compile_chunks_ndplus_geoms <- function(dir_save_nhdp_chunk,seq_nums=NULL,
   return(ls_compiled_data)
 }
 
+
+
+
 dl_nhdplus_geoms_wrap <- function(df,col_id, dir_save_nhdp,filename_str,
                                   id_type = c("comid","AOI")[1],
                                   keep_cols=c(NULL,"all")[1],
-                                  keep_layer = "input_df",
                                   seq_size = 390,
                                   overwrite_chunk=FALSE){
   #' @title Grab all nhdplus geometries/comids: outlet, flowlines, catchment
@@ -220,7 +310,6 @@ dl_nhdplus_geoms_wrap <- function(df,col_id, dir_save_nhdp,filename_str,
   #' @param seq_size the size of the sequence of ids to query within an hour. Recommend <400
   #' @param id_type the type of id corresponding to `col_id`. Default 'comid'. 'AOI' may be used for geospatial queries
   #' @param keep_cols the columns inside `df` to also save. May be 'all'. Default NULL means no df data written to file
-  #' @param keep_layer the layer name for saving `df` to file alongside the layers returned by `get_nhdplus`. Default 'input_df'.
   #' @param overwrite_chunk Should file chunks be overwritten? Default FALSE means skipping database connection & file chunking if a data sequence already created
   #' @seealso gen_pred_locs_rfcs.R script
   #' @export
@@ -231,18 +320,32 @@ dl_nhdplus_geoms_wrap <- function(df,col_id, dir_save_nhdp,filename_str,
     keep_cols <- base::colnames(df)
   }
   # Generate the chunk subdirectory for temporarily storing results
-  dir_save_nhdp_chunk <- file.path(dir_save_nhdp,"chunk") # Place the geopackage chunks here
-  if(!base::dir.exists(dir_save_nhdp_chunk)){
-    base::dir.create(dir_save_nhdp_chunk,recursive = TRUE)
+  dir_save_nhdp_chunk <- proc.attr.hydfab:::std_dir_gpkg_chunk_nhdp_geom(dir_save_nhdp)
+
+  path_save_gpkg_all <- proc.attr.hydfab:::std_path_gpkg_all_nhdp_geom(dir_save_nhdp,
+                                                                       filename_str)
+
+  if(!base::is.null(keep_cols) && overwrite_chunk == FALSE &&
+     base::file.exists(path_save_gpkg_all)){
+    # Check if the input data have been saved to file
+    all_layrs <- sf::st_layers(path_save_gpkg_all) # Check if all layers accounted for
+    if(!'input_df' %in% all_layrs$name){ # Overwrite
+      # Find the keep column:
+      df_keep <- df[,keep_cols]
+
+      # Write the keep column to file
+      proc.attr.hydfab:::std_write_gpkg_all_nhdp_geom(df_obj=df_keep,
+                              path_save_gpkg_all,
+                              layer_save = 'input_df')
+    }
   }
   # Perform chunking
   seq_nums <- base::c(base::seq(from=1,base::nrow(df),seq_size),base::nrow(df))[-1]
   ls_nhdp_all <- list()
   ctr_seq <- 0
   for(seq_num in seq_nums){
-    path_gpkg <- glue::glue(base::file.path(dir_save_nhdp_chunk,
-                                 "nhdp_chunked_{seq_num}.gpkg"))
-    if(base::file.exists(path_gpkg) && overwrite_chunk==FALSE){
+    path_gpkg_chunk <- proc.attr.hydfab:::std_path_gpkg_chunk_nhdp_geom(dir_save_nhdp,seq_num)
+    if(base::file.exists(path_gpkg_chunk) && overwrite_chunk==FALSE){
       next()
     }
 
@@ -299,24 +402,35 @@ dl_nhdplus_geoms_wrap <- function(df,col_id, dir_save_nhdp,filename_str,
       data.table::rbindlist(fill=TRUE,use.names=TRUE,ignore.attr=TRUE)%>%
       sf::st_as_sf(crs=4326)
 
-    # Write chunked geopackage:
-    try(sf::st_write(sf_cats,path_gpkg,layer="catchment",append=FALSE))
-    try(sf::st_write(sf_flowlines,path_gpkg,layer="flowlines",append=FALSE))
-    try(sf::st_write(sf_outlets,path_gpkg,layer="outlet",append=FALSE))
-    if(!is.null(keep_cols)){ # Save to file data from the original dataframe
-      sub_df <- df[,keep_cols]
-      try(sf::st_write(sub_df,path_gpkg, layer=keep_layer,append=FALSE))
-    }
 
-    path_rds <- base::gsub(pattern="gpkg",replacement="rds",path_gpkg)
-    ls_nhdp_chunk <- list(catchment = sf_cats,
+    # Write chunked geopackage files:
+    proc.attr.hydfab:::std_write_gpkg_all_nhdp_geom(df_obj=sf_cats,
+                                          path_save_gpkg_all = path_gpkg_chunk,
+                                          layer_save = 'catchment')
+
+    proc.attr.hydfab:::std_write_gpkg_all_nhdp_geom(df_obj=sf_flowlines,
+                                          path_save_gpkg_all = path_gpkg_chunk,
+                                          layer_save = 'flowlines')
+
+    proc.attr.hydfab:::std_write_gpkg_all_nhdp_geom(df_obj=sf_outlets,
+                                        path_save_gpkg_all = path_gpkg_chunk,
+                                        layer_save = 'outlet')
+    if(!base::is.null(keep_cols)){ # Save to file data from the original dataframe
+      df_keep <- df[,keep_cols]
+      proc.attr.hydfab:::std_write_gpkg_all_nhdp_geom(df_obj=df_keep,
+                                          path_save_gpkg_all = path_gpkg_chunk,
+                                          layer_save = 'input_df')
+    }
+    path_rds <- proc.attr.hydfab:::std_path_rds_chunk_nhdp_geom(path_gpkg_chunk)
+    ls_nhdp_chunk <- base::list(catchment = sf_cats,
                           flowline=sf_flowlines,outlet = sf_outlets)
-    if(!is.null(keep_cols)){
-      ls_nhdp_chunk[[keep_layer]] <- df[,keep_cols]
+    if(!base::is.null(keep_cols)){
+      ls_nhdp_chunk[['input_df']] <- df[,keep_cols]
     }
-
+    # Write list of chunks to file
     base::saveRDS(ls_nhdp_chunk,path_rds)
-    if(seq_num != max(seq_nums)){
+
+    if(seq_num < base::max(seq_nums)){
       print("Pausing NLDI queries for 61 minutes")
       Sys.sleep(60*61) # 400 NLDI queries per hour
     }
@@ -324,10 +438,8 @@ dl_nhdplus_geoms_wrap <- function(df,col_id, dir_save_nhdp,filename_str,
 
   # Compile the chunks into a list of sf objects / data.table
   ls_compiled_data <- proc.attr.hydfab:::compile_chunks_ndplus_geoms(
-                    dir_save_nhdp_chunk=dir_save_nhdp_chunk,seq_nums=seq_nums,
+                    dir_save_nhdp=dir_save_nhdp,seq_nums=seq_nums,
                     filename_str=filename_str)
 
   return(ls_compiled_data)
 }
-
-
