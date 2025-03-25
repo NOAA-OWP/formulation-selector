@@ -26,7 +26,6 @@ main <- function(){
   if(!base::file.exists(path_cfig_pred)){
     stop(glue::glue("The provided path_cfig_pred does not exist: {path_cfig_pred}"))
   }
-
   cfig_pred <- yaml::read_yaml(path_cfig_pred)
   ds_type <- base::unlist(cfig_pred)[['ds_type']]
   write_type <- base::unlist(cfig_pred)[['write_type']]
@@ -34,7 +33,6 @@ main <- function(){
   # READ IN ATTRIBUTE CONFIG FILE
   path_attr_config <- glue::glue(cfig_pred[['path_attr_config']])
   cfig_attr <- yaml::read_yaml(path_attr_config)
-
   # Defining directory paths as early as possible:
   io_cfig <- cfig_attr[['file_io']]
   dir_base <- glue::glue(base::unlist(io_cfig)[['dir_base']])
@@ -64,7 +62,6 @@ main <- function(){
   ls_vars <- names_attr_sel[grep("_vars",names_attr_sel)]
   vars_ls <- base::lapply(ls_vars, function(x) base::unlist(base::lapply(cfig_attr[['attr_select']], function(y) y[[x]])))
   names(vars_ls) <- ls_vars
-
   # The attribute retrieval parameters
   Retr_Params <- list(paths = list(# Note that if a path is provided, ensure the
     # name includes 'path'. Same for directory having variable name with 'dir'
