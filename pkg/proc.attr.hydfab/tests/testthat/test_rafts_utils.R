@@ -172,9 +172,3 @@ testthat::test_that("dl_nhdplus_geoms_wrap", {
   testthat::expect_identical(base::nrow(rslt_compile_dat$flowlines), 
                              base::nrow(df))
 })
-
-
-  
-  
-  
-})
