@@ -16,7 +16,7 @@ lapply(c("devtools","roxygen2","testthat","covr"), library, character.only = TRU
 
 # ---------------------------------------------------------------------------- #
 #  Define user-specific paths for installation
-if ('bolotin' %in% Sys.getenv("HOME")) {rm
+if ('bolotin' %in% Sys.getenv("HOME")) {
   # if you have a different path to formulation-selector, add it here, otherwise remove
 } else if ('choat' %in% Sys.getenv("HOME")){
   # if you have a different path to formulation-selector, add it here, otherwise remove
