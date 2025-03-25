@@ -825,7 +825,6 @@ def split_train_test_comid_wrap(dir_std_base:str|os.PathLike,
     """
     dict_gdf_comids = dict()
     for ds in datasets:
-    
         # Generate the geodataframe in a standard format
         dict_resp_gdf = combine_resp_gdf_comid_wrap(dir_std_base,ds,attr_config )
     
