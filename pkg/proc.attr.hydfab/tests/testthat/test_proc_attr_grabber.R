@@ -99,7 +99,7 @@ testthat::test_that("retr_attr_new",{
   need_vars <- list(usgs_vars = c("CAT_TWI","CAT_BFI"))
 
   rslt <- proc.attr.hydfab::retr_attr_new(comids = comids, need_vars=need_vars,
-                                  Retr_Params = Retr_Params$paths$s3_path_hydatl)
+                                          path_ha = Retr_Params$paths$s3_path_hydatl)
 
   testthat::expect_contains(rslt[['usgs_nhdplus__v2']]$featureID,comids)
   testthat::expect_contains(rslt[['usgs_nhdplus__v2']]$attribute,need_vars$usgs_vars)
