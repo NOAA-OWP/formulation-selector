@@ -1,12 +1,11 @@
-#' @title Unit test attribute grabber processor
-#' @description Unit testing for catchment attribute grabbing via the hydrofabric
+#' @title Unit test RaFTS utilities that are not part of the standard attribute 
+#' -grabbing functionality of RaFTS
+#' @description Unit testing for RaFTS utility functions
 #' @author Guy Litt \email{guy.litt@noaa.gov}
 #' @note When running this script, be sure to also source tests/testthat/setup.R first
 # Changelog / Contributions
-#   2024-07-24 Originally created, GL
-#   2024-10-03 Contributed to, LB
+#   2025-03-24 Originally created, GL
 
-# unloadNamespace("proc.attr.hydfab")
 suppressPackageStartupMessages(library(proc.attr.hydfab,quietly=TRUE))
 suppressPackageStartupMessages(library(testthat,quietly=TRUE))
 suppressPackageStartupMessages(library(mockery,quietly=TRUE))
@@ -28,9 +27,6 @@ s3_base <- "s3://lynker-spatial/tabular-resources"
 s3_bucket <- 'lynker-spatial'
 s3_path_hydatl <- glue::glue('{s3_base}/hydroATLAS/hydroatlas_vars.parquet')
 
-# Testing variables
-# ha_vars <- c('pet_mm_s01', 'cly_pc_sav', 'cly_pc_uav') # hydroatlas variables
-# usgs_vars <- c('TOT_TWI','TOT_PRSNOW','TOT_POPDENS90','TOT_EWT','TOT_RECHG')
 
 # Define data directories to a package-specific data path
 dir_base <- system.file("extdata",package="proc.attr.hydfab")
