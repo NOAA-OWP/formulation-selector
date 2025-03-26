@@ -24,7 +24,6 @@ represents exactly what the nldi_feature$featureID should be, then
 featureID="{gage_id}". In other instances, conversions may be necessary,
 e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
 that the term 'gage_id' is used as a variable in glue syntax to create featureID
-<<<<<<< HEAD
 Refer to ?dataRetrieval::get_nldi_sources() for options to use with nldi_feature}
 
 \item{dir_db_attrs}{Attribute directory path, where the standardized
@@ -33,9 +32,6 @@ comid-gage_id will be stored as a .csv}
 \item{path_save_gpkg}{The filepath where the geopackage containing
 comid-gageid-geometry mappings are saved. Default NULL, but strongly recommended
 to use!}
-=======
-Refer to ?dataRetrieval::get_nldi_sources() for options to use with nldi_featre}
->>>>>>> a7bc84b (feat: add R^2 to regression plots)
 }
 \description{
 Retrieve comids based on provided gage_ids and expected NLDI format
