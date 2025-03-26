@@ -50,7 +50,6 @@ else
 fi
 
 # Print a message to indicate all scripts have finished executing
-<<<<<<< HEAD
 echo "Attribute grabbing, transformation, and algorithm training steps executed."
 
 # 4.1 Identify which locations will be used for prediction, and generate the attributes (and metadata file for predictions)
@@ -92,15 +91,3 @@ else
 fi
 
 echo "Finished the xSSA process sensitivity mapping predictions workflow"
-=======
-echo "Attribute grabbing, transformation, and algorithm training executed successfully!"
-
-# 4.1 Identify which locations will be used for prediction, and generate the attributes
-# TODO insert custom script call here
-
-# 4.2 Perform transformations on prediction locations
-# TODO insert modified script call here
-
-# 4.3 Perform the prediction
-# TODO insert the prediction script here
->>>>>>> b9a8de5c (doc: describe all RaFTS processing steps)
