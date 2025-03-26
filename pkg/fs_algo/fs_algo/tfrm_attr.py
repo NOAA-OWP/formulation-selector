@@ -37,7 +37,6 @@ def read_df_ext(path_to_file: str | os.PathLike) -> pd.DataFrame:
         df = gpd.read_file(path_to_file)
     else:
         raise ValueError("Expecting path to file containing comids to be csv, parquet, or gpkg file")
-
     return df
 
 
