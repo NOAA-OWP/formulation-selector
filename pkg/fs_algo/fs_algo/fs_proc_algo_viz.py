@@ -309,6 +309,13 @@ if __name__ == "__main__":
                                         metr,algo_str,
                                         split_type='test',
                                         colname_data='performance')
+                    for alpha_val in mapie_alpha:
+                        fsate.plot_map_pred_wrap_mapie(test_gdf,
+                                        dir_out_viz_base, ds,
+                                            metr,algo_str,
+                                            y_pis = y_pis, alpha_val = alpha_val,
+                                            split_type='test',
+                                            colname_data='performance')                        
             
             # Generate analysis path out:
             path_pred_obs = fsate.std_test_pred_obs_path(dir_out_anlys_base,ds, metr)

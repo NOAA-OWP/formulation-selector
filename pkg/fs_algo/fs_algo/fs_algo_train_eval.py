@@ -1165,7 +1165,7 @@ class AlgoTrainEval:
             algo = algo_data['algo']
             mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
             # mapie = MapieQuantileRegressor(algo, cv="split", method="quantile")
-            # mapie = MapieRegressor(algo, cv=10, agg_function="median")
+            # mapie = MapieRegressor(algo, cv=5, agg_function="median")
             mapie.fit(self.X_train, self.y_train)  
             self.algs_dict[algo_str]['mapie'] = mapie
             
@@ -2130,6 +2130,9 @@ def plot_pred_vs_obs_regr_mapie(y_pred: np.ndarray, y_obs: np.ndarray, ds:str,
     # Extract error bars (lower and upper limits) for the first alpha value
     lower_err = y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))])
     upper_err = np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred
+    
+    # lower_err = np.maximum(0, y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]))
+    # upper_err = np.maximum(0, np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred)
 
     # Adapted from plot in bolotinl's fs_perf_viz.py
     plt.errorbar(y_obs, y_pred, yerr=[lower_err, upper_err], fmt='o', alpha=0.3, ecolor='gray', capsize=3)
@@ -2288,6 +2291,99 @@ def plot_map_pred_wrap(test_gdf,dir_out_viz_base, ds,
 
     # Save the plot as a .png file
     plot_pred_map.savefig(path_pred_map_plot, dpi=300, bbox_inches='tight')
+    print(f"Wrote prediction map to \n{path_pred_map_plot}")
+    plt.clf()
+    plt.close()
+
+
+def plot_map_pred_mapie(geo_df:gpd.GeoDataFrame, states,title:str,metr:str,
+                        y_pis: list, alpha_val:float,
+                  colname_data:str='performance'):
+    """Genereate a map of predicted response variables
+
+    :param geo_df: Geodataframe of response variable results
+    :type geo_df: gpd.GeoDataFrame
+    :param states: The states basemap
+    :type states: gpd.GeoDataFrame
+    :param title: Map title
+    :type title: str
+    :param metr: The metric/response variable of interest
+    :type metr: str
+    :param colname_data: The geo_df column name representing data of interest, defaults to 'performance'
+    :type colname_data: str, optional
+    :return: Map of predicted response variables
+    :rtype: Figure
+    """
+
+    # Compute error bars
+    lower_err = geo_df[colname_data] - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(geo_df[colname_data]))])
+    upper_err = np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(geo_df[colname_data]))]) - geo_df[colname_data]
+    total_err = lower_err + upper_err
+
+    # Normalize marker size (scale from 100 to 300)
+    min_err, max_err = total_err.min(), total_err.max()
+    marker_sizes = 100 + 300 * (total_err - min_err) / (max_err - min_err)
+
+    fig, ax = plt.subplots(1, 1, figsize=(20, 24))
+    base = states.boundary.plot(ax=ax,color="#555555", linewidth=1)
+    # Points
+    geo_df.plot(column=colname_data, ax=ax, markersize=marker_sizes, cmap='viridis', legend=False, zorder=2) # delete zorder to plot points behind states boundaries
+    # States
+    states.boundary.plot(ax=ax, color="#555555", linewidth=1, zorder=1)  # Plot states boundary again with lower zorder
+    
+    # TODO: need to customize the colorbar min and max based on the metric
+    ## cbar = plt.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0,vmax = 1), cmap='viridis')
+    cbar = plt.cm.ScalarMappable(cmap='viridis')
+    ax.tick_params(axis='x', labelsize= 24)
+    ax.tick_params(axis='y', labelsize= 24)
+    plt.xlabel('Latitude',fontsize = 26)
+    plt.ylabel('Longitude',fontsize = 26)
+    cbar_ax = plt.colorbar(cbar, ax=ax,fraction=0.02, pad=0.04)
+    cbar_ax.set_label(label=metr,size=24)
+    cbar_ax.ax.tick_params(labelsize=24)  # Set colorbar tick labels size
+    plt.title(title, fontsize = 28)
+    ax.set_xlim(-126, -66)
+    ax.set_ylim(24, 50)
+    
+    confidence_interval = (1 - alpha_val) * 100
+
+    # Add alpha values as text box
+    plt.gca().text(0.88, 0.05, f'alpha = {alpha_val:.2f}', transform=plt.gca().transAxes,
+                   fontsize=16, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
+
+    # Scale Legend (Two dots for min and max error)
+    legend_handles = [
+        plt.scatter([], [], s=100, color='gray', label=f'{min_err:.2f}'),
+        plt.scatter([], [], s=300, color='gray', label=f'{max_err:.2f}')
+    ]
+    ax.legend(handles=legend_handles, title=f"{confidence_interval:.0f}% of Confidence Interval", 
+              loc='lower left', fontsize=20, title_fontsize=22)
+
+    fig = plt.gcf()
+    return fig
+
+def plot_map_pred_wrap_mapie(test_gdf,dir_out_viz_base, ds,
+                      metr,algo_str,
+                      y_pis: list, alpha_val:float,
+                      split_type='test',
+                      colname_data='performance'):
+
+    path_pred_map_plot = std_map_pred_path(dir_out_viz_base,ds,metr,algo_str,split_type)
+    new_filename = path_pred_map_plot.stem + f"_alpha{alpha_val:.2f}" + path_pred_map_plot.suffix
+    path_pred_map_plot_mapie = path_pred_map_plot.with_name(new_filename)
+    dir_out_basemap = path_pred_map_plot.parent.parent
+    states = gen_conus_basemap(dir_out_basemap = dir_out_basemap)
+
+    # Ensure the gdf matches the 4326 epsg used for states:
+    test_gdf = test_gdf.to_crs(4326)
+
+    # Generate the map
+    plot_title = f"Predicted Values: {metr} - {ds}"
+    plot_pred_map = plot_map_pred_mapie(geo_df=test_gdf, states=states,title=plot_title,
+                                  metr=metr,y_pis=y_pis, alpha_val=alpha_val,colname_data=colname_data)
+
+    # Save the plot as a .png file
+    plot_pred_map.savefig(path_pred_map_plot_mapie, dpi=300, bbox_inches='tight')
     print(f"Wrote prediction map to \n{path_pred_map_plot}")
     plt.clf()
     plt.close()
