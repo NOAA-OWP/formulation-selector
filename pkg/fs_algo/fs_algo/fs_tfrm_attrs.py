@@ -99,10 +99,10 @@ if __name__ == "__main__":
 
     # Compile unique comid values
     comids = list(set(ls_comid + ls_comids_attrs))
-    #%% Parse aggregation/transformations in config file
+    # #%% Parse aggregation/transformations in config file
     tfrm_cfg_attrs = tfrm_cfg[idx_tfrm_attrs]
 
-    # Create the custom functions
+    # # Create the custom functions
     dict_cstm_vars_funcs = fta._retr_cstm_funcs(tfrm_cfg_attrs)
 
     # Note that this is a flattened length size, based on the total 
