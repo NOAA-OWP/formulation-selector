@@ -266,6 +266,24 @@ if __name__ == "__main__":
                                 training_uncn = False
                                 )
 
+            # %% Calculate global min and max across all algorithms
+            min_err = float('inf')  # Initialize with a large value
+            max_err = float('-inf')  # Initialize with a small value
+            for algo_str in train_eval.algs_dict.keys():
+                y_pred = train_eval.preds_dict[algo_str]['y_pred']
+                y_pis = train_eval.preds_dict[algo_str]['y_pis']
+            
+                for alpha_val in mapie_alpha:
+                    lower_err = y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))])
+                    upper_err = np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred
+                
+                    total_err = lower_err + upper_err  # Compute total error for this algorithm
+                
+                    # Update global min and max across all algorithms
+                    min_err = min(min_err, total_err.min())
+                    max_err = max(max_err, total_err.max())
+
+
             # %% Model testing results visualization
             # TODO extract y_pred for each model
             dict_test_gdf = dict()
@@ -314,6 +332,7 @@ if __name__ == "__main__":
                                         dir_out_viz_base, ds,
                                             metr,algo_str,
                                             y_pis = y_pis, alpha_val = alpha_val,
+                                            min_err = min_err, max_err = max_err,
                                             split_type='test',
                                             colname_data='performance')                        
             
