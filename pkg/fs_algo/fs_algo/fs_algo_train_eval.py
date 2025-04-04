@@ -866,7 +866,7 @@ class AlgoTrainEval:
                  forestci: bool = False,
                  confidence_levels: list[int] = [95],
                  mapie_alpha : float = 0.05,
-                 mapie_method : int = 1,
+                 mapie_method : str = 'plus',
                  bagging_ci_params: dict = None):
         """The algorithm training and evaluation class.
 
@@ -900,8 +900,8 @@ class AlgoTrainEval:
         :type confidence_levels: int, optional
         :param mapie_alpha: alpha for MAPIE, defaults to 0.05.
         :type mapie_alpha: float, optional
-        :param mapie_method: MAPIE resampling method, defaults to 1 (CV+).
-        :type mapie_method: int, optional
+        :param mapie_method: MAPIE resampling method, defaults to 'plus'.
+        :type mapie_method: str, optional
         :param bagging_ci: Configuration dictionary for Bagging-based uncertainty estimation. 
         :type bagging_ci: dict or None, optional
         """
@@ -1168,12 +1168,12 @@ class AlgoTrainEval:
         for algo_str, algo_data in self.algs_dict.items():
             algo = algo_data['algo']
             # mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
-            if self.mapie_method == 1:
+            if self.mapie_method == 'plus':
                 mapie = MapieRegressor(algo, method="plus", cv=10, agg_function="median")
-            elif self.mapie_method == 2:
+            elif self.mapie_method == 'minmax':
                 mapie = MapieRegressor(algo, method="minmax", cv=10, agg_function="median")
             else:
-                raise ValueError("Invalid MAPIE_method. Please select either 1 (CV+) or 2 (CV-minmax).")
+                raise ValueError("Invalid MAPIE_method. Please select either 'plus' (CV+) or 'minmax' (CV-minmax).")
 
             mapie.fit(self.X_train, self.y_train)  
             self.algs_dict[algo_str]['mapie'] = mapie
