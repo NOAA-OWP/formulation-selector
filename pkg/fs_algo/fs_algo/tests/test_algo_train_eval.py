@@ -352,9 +352,10 @@ class TestAlgoTrainEval(unittest.TestCase):
     def setUp(self):
         # Create a simple DataFrame for testing
         data = {
-            'attr1': [1, 2, 3, 4, 5],
-            'attr2': [5, 4, 3, 2, 1],
-            'metric1': [0.1, 0.9, 0.3, 0.1, 0.8]
+            'attr1': list(range(1, 21)),
+            'attr2': list(range(21, 1, -1)),
+            'metric1': [0.1, 0.9, 0.3, 0.1, 0.8, 0.2, 0.7, 0.5, 0.3, 0.6,
+                        0.2, 0.2, 0.3, 0.6, 0.5, 0.2, 0.7, 0.9, 0.3, 0.1]
         }
         self.df = pd.DataFrame(data)
 
@@ -387,10 +388,10 @@ class TestAlgoTrainEval(unittest.TestCase):
     def test_split_data(self):
         # Test data splitting
         self.train_eval.split_data()
-        self.assertEqual(len(self.train_eval.X_train), 3)
-        self.assertEqual(len(self.train_eval.X_test), 2)
-        self.assertEqual(len(self.train_eval.y_train), 3)
-        self.assertEqual(len(self.train_eval.y_test), 2)
+        self.assertEqual(len(self.train_eval.X_train), 12)
+        self.assertEqual(len(self.train_eval.X_test), 8)
+        self.assertEqual(len(self.train_eval.y_train), 12)
+        self.assertEqual(len(self.train_eval.y_test), 8)
 
     def test_train_algos(self):
         # Test algorithm training
@@ -414,8 +415,8 @@ class TestAlgoTrainEval(unittest.TestCase):
 
         self.assertIn('rf', preds)
         self.assertIn('mlp', preds)
-        self.assertEqual(len(preds['rf']['y_pred']), 2)  # Number of test samples
-        self.assertEqual(len(preds['mlp']['y_pred']), 2)
+        self.assertEqual(len(preds['rf']['y_pred']), len(self.train_eval.X_test))  # Number of test samples
+        self.assertEqual(len(preds['mlp']['y_pred']), len(self.train_eval.X_test))
 
     def test_evaluate_algos(self):
         # Test evaluation of algorithms
