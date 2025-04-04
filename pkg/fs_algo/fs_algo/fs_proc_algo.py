@@ -35,7 +35,7 @@ if __name__ == "__main__":
     seed = algo_cfg['seed']
     read_type = algo_cfg.get('read_type','all') # Arg for how to read attribute data using comids in fs_read_attr_comid(). May be 'all' or 'filename'.
     mapie_alpha = algo_cfg['MAPIE_alpha']
-    mapie_method = algo_cfg['MAPIE_method']
+    mapie_method = algo_cfg.get('MAPIE_method')
     forestci = algo_cfg['forestci']
     confidence_levels = algo_cfg['confidence_levels']
     
