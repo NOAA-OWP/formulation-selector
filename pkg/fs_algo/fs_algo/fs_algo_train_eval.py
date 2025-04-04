@@ -866,6 +866,7 @@ class AlgoTrainEval:
                  forestci: bool = False,
                  confidence_levels: list[int] = [95],
                  mapie_alpha : float = 0.05,
+                 mapie_method : int = 1,
                  bagging_ci_params: dict = None):
         """The algorithm training and evaluation class.
 
@@ -898,7 +899,9 @@ class AlgoTrainEval:
         :param: confidence_levels: confidence levels for ci calculation, defaults to 95
         :type confidence_levels: int, optional
         :param mapie_alpha: alpha for MAPIE, defaults to 0.05.
-        :type test_size: float, optional
+        :type mapie_alpha: float, optional
+        :param mapie_method: MAPIE resampling method, defaults to 1 (CV+).
+        :type mapie_method: int, optional
         :param bagging_ci: Configuration dictionary for Bagging-based uncertainty estimation. 
         :type bagging_ci: dict or None, optional
         """
@@ -917,6 +920,7 @@ class AlgoTrainEval:
         self.forestci = forestci
         self.confidence_levels = confidence_levels
         self.mapie_alpha = mapie_alpha
+        self.mapie_method = mapie_method
         self.bagging_ci_params = bagging_ci_params if bagging_ci_params is not None else {} 
 
         # train/test split
@@ -1163,9 +1167,14 @@ class AlgoTrainEval:
         """Generalized function to calculate prediction uncertainty using MAPIE."""
         for algo_str, algo_data in self.algs_dict.items():
             algo = algo_data['algo']
-            mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
-            # mapie = MapieQuantileRegressor(algo, cv="split", method="quantile")
-            # mapie = MapieRegressor(algo, cv=5, agg_function="median")
+            # mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
+            if self.mapie_method == 1:
+                mapie = MapieRegressor(algo, method="plus", cv=10, agg_function="median")
+            elif self.mapie_method == 2:
+                mapie = MapieRegressor(algo, method="minmax", cv=10, agg_function="median")
+            else:
+                raise ValueError("Invalid MAPIE_method. Please select either 1 (CV+) or 2 (CV-minmax).")
+
             mapie.fit(self.X_train, self.y_train)  
             self.algs_dict[algo_str]['mapie'] = mapie
             
@@ -2128,8 +2137,8 @@ def plot_pred_vs_obs_regr_mapie(y_pred: np.ndarray, y_obs: np.ndarray, ds:str,
     max_vals = (max_val_rnd,max_val_rnd)
 
     # Extract error bars (lower and upper limits) for the first alpha value
-    lower_err = y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))])
-    upper_err = np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred
+    lower_err = np.abs(y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]))
+    upper_err = np.abs(np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred)
     
     # lower_err = np.maximum(0, y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]))
     # upper_err = np.maximum(0, np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred)
@@ -2317,8 +2326,8 @@ def plot_map_pred_mapie(geo_df:gpd.GeoDataFrame, states,title:str,metr:str,
     """
 
     # Compute error bars
-    lower_err = geo_df[colname_data] - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(geo_df[colname_data]))])
-    upper_err = np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(geo_df[colname_data]))]) - geo_df[colname_data]
+    lower_err = np.abs(geo_df[colname_data] - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(geo_df[colname_data]))]))
+    upper_err = np.abs(np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(geo_df[colname_data]))]) - geo_df[colname_data])
     total_err = lower_err + upper_err
 
     # Normalize marker size (scale from 100 to 300)
