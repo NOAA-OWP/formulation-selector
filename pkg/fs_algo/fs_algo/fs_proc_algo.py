@@ -34,17 +34,9 @@ if __name__ == "__main__":
     test_size = algo_cfg['test_size']
     seed = algo_cfg['seed']
     read_type = algo_cfg.get('read_type','all') # Arg for how to read attribute data using comids in fs_read_attr_comid(). May be 'all' or 'filename'.
-    mapie_alpha = algo_cfg['MAPIE_alpha']
-    mapie_method = algo_cfg.get('MAPIE_method')
-    forestci = algo_cfg['forestci']
     confidence_levels = algo_cfg['confidence_levels']
     
-    bagging_ci_params_list = algo_cfg['Bagging_uncertainty']
-    bagging_ci_params = {}
-    if isinstance(bagging_ci_params_list, list):
-        for param_dict in bagging_ci_params_list:
-            if isinstance(param_dict, dict):  # Ensure each item is a dictionary
-                bagging_ci_params.update(param_dict)
+    uncertainty_cfg = algo_cfg.get('uncertainty', {})
 
     #%% Attribute configuration
     name_attr_config = algo_cfg.get('name_attr_config', Path(path_algo_config).name.replace('algo','attr')) 
@@ -135,14 +127,12 @@ if __name__ == "__main__":
             train_eval = fsate.AlgoTrainEval(df=df_pred_resp,
                                         attrs=attrs_sel,
                                         algo_config=algo_config,
+                                        uncertainty=uncertainty_cfg,
                                         dir_out_alg_ds=dir_out_alg_ds, dataset_id=ds,
                                         metr=metr,test_size=test_size, rs = seed,
                                         verbose=verbose,
-                                        forestci=forestci,
                                         confidence_levels=confidence_levels,
-                                        mapie_alpha=mapie_alpha,
-                                        mapie_method=mapie_method,
-                                        bagging_ci_params=bagging_ci_params)
+                                        )
             train_eval.train_eval() # Train, test, eval wrapper
 
             # Retrieve evaluation metrics dataframe

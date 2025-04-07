@@ -859,15 +859,13 @@ def split_train_test_comid_wrap(dir_std_base:str|os.PathLike,
 
 class AlgoTrainEval:
     def __init__(self, df: pd.DataFrame, attrs: Iterable[str], algo_config: dict,
+                 uncertainty: dict,
                  dir_out_alg_ds: str | os.PathLike, dataset_id: str,
                  metr: str, test_size: float = 0.3,rs: int = 32,
                  test_ids = None,test_id_col:str = 'comid',
                  verbose: bool = False,
-                 forestci: bool = False,
                  confidence_levels: list[int] = [95],
-                 mapie_alpha : float = 0.05,
-                 mapie_method : str = 'plus',
-                 bagging_ci_params: dict = None):
+                 ):
         """The algorithm training and evaluation class.
 
         :param df: The combined response variable and predictor variables DataFrame.
@@ -879,6 +877,12 @@ class AlgoTrainEval:
             - `mlp`:  :class:`sklearn.neural_network.MLPRegressor` multilayer perceptron algorithm.
             Each algorithm key contains sub-dict keys for the parameters that may be passed to the corresponding :mod:`sklearn` algorithm. 
             If no parameters keys are passed, the :mod:`sklearn` algorithm's default arguments are used.
+        :type algo_config: dict
+        :param uncertainty: The uncertainty as read from the uncertainty yaml where each key is the uncertainty that will be run. Presently allowable keys include:
+            - `fci`:  :dict:Forestci uncertainty. Only if 'rf' algorithm is selected.
+            - `bagging`:  :dict:Configuration dictionary for Bagging-based confidence interval uncertainty estimation. Works for both `rf` and `mlp` algorithms.
+            - `mapie`:  :dict:Configuration dictionary for MAPIE prediction interval estimation. Works for both `rf` and `mlp` algorithms.
+            Each method contains sub-dict keys for the parameters that may be passed to the corresponding method.
         :type algo_config: dict
         :param dir_out_alg_ds: Directory where algorithm's output stored.
         :type dir_out_alg_ds: str | os.PathLike
@@ -900,15 +904,12 @@ class AlgoTrainEval:
         :type confidence_levels: int, optional
         :param mapie_alpha: alpha for MAPIE, defaults to 0.05.
         :type mapie_alpha: float, optional
-        :param mapie_method: MAPIE resampling method, defaults to 'plus'.
-        :type mapie_method: str, optional
-        :param bagging_ci: Configuration dictionary for Bagging-based uncertainty estimation. 
-        :type bagging_ci: dict or None, optional
         """
         # class args
         self.df = df
         self.attrs = attrs
         self.algo_config = algo_config
+        self.uncertainty = uncertainty
         self.dir_out_alg_ds = dir_out_alg_ds
         self.metric = metr
         self.test_size = test_size
@@ -917,11 +918,7 @@ class AlgoTrainEval:
         self.rs = rs
         self.dataset_id = dataset_id
         self.verbose = verbose
-        self.forestci = forestci
         self.confidence_levels = confidence_levels
-        self.mapie_alpha = mapie_alpha
-        self.mapie_method = mapie_method
-        self.bagging_ci_params = bagging_ci_params if bagging_ci_params is not None else {} 
 
         # train/test split
         self.X_train = pd.DataFrame()
@@ -1111,7 +1108,8 @@ class AlgoTrainEval:
         if algo_cfg is None:
             raise KeyError(f"Algorithm {algo_str} not found in configurations.")
 
-        n_algos = self.bagging_ci_params['n_algos']
+        # n_algos = self.bagging_ci_params['n_algos']
+        n_algos = next(d['n_algos'] for d in self.uncertainty.get('bagging', []))
         predictions = []
         # Extract the model if it's inside a pipeline
         if isinstance(best_algo, Pipeline):
@@ -1146,7 +1144,7 @@ class AlgoTrainEval:
         predictions = np.array(predictions)
         mean_pred = predictions.mean(axis=0)
         std_pred = predictions.std(axis=0)
-        confidence_levels = self.confidence_levels #self.bagging_ci_params.get('confidence_levels')
+        confidence_levels = self.confidence_levels 
         confidence_intervals = {}
 
         for cl in confidence_levels:
@@ -1165,13 +1163,16 @@ class AlgoTrainEval:
     
     def calculate_mapie(self):
         """Generalized function to calculate prediction uncertainty using MAPIE."""
+        mapie_method = next((d['method'] for d in self.uncertainty.get('mapie', []) if 'method' in d), None)
+        mapie_cv = next((d['cv'] for d in self.uncertainty.get('mapie', []) if 'cv' in d), None)
+        mapie_agg_function = next((d['agg_function'] for d in self.uncertainty.get('mapie', []) if 'agg_function' in d), None)
         for algo_str, algo_data in self.algs_dict.items():
             algo = algo_data['algo']
             # mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
-            if self.mapie_method == 'plus':
-                mapie = MapieRegressor(algo, method="plus", cv=10, agg_function="median")
-            elif self.mapie_method == 'minmax':
-                mapie = MapieRegressor(algo, method="minmax", cv=10, agg_function="median")
+            if mapie_method == 'plus':
+                mapie = MapieRegressor(algo, method="plus", cv=mapie_cv, agg_function=mapie_agg_function)
+            elif mapie_method == 'minmax':
+                mapie = MapieRegressor(algo, method="minmax", cv=mapie_cv, agg_function=mapie_agg_function)
             else:
                 raise ValueError("Invalid MAPIE_method. Please select either 'plus' (CV+) or 'minmax' (CV-minmax).")
 
@@ -1306,13 +1307,14 @@ class AlgoTrainEval:
             
             y_pred = pipe.predict(self.X_test)
             if 'mapie' in v:
-                y_test_pred, y_test_pis = v['mapie'].predict(self.X_test, alpha=self.mapie_alpha) 
+                mapie_alpha = next((d['alpha'] for d in self.uncertainty.get('mapie', []) if 'alpha' in d), None)
+                y_test_pred, y_test_pis = v['mapie'].predict(self.X_test, alpha=mapie_alpha) 
                 
                 # Rename rows
                 row_labels = ['lower_limit', 'upper_limit']
                 
                 # Rename columns based on mapie_alpha values
-                col_labels = [f'alpha_{alpha:.2f}' for alpha in self.mapie_alpha]  
+                col_labels = [f'alpha_{alpha:.2f}' for alpha in mapie_alpha]  
                 
                 # Convert to DataFrame
                 y_pis_list = [pd.DataFrame(y_test_pis[i], index=row_labels, columns=col_labels) for i in range(y_test_pis.shape[0])]
@@ -1420,13 +1422,19 @@ class AlgoTrainEval:
                 best_rf_algo = self.algs_dict['rf']['gridsearchcv'].best_estimator_.named_steps['randomforestregressor']
             else:
                 best_rf_algo = self.algs_dict['rf']['algo']
-            # Compute forestci uncertainty with the best RF model
-            self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
-                best_rf_algo, np.array(self.X_train), np.array(self.X_test)
+                
+            # Check if forestci is enabled in self.uncertainty
+            forestci_enabled = any(
+                d.get('forestci', False) for d in self.uncertainty.get('fci', [])
             )
+            # Compute forestci uncertainty with the best RF model
+            if forestci_enabled:
+                self.algs_dict['rf']['Uncertainty']['forestci'] = self.calculate_forestci_uncertainty(
+                    best_rf_algo, np.array(self.X_train), np.array(self.X_test)
+                )
 
         # Calculate Bagging uncertainty if enabled
-        if self.bagging_ci_params.get('n_algos', None):
+        if any('n_algos' in d and d['n_algos'] for d in self.uncertainty.get('bagging', [])):
             for algo_dict in [self.algo_config, self.algo_config_grid]:  # Iterate over both configurations
                 for algo_str in algo_dict.keys():  # algo_str is the correct algorithm name
                     # Select the best model if Grid Search was performed
@@ -1440,7 +1448,7 @@ class AlgoTrainEval:
                     self.calculate_bagging_ci(algo_str, best_algo)
                 
         # --- Calculate prediction intervals using MAPIE if enabled ---
-        if getattr(self, 'mapie_alpha', None):
+        if any('alpha' in d and d['alpha'] for d in self.uncertainty.get('mapie', [])): #getattr(self, 'mapie_alpha', None):
             self.calculate_mapie()
 
         # Make predictions  (aka validation) 
