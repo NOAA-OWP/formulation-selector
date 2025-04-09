@@ -40,15 +40,9 @@ if __name__ == "__main__":
     metrics = algo_cfg.get('metrics',None)
     make_plots = algo_cfg.get('make_plots',False)
     same_test_ids = algo_cfg.get('same_test_ids',True)
+    confidence_levels = algo_cfg['confidence_levels']
     
-    mapie_alpha = algo_cfg['MAPIE_alpha']    
-    mapie_method = algo_cfg['MAPIE_method']
-    bagging_ci_params_list = algo_cfg['Bagging_uncertainty']
-    bagging_ci_params = {}
-    if isinstance(bagging_ci_params_list, list):
-        for param_dict in bagging_ci_params_list:
-            if isinstance(param_dict, dict):  # Ensure each item is a dictionary
-                bagging_ci_params.update(param_dict)    
+    uncertainty_cfg = algo_cfg.get('uncertainty', {})
 
     #%% Attribute configuration
     name_attr_config = algo_cfg.get('name_attr_config', Path(path_algo_config).name.replace('algo','attr')) 
@@ -216,13 +210,12 @@ if __name__ == "__main__":
             train_eval = fsate.AlgoTrainEval(df=df_pred_resp,
                                         attrs=attrs_sel,
                                         algo_config=algo_config,
+                                        uncertainty=uncertainty_cfg,
                                         dir_out_alg_ds=dir_out_alg_ds, dataset_id=ds,
                                         metr=metr,test_size=test_size, rs = seed,
-                                        test_ids=test_ids,
                                         verbose=verbose,
-                                        mapie_alpha=mapie_alpha,
-                                        mapie_method=mapie_method,
-                                        bagging_ci_params=bagging_ci_params)
+                                        confidence_levels=confidence_levels,
+                                        )
             train_eval.train_eval() # Train, test, eval wrapper
 
             # Get the comids corresponding to the testing data/run QA checks
@@ -275,7 +268,7 @@ if __name__ == "__main__":
                 y_pred = train_eval.preds_dict[algo_str]['y_pred']
                 y_pis = train_eval.preds_dict[algo_str]['y_pis']
             
-                for alpha_val in mapie_alpha:
+                for alpha_val in next(d['alpha'] for d in uncertainty_cfg.get('mapie', [])):
                     lower_err = y_pred - np.array([y_pis[i].loc['lower_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))])
                     upper_err = np.array([y_pis[i].loc['upper_limit', f'alpha_{alpha_val:.2f}'] for i in range(len(y_pred))]) - y_pred
                 
@@ -299,7 +292,7 @@ if __name__ == "__main__":
                     # Regression of testing holdout's prediction vs observation
                     fsate.plot_pred_vs_obs_wrap(y_pred, y_obs, dir_out_viz_base,
                             ds, metr, algo_str=algo_str,split_type=f'testing{test_size}')
-                    for alpha_val in mapie_alpha:
+                    for alpha_val in next(d['alpha'] for d in uncertainty_cfg.get('mapie', [])):
                         fsate.plot_pred_vs_obs_wrap_mapie(y_pred, y_obs, dir_out_viz_base,
                                 ds, metr, algo_str=algo_str,
                                 y_pis = y_pis, alpha_val = alpha_val,
@@ -329,7 +322,7 @@ if __name__ == "__main__":
                                         metr,algo_str,
                                         split_type='test',
                                         colname_data='performance')
-                    for alpha_val in mapie_alpha:
+                    for alpha_val in next(d['alpha'] for d in uncertainty_cfg.get('mapie', [])):
                         fsate.plot_map_pred_wrap_mapie(test_gdf,
                                         dir_out_viz_base, ds,
                                             metr,algo_str,
