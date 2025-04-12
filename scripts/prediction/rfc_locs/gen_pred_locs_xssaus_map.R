@@ -143,7 +143,6 @@ main <- function(){
   df_add <- base::data.frame(comid=df_huc08_10sqkm$hf_id[idxs_need],
                              source = "gen_pred_locs_xssaus_map.R")
   df <- base::rbind(df,df_add)
-
   ############################ END CUSTOM MUNGING ##############################
   for(ds in datasets){
     message(glue::glue("Processing {nrow(df)} locations"))
