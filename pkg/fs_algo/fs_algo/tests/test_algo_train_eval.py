@@ -381,25 +381,35 @@ class TestAlgoTrainEval(unittest.TestCase):
             'rf': {'n_estimators': 10},
             'mlp': {'hidden_layer_sizes': (10,), 'max_iter': 2000}
         }
-        self.bagging_ci_params = {'n_algos': 5}  # Example parameters
+        # self.bagging_ci_params = {'n_algos': 5}  # Example parameters
         self.dataset_id = 'test_dataset'
         self.metric = 'metric1'
         self.verbose = False
         # Output directory
         self.dir_out_alg_ds = tempfile.gettempdir()
         self.confidence_levels = [90, 95]  # Example parameters
-        self.mapie_alpha = [0.1, 0.2]
-
+        # self.mapie_alpha = [0.1, 0.2]
+        uncertainty_cfg = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.05, 0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }
+        
         # Instantiate AlgoTrainEval class
-        self.train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
+        self.train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, 
+                                        algo_config=self.algo_config,
+                                        uncertainty=uncertainty_cfg,
                                  dir_out_alg_ds=self.dir_out_alg_ds, dataset_id=self.dataset_id,
                                  metr=self.metric, test_size=0.4, rs=42,
                                  confidence_levels = self.confidence_levels,
-                                 bagging_ci_params=self.bagging_ci_params,
-                                 mapie_alpha=self.mapie_alpha)
-        # self.train_eval.confidence_levels = [90, 95]  # Example parameters
-        # self.train_eval.bagging_ci_params = self.bagging_ci_params  # Set bagging parameters
-        # self.train_eval.mapie_alpha = [0.1, 0.2]
+                                 # bagging_ci_params=self.bagging_ci_params,
+                                 # mapie_alpha=self.mapie_alpha
+                                 )
 
     def test_split_data(self):
         # Test data splitting
