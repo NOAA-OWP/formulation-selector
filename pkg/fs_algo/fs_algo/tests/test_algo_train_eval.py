@@ -312,22 +312,6 @@ class TestStdPredPath(unittest.TestCase):
         mock_mkdir.assert_called_once_with(exist_ok=True, parents=True)
         self.assertEqual(result, expected_path)
 
-class TestStdXtrainPath(unittest.TestCase):
-
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.exists')
-    def test_std_Xtrain_path(self, mock_exists, mock_mkdir):
-        dir_out_alg_ds = tempfile.gettempdir()
-        dataset_id = 'test_dataset'
-        expected_path = Path(dir_out_alg_ds) / 'Xtrain__test_dataset.csv'
-
-        # Mock the existence of the directory
-        mock_exists.return_value = True
-
-        result = fs_algo_train_eval.std_Xtrain_path(dir_out_alg_ds, dataset_id)
-        mock_mkdir.assert_called_once_with(exist_ok=True, parents=True)
-        self.assertEqual(result, expected_path)
-
 class TestReadPredComid(unittest.TestCase):
     @patch('pathlib.Path.exists')
     @patch('pandas.read_csv')
@@ -572,17 +556,29 @@ class TestAlgoTrainEvalMlti(unittest.TestCase):
         self.rs = 32
         self.verbose = False
 
-        self.bagging_ci_params = {'n_algos': 5}  # Example parameters
+        # self.bagging_ci_params = {'n_algos': 5}  # Example parameters
         self.confidence_levels = [90, 95]  # Example parameters
-        self.mapie_alpha = [0.1, 0.2]
+        # self.mapie_alpha = [0.1, 0.2]
+        uncertainty_cfg = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.05, 0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }
 
         self.algo_train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
+                                             uncertainty=uncertainty_cfg,
                                               dir_out_alg_ds=self.dir_out_alg_ds,dataset_id=self.dataset_id,
                                               metr=self.metric, test_size=self.test_size, rs=self.rs,
                                               verbose=self.verbose,
                                               confidence_levels = self.confidence_levels,
-                                              bagging_ci_params=self.bagging_ci_params,
-                                              mapie_alpha=self.mapie_alpha)
+                                              # bagging_ci_params=self.bagging_ci_params,
+                                              # mapie_alpha=self.mapie_alpha
+                                              )
     def test_initialization(self):
         self.assertEqual(self.algo_train_eval.df.shape, self.df.shape)
         self.assertEqual(self.algo_train_eval.attrs, self.attrs)
@@ -687,7 +683,17 @@ class TestAlgoTrainEvalSngl(unittest.TestCase):
         })
         self.attrs = ['attr1', 'attr2']
         self.algo_config = {'mlp': {'max_iter': [100]}}
-        self.dir_out_alg_ds = 'some/dir'
+        uncertainty_cfg = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }
+        self.dir_out_alg_ds = tempfile.gettempdir()
         self.dataset_id = 'dataset_1'
         self.metr = 'metric'
         self.test_size = 0.3
@@ -697,20 +703,58 @@ class TestAlgoTrainEvalSngl(unittest.TestCase):
         self.grid_search_algs=list()
 
         self.algo_train_eval = AlgoTrainEval(
-            df=self.df, attrs=self.attrs, algo_config=self.algo_config, dir_out_alg_ds=self.dir_out_alg_ds,
+            df=self.df, attrs=self.attrs, algo_config=self.algo_config, 
+            uncertainty=uncertainty_cfg,
+            dir_out_alg_ds=self.dir_out_alg_ds,
             dataset_id=self.dataset_id, metr=self.metr, test_size=self.test_size, rs=self.rs, verbose=self.verbose
         )
 
+    @patch('fs_algo.fs_algo_train_eval.joblib.dump')
+    @patch.object(AlgoTrainEval, 'calculate_bagging_ci')
+    @patch.object(AlgoTrainEval, 'calculate_mapie')
     @patch.object(AlgoTrainEval, 'split_data')
     @patch.object(AlgoTrainEval, 'select_algs_grid_search')
     @patch.object(AlgoTrainEval, 'train_algos_grid_search')
     @patch.object(AlgoTrainEval, 'train_algos')
-    def test_train_eval(self, mock_train_algos, mock_train_algos_grid_search, mock_select_algs_grid_search, mock_split_data):
+    def test_train_eval(self, mock_train_algos, mock_train_algos_grid_search,
+                        mock_select_algs_grid_search, mock_split_data,
+                        mock_calc_bagging_ci,mock_calc_mapie, mock_dump):
         # Mock the methods to avoid actual execution
         mock_split_data.return_value = None
         mock_select_algs_grid_search.return_value = None
         mock_train_algos_grid_search.return_value = None
         mock_train_algos.return_value = None
+        mock_calc_bagging_ci.return_value = None
+        mock_calc_mapie.return_value = None
+
+        # Mock pipeline with a .predict() method
+        mock_pipeline = MagicMock()
+        mock_pipeline.predict.return_value = [0.1, 0.2, 0.3]
+    
+        self.algo_train_eval.X_test = [[1, 2], [3, 4], [5, 6]]
+        self.algo_train_eval.y_test = [0.0, 0.1, 0.2]
+        self.algo_train_eval.preds_dict = {}
+        self.algo_train_eval.uncertainty = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }   
+        
+        # Setup algs_dict with required keys
+        self.algo_train_eval.algs_dict = {
+            'mlp': {
+                'algo': MLPRegressor(),
+                'pipeline': mock_pipeline,
+                'type': 'MLP',
+                'metric': 'metric',
+                'Uncertainty': {}
+            }
+        }
 
         # Call the method
         self.algo_train_eval.train_eval()
@@ -720,6 +764,8 @@ class TestAlgoTrainEvalSngl(unittest.TestCase):
         mock_select_algs_grid_search.assert_called_once()
         mock_train_algos_grid_search.assert_not_called()
         mock_train_algos.assert_called_once()
+        mock_calc_bagging_ci.assert_called_once()
+        mock_calc_mapie.assert_called_once()
 
 class TestAlgoTrainEvalBasic(unittest.TestCase):
 
@@ -747,17 +793,29 @@ class TestAlgoTrainEvalBasic(unittest.TestCase):
         self.verbose = False
         self.algo_config_grid = dict()
 
-        self.bagging_ci_params = {'n_algos': 5}  # Example parameters
+        # self.bagging_ci_params = {'n_algos': 5}  # Example parameters
         self.confidence_levels = [90, 95]  # Example parameters
-        self.mapie_alpha = [0.1, 0.2]
-
+        # self.mapie_alpha = [0.1, 0.2]
+        uncertainty_cfg = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.2, 0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }
+        
         self.algo = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
+                                  uncertainty=uncertainty_cfg,
                                   dir_out_alg_ds=self.dir_out_alg_ds, dataset_id=self.dataset_id, 
                                   metr=self.metric, test_size=self.test_size, rs=self.rs, 
                                   verbose=self.verbose,
                                   confidence_levels = self.confidence_levels,
-                                  bagging_ci_params=self.bagging_ci_params,
-                                  mapie_alpha=self.mapie_alpha)
+                                  # bagging_ci_params=self.bagging_ci_params,
+                                  # mapie_alpha=self.mapie_alpha
+                                  )
 
     @patch('joblib.dump')  # Mock saving the model to disk
     @patch('sklearn.model_selection.train_test_split', return_value=(pd.DataFrame(), pd.DataFrame(), pd.Series(), pd.Series()))
