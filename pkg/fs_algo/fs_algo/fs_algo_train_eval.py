@@ -254,6 +254,7 @@ def _check_attributes_exist(df_attr: pd.DataFrame, attrs_sel:pd.Series | Iterabl
     :seealso: :func:`fs_read_attr_comid()`
 
     """
+    print(f"type of attrs_sel: {type(attrs_sel)}")
     if not isinstance(attrs_sel,pd.Series):
         # Convert to a series for convenience of pd.Series.isin()
         attrs_sel = pd.Series(pd.Series(attrs_sel).unique())
