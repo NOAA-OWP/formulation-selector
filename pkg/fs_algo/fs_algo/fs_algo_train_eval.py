@@ -1166,18 +1166,19 @@ class AlgoTrainEval:
         mapie_method = next((d['method'] for d in self.uncertainty.get('mapie', []) if 'method' in d), None)
         mapie_cv = next((d['cv'] for d in self.uncertainty.get('mapie', []) if 'cv' in d), None)
         mapie_agg_function = next((d['agg_function'] for d in self.uncertainty.get('mapie', []) if 'agg_function' in d), None)
-        for algo_str, algo_data in self.algs_dict.items():
-            algo = algo_data['algo']
-            # mapie = MapieRegressor(algo, cv="prefit", agg_function="median")
-            if mapie_method == 'plus':
-                mapie = MapieRegressor(algo, method="plus", cv=mapie_cv, agg_function=mapie_agg_function)
-            elif mapie_method == 'minmax':
-                mapie = MapieRegressor(algo, method="minmax", cv=mapie_cv, agg_function=mapie_agg_function)
-            else:
-                raise ValueError("Invalid MAPIE_method. Please select either 'plus' (CV+) or 'minmax' (CV-minmax).")
-
-            mapie.fit(self.X_train, self.y_train)  
-            self.algs_dict[algo_str]['mapie'] = mapie
+        try:
+            for algo_str, algo_data in self.algs_dict.items():
+                algo = algo_data['algo']
+                mapie = MapieRegressor(
+                    algo,
+                    method=mapie_method,
+                    cv=mapie_cv,
+                    agg_function=mapie_agg_function
+                )
+                mapie.fit(self.X_train, self.y_train)
+                self.algs_dict[algo_str]['mapie'] = mapie
+        except ValueError as e:
+            raise ValueError(f"Invalid MAPIE method '{mapie_method}'. Please choose either 'plus' or 'minmax'.") from e
             
     def train_algos(self):
         """Train algorithms based on what has been defined in the algo config file
