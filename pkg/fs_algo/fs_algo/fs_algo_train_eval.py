@@ -2013,6 +2013,10 @@ def plot_map_pred(geo_df:gpd.GeoDataFrame, states,title:str,metr:str,
     :return: Map of predicted response variables
     :rtype: Figure
     """
+    # Calculate vmin and vmax based on the data
+    vmin = geo_df[colname_data].min()
+    vmax = geo_df[colname_data].max()
+
     fig, ax = plt.subplots(1, 1, figsize=(20, 24))
     base = states.boundary.plot(ax=ax,color="#555555", linewidth=1)
     # Points
@@ -2020,9 +2024,8 @@ def plot_map_pred(geo_df:gpd.GeoDataFrame, states,title:str,metr:str,
     # States
     states.boundary.plot(ax=ax, color="#555555", linewidth=1, zorder=1)  # Plot states boundary again with lower zorder
     
-    # TODO: need to customize the colorbar min and max based on the metric
-    ## cbar = plt.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0,vmax = 1), cmap='viridis')
     cbar = plt.cm.ScalarMappable(cmap='viridis')
+    cbar = plt.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=vmin, vmax=vmax), cmap='viridis')
     ax.tick_params(axis='x', labelsize= 24)
     ax.tick_params(axis='y', labelsize= 24)
     plt.xlabel('Latitude',fontsize = 26)
