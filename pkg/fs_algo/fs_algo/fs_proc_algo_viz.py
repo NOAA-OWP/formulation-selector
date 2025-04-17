@@ -220,10 +220,10 @@ if __name__ == "__main__":
 
             # Get the comids corresponding to the testing data/run QA checks
             if train_eval.X_test.shape[0] + train_eval.X_train.shape[0] == df_pred_resp.shape[0]:
-                if all(train_eval.X_test.index == test_ids.index):
+                if all(np.sort(train_eval.X_test.index) == np.sort(test_ids.index)):
                     df_pred_resp_test = df_pred_resp.iloc[train_eval.X_test.index]
                     comids_test = df_pred_resp_test['comid'].values
-                    if not all(comids_test == test_ids.values): 
+                    if not all(np.sort(comids_test) == np.sort(test_ids.values)): 
                         raise ValueError("PROBLEM: the testing comids stored using AlgoTrainEval do not match the expected testing comids")
                 else:
                     raise ValueError("Unexpected train/test split index corruption when using AlgoTrainEval.train_eval().")
@@ -301,7 +301,7 @@ if __name__ == "__main__":
                 # PREPARE THE GDF TO ALIGN PREDICTION VALUES BY COMIDS/COORDS
                 test_gdf = gdf_comid.loc[test_ids.index]#[gdf_comid['comid'].isin(comids_test)].copy()
                 # Ensure test_gdf is ordered in the same order of comids as y_pred
-                if all(test_gdf['comid'].values == comids_test):             
+                if all(np.sort(test_gdf['comid'].values) == np.sort(comids_test)):             
                     test_gdf['id'] = pd.Categorical(test_gdf['comid'], categories=np.unique(comids_test), ordered=True) 
                     # The comid can be used for sorting... see test_gdf.sort_values() below
                 else:
