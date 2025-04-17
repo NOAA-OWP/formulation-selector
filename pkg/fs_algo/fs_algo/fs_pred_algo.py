@@ -129,7 +129,7 @@ if __name__ == "__main__":
                 resp_pred = pipe.predict(df_attr_sub_rmna)
 
                 # Initialize DataFrame for storing results
-                df_pred = pd.DataFrame({'comid': comids_pred, 'prediction': resp_pred, 'metric': metric, 'dataset': ds, 'algo': algo, 'name_algo': Path(path_algo).name})
+                df_pred = pd.DataFrame({'featureID': comids_pred, 'prediction': resp_pred, 'metric': metric, 'dataset': ds, 'algo': algo, 'name_algo': Path(path_algo).name})
         
                 # If using RandomForest, calculate confidence intervals using forestci
                 if algo == 'rf':
