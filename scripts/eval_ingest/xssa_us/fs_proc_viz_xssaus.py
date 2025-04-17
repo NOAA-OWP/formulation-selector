@@ -64,19 +64,36 @@ if __name__ == "__main__":
     for ds in datasets:
         # Read in the geospatial data corresponding to training/prediction locations:
         path_fs_proc = fsate._std_fs_proc_ds_paths(dir_std_base, ds =ds, mtch_str='*.nc')
+        print('PRINTING PATH FS PROC')
+        print(path_fs_proc)
         path_gpkg = fsate._std_fs_proc_ds_companion_gpkg_path(path_fs_proc[0])
+        print('PRINTING PATH GPKG')
+        print(path_gpkg)
         gdf = gpd.read_file(path_gpkg)
+        print('PRINT GDF COL NAMES')
+        gdf.columns
 
         # Read in the predicted data
         dir_out_pred = Path(Path(dir_out_preds_base),Path(ds))
+        print('PRINTING DIR OUT PRED')
+        print(dir_out_pred)
         paths_pred = [x for x in list(dir_out_pred.rglob('*.parquet'))]
+        print('PRINTING RESPONSE VARS')
+        print(response_vars)
         for resp_var in response_vars:
             paths_resp = [x for x in paths_pred if resp_var in str(x)]
+            print('PRINTING PATHS RESP')
+            print(paths_resp)
             for path_resp in paths_resp:
                 df_resp = pd.read_parquet(path_resp) # The predicticted results dataframe
+                print('PRINT DF RESP')
+                print(df_resp)
+                print(len(df_resp['featureID'].unique()))
                 # Match location with predicted results
                 gdf_all = pd.merge(left=df_resp,right=gdf,left_on='featureID', right_on = 'comid')
                 gdf_all = gpd.GeoDataFrame(gdf_all, geometry = 'geometry')
+                # print('CHECKING GDF')
+                # print(len(gdf_all['featureID'].unique()))
 
                 # Generate map of predicted sensitivity values
                 fsate.plot_map_pred_wrap(test_gdf=gdf_all,dir_out_viz_base=dir_out_viz_base, ds=ds,
