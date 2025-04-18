@@ -29,6 +29,7 @@ algo_response_vars: # List out the desired response variables (e.g. metrics, hyd
   - 'P_wt_baseflow'
   - 'N_wt_quickflow'
   - 'M_wt_infilt'
+  - 'O_evap'
 algo_type: # List out the regressor rr43walgorithms desired for prediction (e.g. rf, mlp).  # TODO offer 'all'
   - 'rf'
 
