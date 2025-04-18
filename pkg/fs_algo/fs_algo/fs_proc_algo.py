@@ -34,7 +34,7 @@ if __name__ == "__main__":
     test_size = algo_cfg['test_size']
     seed = algo_cfg['seed']
     read_type = algo_cfg.get('read_type','all') # Arg for how to read attribute data using comids in fs_read_attr_comid(). May be 'all' or 'filename'.
-    confidence_levels = algo_cfg['confidence_levels']
+    confidence_levels = algo_cfg['confidence_levels',95]
     
     uncertainty_cfg = algo_cfg.get('uncertainty', {})
 
