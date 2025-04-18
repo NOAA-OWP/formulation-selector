@@ -22,12 +22,12 @@ make_plots: True # Optional. Default False. Should plots be created & saved to f
 same_test_ids: True # Optional. Default True. Should all datasets being compared have the same test ID? If not, algos will be trained true to the test_size, but the train_test split may not be the same across each dataset (particularly total basins differ)
 metrics: # OPTIONAL. The metrics of interest for processing. If not provided, all metrics in the input dataset will be processed. Must be a sublist structure.
 confidence_levels: [90,95,99] # OPTIONAL. But REQUIRED if a value is assinged to n_algos. Confidence levels between 50 and 100 for bootstrap ci calculation in an array format.
-uncertainty: # REQUIRED. Refer to AlgoTrainEval.train_algos to see what options are present (e.g. rf, mlp)
-  fci:  # STRONGLY RECOMMENDED. Refer to sklearn.ensemble.RandomForestRegressor for arguments to pass here. Otherwise defaults will be used
+uncertainty: # OPTIONAL. Defines methods to quantify uncertainty in model training and predictions. 
+  fci:  # OPTIONAL. Used only with Random Forest (rf). Applies forestci to estimate confidence intervals for the model training based on the variance of predictions from trees in the random forest model. For more details, see: https://github.com/scikit-learn-contrib/forest-confidence-interval 
     - forestci: True # Boolean. Forestci model to calculate confidence interval for rf model.
-  bagging:  # OPTIONAL. Refer to sklearn.neural_network.MLPRegressor for arguments to pass here. Otherwise defaults will be when 'mlp' is specified here
+  bagging:  # OPTIONAL. Enables bootstrap aggregating (bagging) to calculate confidence intervals during the model training by training multiple models on resampled data. More broadly applicable than forestci, as it works with the algorithm types other than rf as well.
     - n_algos: 10 # OPTIONAL. Enabled if not empty. Number of bootstrap runs for Bagging confidence interval calculation (integer). Bagging ci calculation is disabled if n_algos is empty.    
-  mapie:  # OPTIONAL. Refer to sklearn.neural_network.MLPRegressor for arguments to pass here. Otherwise defaults will be when 'mlp' is specified here
+  mapie:  # OPTIONAL. Applies the MAPIE (Model Agnostic Prediction Interval Estimator) framework to estimate **prediction intervals**, which provide bounds around individual predicted values. Supports many model types. See documentation for details: https://mapie.readthedocs.io/en/stable/index.html
     - alpha: [0.05, 0.32] # OPTIONAL. Enabled if not empty. Alpha parameter (0 < α < 1) in an array format to calculate MAPIE prediction intervals. If empty, MAPIE is not calculated. Note: 1/α (or 1/(1 - α)) must be lower than the number of samples.
     - method: 'plus' #  OPTIONAL. But REQUIRED if MAPIE_alpha provided. MAPIE method: 'plus' (CV+) or 'minmax' (CV-minmax). For more information and other methods, refer to: https://mapie.readthedocs.io/en/stable/theoretical_description_regression.html
     - cv: 10 # OPTIONAL. But REQUIRED if MAPIE_alpha provided. Interger , to specify the number of folds. 
