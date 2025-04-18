@@ -40,7 +40,7 @@ if __name__ == "__main__":
     metrics = algo_cfg.get('metrics',None)
     make_plots = algo_cfg.get('make_plots',False)
     same_test_ids = algo_cfg.get('same_test_ids',True)
-    confidence_levels = algo_cfg['confidence_levels',95]
+    confidence_levels = algo_cfg.get('confidence_levels',95)
     
     uncertainty_cfg = algo_cfg.get('uncertainty', {})
 
