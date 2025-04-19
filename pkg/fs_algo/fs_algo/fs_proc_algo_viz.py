@@ -159,11 +159,16 @@ if __name__ == "__main__":
         # Data removal comes from from fsate.fs_read_attr_comid & df_attr_wide.dropna():
         remn_comids = list(df_attr_wide_dropna.index) # these are the comids that are left after checking what data are available
         # Revise gdf_comid
-        gdf_comid = gdf_comid[gdf_comid['comid'].isin(remn_comids)].reset_index()
-        
+        gdf_comid = gdf_comid[gdf_comid['comid'].isin(remn_comids)]
         if isinstance(test_ids,pd.Series): # Revise test_ids
             # This resets the index of test_ids to correspond with gdf_comid
-            test_ids = gdf_comid['comid'][gdf_comid['comid'].isin(test_ids)]
+            try:
+                print(f"Shape3: {gdf_comid.shape}")
+                test_ids = gdf_comid.loc[gdf_comid['comid'].isin(test_ids)]['comid']
+            except:
+                if len(test_ids) != gdf_comid.shape[0]:
+                    raise ValueError("PROBLEM HERE. The test_ids failed to update.")
+
 
         #%% Characterize dataset correlations & principal components:
         fig_corr_mat = fsate.plot_corr_mat_save_wrap(df_X=df_attr_wide_dropna,

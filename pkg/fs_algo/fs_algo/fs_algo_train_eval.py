@@ -418,7 +418,7 @@ def fs_retr_nhdp_comids_geom(featureSource:str,featureID:str,gage_ids: Iterable[
     gdf_comid = gpd.GeoDataFrame(pd.DataFrame({ 'comid': comids_resp,
                                                'gage_id': gage_ids}),
                                             geometry=geom_pts,crs=4326 
-                                )
+                                ).fillna(np.nan)
 
     return gdf_comid
 
@@ -752,8 +752,11 @@ def fs_retr_nhdp_comids_geom_wrap(path_save_gpkg:str|os.PathLike,
     return(gdf_comid)
 
 def combine_resp_gdf_comid_wrap(dir_std_base:str|os.PathLike,ds:str,
-                          attr_config:dict)->dict:
+                          attr_config:dict,
+                          #featureSources:list=['comid','hf_uid']
+                          )->dict:
     """Standardize the response variable and geodataframe/comid retrieval for a single dataset in a wrapper function
+    This is only used for training/testing purposes. NOT prediction!
 
     Removes data points from consideration if no comid could be found. Makes the gdf and response data consistent.
 
@@ -783,27 +786,71 @@ def combine_resp_gdf_comid_wrap(dir_std_base:str|os.PathLike,ds:str,
     gdf_comid = fs_retr_nhdp_comids_geom_wrap(path_save_gpkg=path_gpkg_fs_proc,
                                   gage_ids=dat_resp['gage_id'].values,
                                 featureSource=featureSource, featureID=featureID)
-   
+
     # --- response data identifier alignment with comids & na removal --- #
-    dat_resp = dat_resp.assign_coords(comid = gdf_comid['comid'].values)
-    idxs_na_comid = list(np.where(gdf_comid['comid'].isna())[0])
-    gage_id_mask = ~np.isin(np.arange(len(dat_resp['gage_id'])),idxs_na_comid)
+    # Make comid assignment a 1:1 gage_id in dat_resp to comid
+    gdf_comid = gdf_comid[gdf_comid['gage_id'].str.contains('|'.join(dat_resp['gage_id'].data.astype(str)))]
+
+    # # REMOVE gdf locations where a comid could not be found:
+    gdf_comid.dropna(subset='comid',inplace=True) # TODO oconus: change comid col in gdf??
+    if any(gdf_comid['comid'].duplicated()):
+        print("Note that some duplicated comids found in gdf dataset. Removing, while recognizing that these could alter the desired gage_id-comid pairings")
+        # TODO oconus: consider removing 'comid' from gdf_comid
+        gdf_comid = gdf_comid.drop_duplicates(['comid'])
+    gdf_comid.reset_index(inplace=True)
+    valid_gage_ids = gdf_comid['gage_id'].values
+    dat_resp = dat_resp.sel(gage_id=dat_resp['gage_id'].isin(valid_gage_ids))
+
+    # Create matching comids - gage ids for dat_resp 
+    # How gage_ids from gdf need to be ordered to jive with dat_resp ordering
+    idxs_gage_id_ordr = [int(y) for x in dat_resp['gage_id'].values for y in np.where(gdf_comid['gage_id'].values==x)[0]]
+    # Reorder gage_ids
+    gdf_comid = gdf_comid.iloc[idxs_gage_id_ordr]
+    # TODO oconus: Subset gdf to the featureSource values of interest (e.g. featureSource='comid' or 'hf_uid')
+    #sub_gdf_comid = gdf_comid[gdf_comid['featureSource'].str.contains("|".join(featureSources))]
+
+    if len(dat_resp['gage_id']) == gdf_comid.shape[0]:
+        # TODO oconus: change to dat_resp['featureID']
+        dat_resp = dat_resp.assign_coords(comid = gdf_comid['comid'].values)
+    else:
+        raise ValueError("total # of gage_id locations differ between subset gpkg and standardized .nc dataset. This needs a logic fix.")
+
+    idxs_na_comid = [int(x) for x in list(np.where(gdf_comid['comid'].isna())[0])]
+  
     if len(idxs_na_comid) > 0:
-        gage_ids_missing = dat_resp['gage_id'].isel(gage_id=~gage_id_mask).values
+        # GOAL: Remove location ids from input ncdf dat_resp that are missing in the geopackage
+        # TODO chagne
+        gage_ids_missing = gdf_comid['gage_id'][gdf_comid['comid'].isna()].values
+        #gage_ids_missing = dat_resp['gage_id'].isel(gage_id=~gage_id_mask).values
         print(f"A total of {len(idxs_na_comid)} returned comids are NA values. \
                \nRemoving the following gage_ids from dataset: \
               \n{gage_ids_missing}")
+        
+        # Create mask and update
+        gage_id_mask = ~np.isin(np.arange(len(dat_resp['gage_id'])),idxs_na_comid)
         # Remove the unknown comids now that they've been matched up to the original dims in dat_resp:
         dat_resp = dat_resp.isel(gage_id=gage_id_mask)# remove NA vals from gage_id coord
         dat_resp = dat_resp.isel(comid=gage_id_mask) # remove NA vals from comid coord
-    
-    gdf_comid = gdf_comid.drop_duplicates().dropna()
-    if any(gdf_comid['comid'].duplicated()):
-        print("Note that some duplicated comids found in dataset based on initial location identifier, gage_id")
-    gdf_comid['dataset'] = ds 
 
+    # # Reduce gdf comids to just those that are inside the dat_resp IMPORTANT!
+    # gdf_comid = gdf_comid[gdf_comid['comid'].isin(dat_resp['comid'].to_dataframe()['comid'].to_list())]
+    gdf_comid['dataset'] = ds 
+    if any(gdf_comid['comid'].duplicated()):
+        print("Note that some duplicated comids found in gdf dataset. Removing, while recognizing that these could alter the desired gage_id-comid pairings")
+        # TODO oconus: WHICH ONES TO KEEP? THE ONES WITH gage_id that matches the gage_id in the dataset!!
+
+
+        gdf_comid = gdf_comid.drop_duplicates(['comid'])
+
+    # REMOVE gdf locations where a comid could not be found:
+    gdf_comid.dropna(subset='comid',inplace=True) # TODO oconus: change comid col in gdf??
+    gdf_comid.reset_index(inplace=True)
+
+    
     dict_resp_gdf = dict({'dat_resp':dat_resp,
                         'gdf_comid': gdf_comid})
+    
+    
     return(dict_resp_gdf)
 
 def split_train_test_comid_wrap(dir_std_base:str|os.PathLike, 
