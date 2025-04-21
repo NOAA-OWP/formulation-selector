@@ -2014,8 +2014,8 @@ def plot_map_pred(geo_df:gpd.GeoDataFrame, states,title:str,metr:str,
     :rtype: Figure
     """
     # Calculate vmin and vmax based on the data
-    vmin = geo_df[colname_data].min()
-    vmax = geo_df[colname_data].max()
+    vmin = geo_df[colname_data].min(skipna=True)
+    vmax = geo_df[colname_data].max(skipna=True)
 
     fig, ax = plt.subplots(1, 1, figsize=(20, 24))
     base = states.boundary.plot(ax=ax,color="#555555", linewidth=1)
