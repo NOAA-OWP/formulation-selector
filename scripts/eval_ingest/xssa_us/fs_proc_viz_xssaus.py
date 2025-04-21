@@ -77,8 +77,6 @@ if __name__ == "__main__":
                 # Match location with predicted results
                 gdf_all = pd.merge(left=df_resp,right=gdf,left_on='featureID', right_on = 'comid')
                 gdf_all = gpd.GeoDataFrame(gdf_all, geometry = 'geometry')
-                # print('CHECKING GDF')
-                # print(len(gdf_all['featureID'].unique()))
 
                 # Generate map of predicted sensitivity values
                 fsate.plot_map_pred_wrap(test_gdf=gdf_all,dir_out_viz_base=dir_out_viz_base, ds=ds,
