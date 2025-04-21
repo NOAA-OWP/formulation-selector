@@ -66,25 +66,14 @@ if __name__ == "__main__":
         path_fs_prep = fsate._std_fs_prep_ds_paths(dir_std_base, ds =ds, mtch_str='*.nc')
         path_gpkg = fsate._std_fs_prep_ds_companion_gpkg_path(path_fs_prep[0])
         gdf = gpd.read_file(path_gpkg)
-        print('PRINT GDF COL NAMES')
-        gdf.columns
 
         # Read in the predicted data
         dir_out_pred = Path(Path(dir_out_preds_base),Path(ds))
-        print('PRINTING DIR OUT PRED')
-        print(dir_out_pred)
         paths_pred = [x for x in list(dir_out_pred.rglob('*.parquet'))]
-        print('PRINTING RESPONSE VARS')
-        print(response_vars)
         for resp_var in response_vars:
             paths_resp = [x for x in paths_pred if resp_var in str(x)]
-            print('PRINTING PATHS RESP')
-            print(paths_resp)
             for path_resp in paths_resp:
                 df_resp = pd.read_parquet(path_resp) # The predicticted results dataframe
-                print('PRINT DF RESP')
-                print(df_resp)
-                print(len(df_resp['featureID'].unique()))
                 # Match location with predicted results
                 gdf_all = pd.merge(left=df_resp,right=gdf,left_on='featureID', right_on = 'comid')
                 gdf_all = gpd.GeoDataFrame(gdf_all, geometry = 'geometry')
