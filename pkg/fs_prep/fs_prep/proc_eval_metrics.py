@@ -22,7 +22,7 @@ import warnings
 import os
 import shutil
 from importlib import resources as impresources
-from fs_proc import data
+from fs_prep import data
 from itertools import compress
 import pynhd as nhd
 
@@ -34,7 +34,7 @@ def _proc_flatten_ls_of_dict_keys(config: dict, key: str) -> list:
     return [x for xs in keys_cs for x in xs]
 
 def _read_std_config():
-    """Read the standardized categorical mappings used in fs_proc
+    """Read the standardized categorical mappings used in fs_prep
 
     :return: yaml configuration file mappings as a dict of lists of dicts
     :rtype: dict
