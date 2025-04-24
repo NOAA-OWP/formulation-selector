@@ -12,7 +12,7 @@ import argparse
 import pandas as pd
 from pathlib import Path
 import yaml
-from fs_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
+from fs_prep.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process the YAML config file.')
