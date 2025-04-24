@@ -54,7 +54,7 @@ import argparse
 import pandas as pd
 from pathlib import Path
 import yaml
-import fs_proc.proc_eval_metrics as pem
+import fs_prep.proc_eval_metrics as pem
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process the YAML config file.')
