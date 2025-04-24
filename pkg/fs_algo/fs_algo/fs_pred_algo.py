@@ -11,7 +11,7 @@ import numpy as np
 import forestci as fci
 from sklearn.model_selection import train_test_split
 
-# TODO create a function that's flexible/converts user formatted checks (a la fs_proc)
+# TODO create a function that's flexible/converts user formatted checks (a la fs_prep)
 
 
 # Predict values and evaluate predictions
