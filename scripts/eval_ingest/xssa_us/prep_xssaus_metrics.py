@@ -14,7 +14,7 @@ import argparse
 import pandas as pd
 from pathlib import Path
 import yaml
-from fs_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
+from fs_prep.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
 import numpy as np
 import re
 if __name__ == "__main__":
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         df_xssa_wt = dat_all_xssa.apply(lambda x: x*dat_all_xssa[' weight '] if x.name in cols_proc else x)
 
         # Rename columns
-        # These are the standardized column names defined in formulation-selector/pkg/fs_proc/fs_proc/fs_categories.yaml:
+        # These are the standardized column names defined in formulation-selector/pkg/fs_prep/fs_prep/fs_categories.yaml:
 
         df_cols_mtch = pd.DataFrame({'new_cols': new_cols})
         df_cols_mtch['key'] = [x.split('_')[0] for x in df_cols_mtch['new_cols']]
