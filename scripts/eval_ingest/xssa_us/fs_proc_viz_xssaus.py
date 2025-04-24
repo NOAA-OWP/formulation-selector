@@ -63,8 +63,8 @@ if __name__ == "__main__":
 
     for ds in datasets:
         # Read in the geospatial data corresponding to training/prediction locations:
-        path_fs_proc = fsate._std_fs_proc_ds_paths(dir_std_base, ds =ds, mtch_str='*.nc')
-        path_gpkg = fsate._std_fs_proc_ds_companion_gpkg_path(path_fs_proc[0])
+        path_fs_prep = fsate._std_fs_prep_ds_paths(dir_std_base, ds =ds, mtch_str='*.nc')
+        path_gpkg = fsate._std_fs_prep_ds_companion_gpkg_path(path_fs_prep[0])
         gdf = gpd.read_file(path_gpkg)
 
         # Read in the predicted data
