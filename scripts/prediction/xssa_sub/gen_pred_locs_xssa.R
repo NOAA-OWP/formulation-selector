@@ -129,7 +129,7 @@ main <- function(){
 
   dir_dataset <- proc.attr.hydfab::std_dir_dataset(Retr_Params$paths$dir_std_base,datasets)
 
-  # Retrieve the gage_ids, featureSource, & featureID from fs_proc standardized output
+  # Retrieve the gage_ids, featureSource, & featureID from fs_prep standardized output
   ls_fs_std <- proc.attr.hydfab::proc_attr_read_gage_ids_fs(dir_dataset)
 
   # TODO add option to read in gage ids from a separate data source
