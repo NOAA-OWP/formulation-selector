@@ -9,6 +9,7 @@ proc_attr_gageids(
   featureSource,
   featureID,
   Retr_Params,
+  path_save_gpkg,
   lyrs = "network",
   overwrite = FALSE
 )
@@ -16,11 +17,11 @@ proc_attr_gageids(
 \arguments{
 \item{gage_ids}{array of gage_id values to be queried for catchment attributes}
 
-\item{featureSource}{The \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature}feature featureSource,
-e.g. 'nwissite'}
+\item{featureSource}{The \code{nhdplusTools::get_nldi_feature} feature
+featureSource, e.g. 'nwissite'}
 
 \item{featureID}{a glue-configured conversion of gage_id into a recognized
-featureID for \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_feature}. E.g. if gage_id
+featureID for \code{nhdplusTools::get_nldi_feature}. E.g. if gage_id
 represents exactly what the nldi_feature$featureID should be, then
 featureID="{gage_id}". In other instances, conversions may be necessary,
 e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
@@ -33,9 +34,11 @@ needed to acquire variables of interest. List objects include the following:
 \item \code{paths$dir_db_hydfab} the local path to where hydrofabric data are saved
 \item \code{path$dir_db_attrs} local path for saving catchment attributes as parquet files
 \item \code{path$s3_path_hydatl} the s3 location where hydroatlas data exist
-\item \code{path$dir_std_base} the location of user_data_std containing dataset that were standardized by \pkg{fs_proc}.
+\item \code{path$dir_std_base} the location of user_data_std containing dataset that were standardized by \pkg{fs_prep}.
 \item \code{datasets} character vector. A list of datasets of interest inside \code{paths$dir_std_base}. Not used in \code{proc_attr_gageids}
 }}
+
+\item{path_save_gpkg}{character. The filepath where the geopackage of comid/gage_id/geometry mappings get saved}
 
 \item{lyrs}{character. The layer names of interest from the hydrofabric gpkg. Default 'network'}
 
@@ -48,5 +51,15 @@ location. Acquires user-requested variables from multiple catchment
 attribute sources. Calls \link{proc_attr_wrap} which writes all
 acquired variables to a parquet file as a standard data.table format.
 Returns a data.table of all data returned from \code{nhdplusTools::get_nldi_feature}
-that corresponded to the gage_ids
+that corresponded to the gage_ids.
+}
+\details{
+Intendended for a single dataset, aka input file directory
+containing data. For multiple datasets, refer to dataset looping inside
+\link[proc.attr.hydfab]{grab_attrs_datasets_fs_wrap}
+}
+\seealso{
+\link[proc.attr.hydfab]{grab_attrs_datasets_fs_wrap} loops over multiple datasets in calling this gage_id retrieval
+
+\link[proc.attr.hydfab]{proc_attr_mlti_wrap} Acquire attributes
 }

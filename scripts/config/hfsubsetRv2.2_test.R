@@ -265,7 +265,7 @@ rslt$geometry
 #     filter(hl_link == '06752260') %>%
 #     collect())
 #
-# dat <- arrow::read_parquet("/Users/guylitt/Downloads/nextgen_04.parquet")
+# dat <- arrow::read_parquet("~/Downloads/nextgen_04.parquet")
 #
 # dim(dat)
 #

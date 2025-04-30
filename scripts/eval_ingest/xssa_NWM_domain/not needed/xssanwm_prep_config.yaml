@@ -3,16 +3,15 @@ col_schema:   # required column mappings in the evaluation metrics dataset
   - 'gage_id': 'basin_id' # The basin identifier/gage id used for each modeled location in the evaluation metrics dataset
   - 'featureID': 'USGS-{gage_id}' # python f-string / R glue() format; converting the 'gage_id' to the standardized featureID used by nhdplusTools. Must use '{gage_id}' e.g. 'USGS-{gage_id}'
   - 'featureSource': 'nwissite' # The standardized nhdplusTools featureSource. Possible featureSources might be 'nwissite', 'comid'.
-  - 'metric_cols': 'nse|rmse|kge' # Column(s) in the dataset corresponding to the evaluation metrics. If multiple exist, separate each string by '|' e.g. 'rmse|kge|nse'
-  - 'metric_mappings': 'NSE|RMSE|KGE' # The mapping of metric_cols to the standardized format as specified in fs_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
+  - 'metric_cols': 'W_wt_precip_corr|V_wt_rainsnow_part|U_wt_perc|T_wt_pot_melt|S_wt_delay_ro|R_wt_srfc_ro|Q_wt_snow_bal|O_evap|P_wt_baseflow|N_wt_quickflow|M_wt_infilt' # Column(s) in the dataset corresponding to the evaluation metrics. If multiple exist, separate each string by '|' e.g. 'rmse|kge|nse'
+  - 'metric_mappings': 'W_wt_precip_corr|V_wt_rainsnow_part|U_wt_perc|T_wt_pot_melt|S_wt_delay_ro|R_wt_srfc_ro|Q_wt_snow_bal|O_evap|P_wt_baseflow|N_wt_quickflow|M_wt_infilt' # The mapping of metric_cols to the standardized format as specified in fs_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'
 file_io: # May define {home_dir} for python's '{home_dir}/string_path'.format(home_dir =str(Path.home())) functionality
-  - 'path_camels': '{home_dir}/noaa/camels/camels_hydro.txt' # Path to the CAMELS basins dataset. CAMELS data should not always be a requirement for dataset processing, but serves to help analyze common catchments.
-  - 'path_data': '{home_dir}/noaa/regionalization/data/julemai-xSSA/data_in/basin_metadata/basin_validation_results.txt' # Where the raw input data are stored.
+  - 'dir_data': '{home_dir}/noaa/regionalization/data/julemai-xSSA/scripts/data/xSSA_analysis' # Where the raw input data are stored.
   - 'dir_save': '{home_dir}/noaa/regionalization/data/input' # Required. The save location of standardized output
   - 'save_type': 'netcdf' #  Required. Save as hierarchical files 'netcdf' or 'zarr'. Default 'netcdf' until attribute 
   - 'save_loc': 'local' #  Required.  Use 'local' for saving to a local path via dir_save. Future work will create an approach for 'aws' or other cloud saving methods
 formulation_metadata:  
-  - 'dataset_name': 'juliemai-xSSA' # Required. 
+  - 'dataset_name': 'xSSA_proc_sens_wt' # Required. 
   - 'formulation_base': 'Raven_blended' # Required. Basename of formulation. the rr, sp, and gw will be added to this if 'formulation_id' is left empty
   - 'formulation_id': 'Raven_blended' # Optional alternative in lieu of generating a formulation_id based on 'formulation_base'. Should leave empty if automatic formulation_id generation desired.
   - 'formulation_ver': # Optional. The version of the formulation

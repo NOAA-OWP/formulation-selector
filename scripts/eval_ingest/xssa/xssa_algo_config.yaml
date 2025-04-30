@@ -11,10 +11,24 @@ algorithms: # REQUIRED. Refer to AlgoTrainEval.train_algos to see what options a
     - learning_rate: constant
     - power_t: 0.5
     - max_iter: [20000,80000,160000]
-test_size: 0.3 # The proportion of dataset for testing, passed to sklearn.train_test_split
-seed: 32 # the random seed
+test_size: 0.3 # The proportion of dataset for testing, passed to sklearn.train_test_split, defaults to 0.3
+seed: 32 # the random seed, defaults to 32
 name_attr_config: 'xssa_attr_config.yaml'  # REQUIRED. Name of the corresponding dataset's attribute configuration file, which should be in the same directory as this. If not provided, assumes 'attr' may be substituted for this filename's 'algo'
 name_attr_csv:  # OPTIONAL. If provided, read this .csv file to define attributes used for training algorithm(s). Default None means use the attributes from the attr config file.
 colname_attr_csv: # OPTIONAL. But REQUIRED if name_attr_csv provided. The column name containing the attribute names. Default None.
-verbose: True # Boolean. Should the train/test/eval provide printouts on progress?
-read_type: 'filename' # Optional. Default 'all'. Should all parquet files be lazy-loaded, assign 'all' otherwise just files with comids_resp in the file name? assign 'filename'. Defaults to 'all'
+verbose: True # Boolean. Should the train/test/eval provide printouts on progress? Defaults to True.
+read_type: 'all' # Optional. Default 'all'. Should all parquet files be lazy-loaded, assign 'all'. Otherwise just files with comids_resp in the file name? assign 'filename'.
+make_plots: True # Optional. Default False. Should plots be created & saved to file?
+same_test_ids: True # Optional. Default True. Should all datasets being compared have the same test ID? If not, algos will be trained true to the test_size, but the train_test split may not be the same across each dataset (particularly total basins differ)
+metrics: # OPTIONAL. The metrics of interest for processing. If not provided, all metrics in the input dataset will be processed. Must be a sublist structure.
+confidence_levels: [90,95,99] # OPTIONAL list object, e.g. [90,95]. REQUIRED if a value is assigned to n_algos. Confidence levels between 50 and 100 for bootstrap ci calculation in an array format.
+uncertainty: # OPTIONAL. Defines methods to quantify uncertainty in model training and predictions. 
+  fci:  # OPTIONAL. Used only with Random Forest (rf). Applies forestci to estimate confidence intervals for the model training based on the variance of predictions from trees in the random forest model. For more details, see: https://github.com/scikit-learn-contrib/forest-confidence-interval 
+    - forestci: True # Boolean. Forestci model to calculate confidence interval for rf model.
+  bagging:  # OPTIONAL. Enables bootstrap aggregating (bagging) to calculate confidence intervals during the model training by training multiple models on resampled data. More broadly applicable than forestci, as it works with the algorithm types other than rf as well.
+    - n_algos: 10 # OPTIONAL. Enabled if not empty. Number of bootstrap runs for Bagging confidence interval calculation (integer). Bagging ci calculation is disabled if n_algos is empty.    
+  mapie:  # OPTIONAL. Applies the MAPIE (Model Agnostic Prediction Interval Estimator) framework to estimate **prediction intervals**, which provide bounds around individual predicted values. Supports many model types. See documentation for details: https://mapie.readthedocs.io/en/stable/index.html
+    - alpha: [0.05, 0.32] # OPTIONAL list object, e.g. [0.05, 0.32]. MAPIE prediction interval estimation will be enabled if not empty. Alpha parameter (0 < α < 1) in an array format to calculate MAPIE prediction intervals. If empty, MAPIE is not calculated. Note: 1/α (or 1/(1 - α)) must be lower than the number of samples.
+    - method: 'plus' #  OPTIONAL. But REQUIRED if MAPIE_alpha provided. MAPIE method: 'plus' (CV+) or 'minmax' (CV-minmax). For more information and other methods, refer to: https://mapie.readthedocs.io/en/stable/theoretical_description_regression.html
+    - cv: 10 # OPTIONAL integer. REQUIRED if MAPIE_alpha provided. Specifies the number of cross-validation folds.
+    - agg_function: 'median' #OPTIONAL. But REQUIRED if MAPIE_alpha provided. Option: 'mean', 'median'.

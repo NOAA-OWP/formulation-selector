@@ -22,7 +22,7 @@ Writes to file the missing comid-attribute pairings after
 first updating the existing known missing data
 }
 \seealso{
-\link{proc_attr_mlti_wrap}
+\link[proc.attr.hydfab]{proc_attr_mlti_wrap}
 
-\link{retr_attr_new}
+\link[proc.attr.hydfab]{retr_attr_new}
 }

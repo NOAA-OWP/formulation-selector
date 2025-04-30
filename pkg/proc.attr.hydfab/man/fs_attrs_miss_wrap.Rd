@@ -23,5 +23,5 @@ from fs_tfrm_attrs.py, and generated as a file by python function
 \seealso{
 \code{fs_algo.tfrm_attr.write_missing_attrs} python
 
-\link{fs_attrs_miss_mlti_wrap}
+\link[proc.attr.hydfab]{fs_attrs_miss_mlti_wrap}
 }

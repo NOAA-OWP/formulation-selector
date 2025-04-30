@@ -1,15 +1,24 @@
 # Prediction configuration file
 name_attr_config: 'xssaus_attr_config.yaml'  # REQUIRED. Name of the corresponding dataset's attribute configuration file, which should be in the same directory as this. If not provided, assumes 'attr' may be substituted for this filename's 'algo'
 name_algo_config: 'xssaus_algo_config.yaml' # REQUIRED. The name of the algorithm configuration file if in same directory as this config file. Otherwise the full path to the file.
+name_tfrm_config: 'xssaus_attrs_tform.yaml' # REQUIRED (if transforming predictor data). The name of transformation configuration file, stored in the same directory as the other config files.
 ds_type: 'prediction' # Required string. Strongly recommended to select 'prediction' in the prediction config file. This string will be used in the filename of the output metadata describing each data point's identifer, COMID, lat/lon, reach name of the location. This string should differ from the string used in the attribute config yaml file. Filename: `"nldi_feat_{dataset}_{ds_type}.csv"` inside `dir_std_base / dataset /`.
 write_type: 'parquet' # Required filetype for writing NLDI feature metadata. Default 'parquet'. May also select 'csv'
-path_meta: "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.{write_type}" # Required. Prediction attribute metadata filepath formatted for R's glue() & py f-strings as generated using `proc.attr.hydfab::write_meta_nldi_feat()`. Strongly suggested default format:  "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.{write_type}"  
-pred_file_comid_colname: 'comid'
-path_attr_config: "{home_dir}/git/formulation-selector/scripts/eval_ingest/xssa_us/xssaus_attr_config.yaml"
-basepath_algos:
+path_meta: "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.{write_type}" # Required. Prediction attribute metadata filepath formatted for R's glue() & py f-strings as generated using `proc.attr.hydfab::write_meta_nldi_feat()`. Strongly suggested default format:  "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.{write_type}"
+pred_file_comid_colname: 'featureID' # # REQUIRED. The column name containing the location identifiers used for prediction in the prediction metadata file as defined above as path_meta.
+path_tfrm_script: "{home_dir}/git/formulation-selector/pkg/fs_algo/fs_algo/fs_tfrm_attrs.py" # Required. The filepath to the transformation script, only used when attempting to run this python transformation script from R. Otherwise, if running transformations from python this does not get used.
+conda_env: 'py312' # Required. The anaconda environment with fs_algo installed so that the fs_tfrm_attrs.py script may run when attempting to run from R. Otherwise, if running transformations from python this does not get used.
 algo_response_vars: # List out the desired response variables (e.g. metrics, hydrologic signatures) for prediction. # TODO offer 'all'
-  - 'NSE'
-  - 'KGE'
-algo_type: # List out the regressor rr43walgorithms desired for prediction (e.g. rf, mlp).  # TODO offer 'all'
+  - 'W_wt_precip_corr'
+  - 'V_wt_rainsnow_part'
+  - 'U_wt_perc'
+  - 'T_wt_pot_melt'
+  - 'S_wt_delay_ro'
+  - 'R_wt_srfc_ro'
+  - 'Q_wt_snow_bal'
+  - 'P_wt_baseflow'
+  - 'N_wt_quickflow'
+  - 'M_wt_infilt'
+algo_type: # List out the regressor algorithms desired for prediction (e.g. rf, mlp).  # TODO offer 'all'
   - 'rf'
-
+  - 'mlp'

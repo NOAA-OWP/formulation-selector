@@ -99,6 +99,7 @@ coverage.xml
 #######
 *.Rproj
 *.Rhistory
+pkg/proc.attr.hydfab/.RData
 
 # Front-End #
 #############

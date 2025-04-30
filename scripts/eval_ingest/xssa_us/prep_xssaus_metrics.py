@@ -7,13 +7,14 @@
 @usage: python proc_xssa_metrics.py "/full/path/to/xssaus_config.yaml"
 
 Changelog/contributions
-    2024-12-17 Originally created, GL
+    2024-12-17 Originally created for AMS2025, GL
+    2025-03-07 Fix to sum to 1.0 by dividing e/ process sensitivity by the annual mean weight
 '''
 import argparse
 import pandas as pd
 from pathlib import Path
 import yaml
-from fs_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
+from fs_prep.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema
 import numpy as np
 import re
 if __name__ == "__main__":
@@ -43,7 +44,8 @@ if __name__ == "__main__":
     # BEGIN CUSTOMIZED DATASET MUNGING
 
     # list files from xssa analysis:
-    dir_xssa = Path('/Users/guylitt/noaa/regionalization/data/julemai-xSSA/scripts/data/xSSA_analysis')
+    if 'bolotin' in Path.home():
+        dir_xssa = Path('/Users/laurenbolotin/noaa/regionalization/data/julemai-xSSA/scripts/data/xSSA_analysis')
     names_xssa = [x.name for x in dir_xssa.iterdir()]
     def _select_numeric_prefix(strings):
         selected_strings = []
@@ -83,12 +85,11 @@ if __name__ == "__main__":
         # Temporally merge
         dat_all_xssa = pd.merge(left=dat_proc_xssa, right = dat_wt_xssa, on='date')
 
-        # TODO remove this placeholder once weighting figured out.
         # Multiply weight to each process sensitivity
         df_xssa_wt = dat_all_xssa.apply(lambda x: x*dat_all_xssa[' weight '] if x.name in cols_proc else x)
 
         # Rename columns
-        # These are the standardized column names defined in formulation-selector/pkg/fs_proc/fs_proc/fs_categories.yaml:
+        # These are the standardized column names defined in formulation-selector/pkg/fs_prep/fs_prep/fs_categories.yaml:
 
         df_cols_mtch = pd.DataFrame({'new_cols': new_cols})
         df_cols_mtch['key'] = [x.split('_')[0] for x in df_cols_mtch['new_cols']]
@@ -99,43 +100,14 @@ if __name__ == "__main__":
         rename_dict = dict(zip(df_cols_map['orig_cols'], df_cols_map['new_cols']))
         df_xssa_wt.rename(columns=rename_dict, inplace=True)
 
-        # TODO remove this placeholder once weighting figured out.
         # Temporally aggregate:
         mean_df = df_xssa_wt[df_cols_map['new_cols']].mean().to_frame().transpose()
-        mean_df['basin_id'] = usgs_gid
-        dict_mean_xssa_wt[usgs_gid] = mean_df
+        mean_df_wt = mean_df.div(dat_all_xssa[' weight '].mean()) # FIX GL 2025-03-09
+        mean_df_wt['basin_id'] = usgs_gid
+        dict_mean_xssa_wt[usgs_gid] = mean_df_wt
 
     df_all_locs_mean_wt = pd.concat(dict_mean_xssa_wt)
-     # Rename column names:
-#         ['Precipitation Correction $W$',
-#  'Rain-Snow Partitioning $V$',
-#  'Percolation $U$',
-#  'Potential Melt $T$',
-#  'Convolution (dlyd runoff) $S$',
-#  'Convolution (srfc runoff) $R$',
-#  'Snow Balance $Q$',
-#  'Baseflow $P$',
-#  'Evaporation $O$',
-#  'Quickflow $N$',
-#  'Infiltration $M$']
 
-
-
-    # ---- Read in Julie Mai's 2022 Nat Comm xSSA results
-    print("Custom code: Reading/formatting non-standardized input datasets")
-    df_all_data = pd.read_csv(path_data,sep = '; ',dtype={col_schema_df['gage_id'].loc[0] :str})
-
-    # Ensure appropriate str formats & remove extraneous spaces that exist in this particular dataset
-    df_all_data.columns = df_all_data.columns.str.replace(' ','')
-    df_all_data[col_schema_df['gage_id'].loc[0]] = df_all_data[col_schema_df['gage_id'].loc[0]].str.replace(' ','')
-
-    # Read in CAMELS data (simply to retrieve the gauge_ids)
-    df_camlh = pd.read_csv(path_camels,sep=';',dtype={'gauge_id' :str})
-    
-    # Subset the xssa dataset to CAMELS basins
-    print(f"Subsetting the dataset {col_schema_df['dataset_name']} to CAMELS basins")
-    df_camls_merge = df_camlh.merge(df_all_data, left_on= 'gauge_id', right_on = col_schema_df['gage_id'].loc[0], how='inner')
-    df = df_camls_merge.drop(columns = df_camlh.columns)
     # END CUSTOMIZED DATASET MUNGING
 
     # ------ Extract metric data and write to file

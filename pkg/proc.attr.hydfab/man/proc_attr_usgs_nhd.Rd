@@ -16,5 +16,5 @@ location code for a surface water feature. May be multiple comids.}
 Retrieve USGS variables based on comid
 }
 \seealso{
-\link[nhdplusTools:get_characteristics_metadata]{nhdplusTools::get_characteristics_metadata}
+\link[nhdplusTools]{get_characteristics_metadata}
 }

@@ -17,6 +17,8 @@
 # Read in attribute config file and extract the following:
 library(proc.attr.hydfab)
 library(dplyr)
+library(future)
+library(future.apply)
 cmd_args <- commandArgs("trailingOnly" = TRUE)
 
 if(base::length(cmd_args)!=1){

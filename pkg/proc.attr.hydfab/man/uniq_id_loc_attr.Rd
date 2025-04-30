@@ -10,5 +10,5 @@ uniq_id_loc_attr(comids, attrs)
 define the unique identifier of comid-attribute pairings
 }
 \seealso{
-\link{fs_attrs_miss_mlti_wrap}
+\link[proc.attr.hydfab]{fs_attrs_miss_mlti_wrap}
 }

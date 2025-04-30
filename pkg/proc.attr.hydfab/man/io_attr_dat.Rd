@@ -25,9 +25,9 @@ Checks to see if data already exists. If so, read it in. Then
 merges new data with existing data and remove any duplicates
 }
 \seealso{
-\link{retrieve_attr_exst} for retrieving existing attributes
+\link[proc.attr.hydfab]{retrieve_attr_exst} for retrieving existing attributes
 
-\link{std_attr_data_fmt}
+\link[proc.attr.hydfab]{std_attr_data_fmt}
 
-\link{std_path_attrs}
+\link[proc.attr.hydfab]{std_path_attrs}
 }

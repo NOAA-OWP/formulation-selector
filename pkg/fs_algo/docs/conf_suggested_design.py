@@ -10,9 +10,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Formulation Selector Algorithms'
-copyright = '2024, Guy Litt, Lauren Bolotin, Ben Choat'
-author = 'Guy Litt, Lauren Bolotin, Ben Choat'
-release = '0.0.1'
+copyright = '2025, United States Department of Commerce'
+author = 'Guy Litt, Soroush Sorourian, Lauren Bolotin, Ben Choat'
+release = '0.0.3'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

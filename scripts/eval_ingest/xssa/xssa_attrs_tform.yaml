@@ -6,7 +6,7 @@
     - path_comid: '{home_dir}/noaa/regionalization/data/input/user_data_std/camelsii_nhdp_grab_24nov05/nldi_feat_camelsii_nhdp_grab_24nov05_camels.csv' # OPTIONAL. File path to the file containing comids. May be .parquet or .csv format. May be used separately in addition to the name_attr_config
     - colname_comid: 'featureID'  # Required only if specifying path_comid. The column name corresponding to the comid data in the `path_comid` file.
     - path_fs_attrs_miss: '{home_dir}/git/formulation-selector/pkg/proc.attr.hydfab/flow/fs_attrs_miss.R' # OPTIONAL. If not present, will not attempt to retrieve missing comid-attribute pairings using the proc.attr.hydfab R package. Needs proc.attr.hydfab installed in order to work!
-    - overwrite_tfrm: True # OPTIONAL, default False. Should the transformation attributes specified below overwrite existing attributes with the same name?
+    - overwrite_tfrm: False # OPTIONAL, default False. Should the transformation attributes specified below overwrite existing attributes with the same name?
 - transform_attrs:
   - 'TOT_PROGLACIAL_SED_{tform_type}':
     - tform_type: [sum]

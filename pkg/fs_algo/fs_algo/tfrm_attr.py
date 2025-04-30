@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 import fs_algo.fs_algo_train_eval as fsate
 from collections.abc import Iterable
-
+import subprocess
 from typing import Callable
 import itertools
 import numpy as np
@@ -12,10 +12,11 @@ import dask.dataframe as dd
 from datetime import datetime, timezone
 import os
 from collections import ChainMap
-
+import geopandas as gpd
+import warnings
 
 def read_df_ext(path_to_file: str | os.PathLike) -> pd.DataFrame:
-    """Read a tabular file with an extension of csv or parquet
+    """Read a tabular file with an extension of csv, parquet, or gpkg
 
     :param path_to_file: file path of tabular file
     :type path_to_file: str | os.PathLike
@@ -32,8 +33,11 @@ def read_df_ext(path_to_file: str | os.PathLike) -> pd.DataFrame:
         df = pd.read_csv(path_to_file)
     elif 'parquet' in path_to_file.suffix:
         df = pd.read_parquet(path_to_file)
+    elif 'gpkg' in path_to_file.suffix:
+        df = gpd.read_file(path_to_file)
     else:
-        raise ValueError("Expecting path to file containing comids to be csv or parquet file")
+        raise ValueError("Expecting path to file containing comids to be csv, parquet, or gpkg file")
+
     return df
 
 
@@ -181,11 +185,11 @@ def _subset_ddf_parquet_by_comid(dir_db_attrs: str | os.PathLike,
     parquet file corresponding to single location, i.e. f'*_{comid}_*'
     :type fp_struct: str, optional
     :return: lazy dask dataframe of all attributes corresponding to the 
-    single comid
+    unique id (e.g. comid)
     :rtype: dd.DataFrame
     """
 
-    # Based on the structure of comid
+    # Based on the structure of unique id in filename
     fp = list(Path(dir_db_attrs).rglob('*'+str(fp_struct)+'*') )
     if fp:
       all_attr_ddf = dd.read_parquet(fp, storage_options = None)
@@ -242,7 +246,7 @@ def _gen_tform_df(all_attr_ddf: dd.DataFrame, new_var_id: str,
     :type all_attr_ddf: dd.DataFrame
     :param new_var_id: Name of the newly desired custom variable
     :type new_var_id: str
-    :param attr_val: _description_
+    :param attr_val: the numerical value of the attribute
     :type attr_val: float
     :param tform_type: The transformation function, provided as a str 
     of a simple function (e.g. 'np.mean', 'max', 'sum') for aggregation
@@ -314,7 +318,7 @@ def _retr_cstm_funcs(tfrm_cfg_attrs:dict)->dict:
             'dict_retr_vars':dict_retr_vars}
 
 
-def _id_need_tfrm_attrs(all_attr_ddf: dd.DataFrame,
+def _id_need_tfrm_attrs(all_attr_ddf: dd.DataFrame|None,
                           ls_all_cstm_vars:list=None,
                           ls_all_cstm_funcs:list=None,
                           overwrite_tfrm:bool=False)->dict:
@@ -333,12 +337,16 @@ def _id_need_tfrm_attrs(all_attr_ddf: dd.DataFrame,
     :type ls_all_cstm_funcs: list, optional
     :param overwrite: Should the desired parameters been overwritten? defaults to False
     :type overwrite_tfrm: bool, optional
-    :raises ValueError: _description_
     :return: dict with keys of 'vars' and 'funcs' respectively representing the variables or functions that need to be created
     :rtype: dict
+
+    # Changelog / Contributions
+    #  2024-Nov or Dec, originally created, GL
+    #  2025-03-28 add None handling for all_attr_ddf for situations when a comid doesn't exist
     """
 
-    if overwrite_tfrm: # TODO double check this
+    if overwrite_tfrm or all_attr_ddf is None: # TODO double check this
+        # We simply need all the variables in these situations
         ls_need_vars = ls_all_cstm_vars
         ls_need_funcs = ls_all_cstm_funcs
     else:
@@ -365,7 +373,7 @@ def _id_need_tfrm_attrs(all_attr_ddf: dd.DataFrame,
 
 #%% missing attributes
 
-def std_miss_path(dir_db_attrs: str | os.PathLike) -> os.PathLike:
+def std_path_miss_tfrm(dir_db_attrs: str | os.PathLike) -> os.PathLike:
     """Create a standardized csv path for storing missing comid-attribute 
     pairings needed for attribute transformation
 
@@ -375,7 +383,7 @@ def std_miss_path(dir_db_attrs: str | os.PathLike) -> os.PathLike:
     `Path(dir_db_attrs/Path(missing/needed_loc_attrs.csv))`
     :rtype: os.PathLike
     """
-    path_need_attrs = Path(Path(dir_db_attrs) / Path('missing/needed_loc_attrs.csv'))
+    path_need_attrs = Path(Path(dir_db_attrs) / Path('missing_tform/needed_loc_attrs_for_tform.csv'))
     path_need_attrs.parent.mkdir(parents=True,exist_ok=True)
     return path_need_attrs
 
@@ -396,7 +404,7 @@ def write_missing_attrs(attrs_retr_sub:list, dir_db_attrs: str | os.PathLike,
     :type path_tfrm_cfig: str | os.PathLike
     """
     # Create path where needed attributes are saved
-    path_need_attrs = std_miss_path(dir_db_attrs)
+    path_need_attrs = std_path_miss_tfrm(dir_db_attrs)
 
     # All the available attributes for a given comid
     df_all = fsate.fs_read_attr_comid(dir_db_attrs, comids_resp=[str(comid)], attrs_sel='all',
@@ -418,3 +426,158 @@ def write_missing_attrs(attrs_retr_sub:list, dir_db_attrs: str | os.PathLike,
                                 index=False)
     print(f"Wrote needed comid-attributes to \n{path_need_attrs}")
     
+#####
+#%% Run the standard processing of attribute transformation:
+
+def tfrm_attr_comids_wrap(comids: Iterable, path_tfrm_cfig: str | os.PathLike):
+    """Transform attributes wrapper function
+        If attributes required as inputs for transformation are missing, calls R processing 
+        from `proc.attr.hydfab` package and attempts to retrieve the needed attributes
+    
+    :param comids: list of comids of interest
+    :type comids: Iterable
+    :param path_tfrm_cfig: Path to transformation config file (the attribute config file must also be in same directory!)
+    :type path_tfrm_cfig: str | os.PathLike
+    .. seealso::
+        The `fs_tfrm_attrs.py` script, which calls this wrapper function
+
+    """
+    # Changelog/contributions
+    # 2025-03: Changed to wrapper function based on comid and transformation config, GL
+
+
+    with open(path_tfrm_cfig, 'r') as file:
+        tfrm_cfg = yaml.safe_load(file)
+    # Read from transformation config file:
+    catgs_attrs_sel = [x for x in list(itertools.chain(*tfrm_cfg)) if x is not None]
+    idx_tfrm_attrs = catgs_attrs_sel.index('transform_attrs')
+
+    # dict of file input/output, read-only combined view
+    idx_file_io = catgs_attrs_sel.index('file_io')
+    fio = dict(ChainMap(*tfrm_cfg[idx_file_io]['file_io'])) 
+    overwrite_tfrm = fio.get('overwrite_tfrm',False)
+    # Extract desired content from attribute config file
+    path_attr_config=fsate.build_cfig_path(path_tfrm_cfig, Path(fio.get('name_attr_config')))
+    attr_cfig = fsate.AttrConfigAndVars(path_attr_config) 
+    attr_cfig._read_attr_config()
+    dir_db_attrs = attr_cfig.attrs_cfg_dict.get('dir_db_attrs')
+    home_dir = attr_cfig.attrs_cfg_dict.get('home_dir',Path.home())
+
+    # Read from transformation config file:
+    catgs_attrs_sel = [x for x in list(itertools.chain(*tfrm_cfg)) if x is not None]
+    idx_tfrm_attrs = catgs_attrs_sel.index('transform_attrs')
+    #%% Parse aggregation/transformations in config file
+    tfrm_cfg_attrs = tfrm_cfg[idx_tfrm_attrs]
+
+    # Create the custom functions
+    dict_cstm_vars_funcs = _retr_cstm_funcs(tfrm_cfg_attrs)
+
+    # functions: The list of the actual function objects
+    dict_func_objs = dict_cstm_vars_funcs['dict_tfrm_func_objs']
+    # functions: Desired transformation functions w/ vars (as str objs (corresponds to 'data_source' column))
+    dict_all_cstm_funcs = dict_cstm_vars_funcs.get('dict_cstm_func')
+    ls_all_cstm_funcs = list(dict_all_cstm_funcs.values())
+    # functions: The just-function in string format
+    dict_cstm_func = dict_cstm_vars_funcs['dict_tfrm_func']
+    # vars: The dict of attributes to aggregate for each custom variable name
+    dict_retr_vars = dict_cstm_vars_funcs.get('dict_retr_vars')
+
+    ls_all_cstm_funcs = list(dict_all_cstm_funcs.values())
+
+    # Define path to store missing comid-attribute pairings:
+    path_need_attrs = std_path_miss_tfrm(dir_db_attrs)
+    #%%
+    for comid in comids:
+        ddf_loc_attrs=_subset_ddf_parquet_by_comid(dir_db_attrs,
+                                        fp_struct='_'+str(comid)+'_')
+        if ddf_loc_attrs is None:
+            warn_msg_missing = f'Attribute data file missing for comid {comid}'
+            warnings.warn(warn_msg_missing)
+
+        
+        # Identify the needed functions based on querying the comid's attr data's 'data_source' column
+        #  Note the custom attributes used the function string as the 'data_source'
+        dict_need_vars_funcs = _id_need_tfrm_attrs(
+                                all_attr_ddf=ddf_loc_attrs,
+                                ls_all_cstm_vars=None,
+                                ls_all_cstm_funcs = ls_all_cstm_funcs,
+                                overwrite_tfrm=overwrite_tfrm)
+
+        # Find the custom variable names we need to create; also the key values in the dicts returned by _retr_cstm_funcs()
+        cstm_vars_need =  [k for k, val in dict_all_cstm_funcs.items() \
+                           if val in dict_need_vars_funcs.get('funcs')]
+
+        #%% Loop over each needed attribute:
+        ls_df_rows = list()
+        for new_var in cstm_vars_need: 
+            if len(cstm_vars_need) != len(dict_need_vars_funcs.get('funcs')):
+                raise ValueError("DO NOT PROCEED! Double check assumptions around fta._id_need_tfrm_attrs indexing")
+            
+            # Retrieve the transformation function object
+            func_tfrm = dict_func_objs[new_var]
+
+            # The attributes used for creating the new variable
+            attrs_retr_sub = dict_retr_vars.get(new_var)
+
+            # Retrieve the variables of interest for the function
+            try:
+                df_attr_sub = fsate.fs_read_attr_comid(dir_db_attrs, comids_resp=[str(comid)], attrs_sel=attrs_retr_sub,
+                                _s3 = None,storage_options=None,read_type='filename')
+            except:
+                warnings.warn(f'Could not acquire comid {comid} attributes. Skipping to next comid.')
+                warnings.warn(f'Missing attributes include {"|".join(attrs_retr_sub)}')
+                continue
+            # Check if needed attribute data all exist. If not, write to 
+            # csv file to know what is missing
+            if df_attr_sub.shape[0] < len(attrs_retr_sub):
+                write_missing_attrs(attrs_retr_sub=attrs_retr_sub,
+                                    dir_db_attrs=dir_db_attrs,
+                                    comid = comid, 
+                                    path_tfrm_cfig = path_tfrm_cfig)
+                #  Re-run the Rscript for acquiring missing attributes, then retry attribute retrieval
+                if fio.get('path_fs_attrs_miss'):
+                    # Path to the Rscript, requires proc.attr.hydfab package to be installed!
+                    path_fs_attrs_miss = fio.get('path_fs_attrs_miss').format(home_dir = home_dir)
+                    args = [str(path_attr_config)]
+                    try:
+                        print(f"Attempting to retrieve missing attributes using {Path(path_fs_attrs_miss).name}")
+                        result = subprocess.run(['Rscript', path_fs_attrs_miss] + args, capture_output=True, text=True)
+                        print(result.stdout) # Print the output from the Rscript
+                        print(result.stderr)  # If there's any error output
+                    except:
+                        print(f"Could not run the Rscript {path_fs_attrs_miss}." +
+                              "\nEnsure proc.attr.hydfab R package installed and appropriate path to fs_attrs_miss.R")
+                    # Re-run the attribute retrieval in case new ones now available
+                    fsate.fs_read_attr_comid(dir_db_attrs, comids_resp=[str(comid)], attrs_sel=attrs_retr_sub,
+                                _s3 = None,storage_options=None,read_type='filename')
+                continue
+
+            # Transform: subset data to variables and compute new attribute
+            attr_val = _sub_tform_attr_ddf(all_attr_ddf=ddf_loc_attrs, 
+                        retr_vars=attrs_retr_sub, func = func_tfrm)
+            
+            if any(pd.isnull(attr_val)):
+                raise ValueError("Unexpected NULL value returned after " +
+                                  "aggregating and transforming attributes. " +
+                                  f"Inspect {new_var} with comid {comid}")
+
+            # Populate new values in the new dataframe
+            new_df = _gen_tform_df(all_attr_ddf=ddf_loc_attrs, 
+                                new_var_id=new_var,
+                                attr_val=attr_val,
+                                tform_type = dict_cstm_func.get(new_var),
+                                retr_vars = attrs_retr_sub)
+            ls_df_rows.append(new_df)
+
+        if len(ls_df_rows) >0:
+            df_new_vars = pd.concat(ls_df_rows)
+            # Update existing dataset with new attributes/write updates to file
+            df_new_vars_updated = io_std_attrs(df_new_vars=df_new_vars,
+                            dir_db_attrs=dir_db_attrs,
+                            comid=comid, 
+                            attrtype='tfrmattr')
+
+    # Ensure no duplicates exist in the needed attributes file
+    if path_need_attrs.exists():
+        print(f"Dropping any duplicate entries in {path_need_attrs}")
+        pd.read_csv(path_need_attrs).drop_duplicates().to_csv(path_need_attrs,index=False)

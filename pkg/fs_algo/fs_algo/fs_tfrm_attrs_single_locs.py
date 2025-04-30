@@ -62,7 +62,7 @@ if __name__ == "__main__":
     home_dir = attr_cfig.attrs_cfg_dict.get('home_dir',Path.home())
 
     # Define path to store missing comid-attribute pairings:
-    path_need_attrs = fta.std_miss_path(dir_db_attrs)
+    path_need_attrs = fta.std_path_miss_tfrm(dir_db_attrs)
 
     #%% READ COMIDS FROM CUSTOM FILE (IF path_comid present in tfrm config)
     # Extract location of custom file containing comids:

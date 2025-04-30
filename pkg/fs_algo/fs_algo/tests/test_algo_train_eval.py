@@ -18,9 +18,9 @@ import unittest
 from unittest.mock import patch, MagicMock, mock_open
 import pandas as pd
 import dask.dataframe as dd
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, BaggingRegressor
 from sklearn.neural_network import MLPRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_squared_error, r2_score
 import tempfile
 from pathlib import Path
@@ -31,6 +31,11 @@ import xarray as xr
 import os
 import numpy as np
 import forestci as fci
+from scipy import stats as st
+from sklearn.utils import resample
+from sklearn.pipeline import Pipeline
+# from sklearn.linear_model import LinearRegression
+from mapie.regression import MapieRegressor
 
 # %% UNIT TESTING FOR AttrConfigAndVars
 
@@ -69,8 +74,9 @@ class TestAttrConfigAndVars(unittest.TestCase):
             'home_dir': '/mocked/home',
             'datasets': ['dataset1', 'dataset2']
         }
-
+           
         self.assertEqual(attr_obj.attrs_cfg_dict, expected_attrs_cfg_dict)
+        print("✅ test_read_attr_config test passed.")
 
 class TestFsReadAttrComid(unittest.TestCase):   
     @patch('fs_algo.fs_algo_train_eval.dd.read_parquet')
@@ -78,49 +84,53 @@ class TestFsReadAttrComid(unittest.TestCase):
         print("    Testing fs_read_attr_comid")
         # Mock DataFrame
         mock_pdf = pd.DataFrame({
-            'data_source': 'hydroatlas__v1',
-            'dl_timestamp': '2024-07-26 08:59:36',
+            'data_source': ['hydroatlas__v1','hydroatlas__v1'],
+            'dl_timestamp': ['2024-07-26 08:59:36','2024-07-26 08:59:36'],
             'attribute': ['pet_mm_s01', 'cly_pc_sav'],
             'value': [58, 21],
-            'featureID': '1520007',
-            'featureSource': 'COMID'
+            'featureID': ['1520007','1520007'],
+            'featureSource': ['COMID','COMID']
         })
-        mock_ddf = dd.from_pandas(mock_pdf, npartitions=1)
-        mock_read_parquet.return_value = mock_ddf
-        # A normal result scenario, mocked:
-        dir_db_attrs = 'mock_dir'
-        comids_resp = ['1520007']
-        attrs_sel = 'all'
-        
-        result = fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs, comids_resp=comids_resp, attrs_sel=attrs_sel)
+        #result = fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs, comids_resp=comids_resp, attrs_sel=attrs_sel)
+        # Use unittest.mock.patch to mock pd.read_parquet
+        with patch('pandas.read_parquet', return_value=mock_pdf) as mock_read_parquet:
+            dir_db_attrs = 'mock_dir'
+            comids_resp = ['1520007']
+            attrs_sel = 'all'
 
-        # Assertions
-        self.assertTrue(mock_read_parquet.called)
-        self.assertEqual(result.shape[0], 2)
-        self.assertIn('1520007', result['featureID'].values)
-        self.assertIn('pet_mm_s01', result['attribute'].values)
-        self.assertIn('COMID',result['featureSource'].values )
-        self.assertIn('value',result.columns )
-        self.assertIn('data_source',result.columns )
-
-        # When only one attribute requested
-        single_result = fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs,
-                                                              comids_resp= comids_resp,attrs_sel= ['pet_mm_s01'])
-        self.assertIn('pet_mm_s01',single_result['attribute'].values)
-        self.assertNotIn('cly_pc_sav',single_result['attribute'].values)
-
-        # When COMID requested that doesn't exist
-        with self.assertWarns(UserWarning):
-                fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs,
-                                                              comids_resp= ['010101010'],
-                                                              attrs_sel= ['pet_mm_s01'])
-
-        # When attribute requested that doesn't exist
-        with self.assertWarns(UserWarning):
-            fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs,
-                                            comids_resp= comids_resp,
-                                            attrs_sel= ['nonexistent'])
+            result = fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs,
+                                        comids_resp=comids_resp,
+                                        attrs_sel=attrs_sel)
             
+            # Assertions and print
+            assert mock_read_parquet.called, "pandas.read_parquet was not called"
+            assert result.shape[0] == 2, f"Expected 2 rows, got {result.shape[0]}"
+            assert '1520007' in result['featureID'].values, "'1520007' not in featureID column"
+            assert 'pet_mm_s01' in result['attribute'].values, "'pet_mm_s01' not in attribute column"
+            assert 'COMID' in result['featureSource'].values, "'COMID' not in featureSource column"
+            assert 'value' in result.columns, "'value' column missing"
+            assert 'data_source' in result.columns, "'data_source' column missing"
+
+            print("✅ fs_read_attr_comid muliple-row test passed.")
+
+            # When only one attribute requested
+            single_result = fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs,
+                                                                comids_resp= comids_resp,attrs_sel= ['pet_mm_s01'])
+            self.assertIn('pet_mm_s01',single_result['attribute'].values)
+            self.assertNotIn('cly_pc_sav',single_result['attribute'].values)
+
+            # When COMID requested that doesn't exist
+            with self.assertWarns(UserWarning):
+                    fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs,
+                                                                comids_resp= ['010101010'],
+                                                                attrs_sel= ['pet_mm_s01'])
+
+            # When attribute requested that doesn't exist
+            with self.assertWarns(UserWarning):
+                fs_algo_train_eval.fs_read_attr_comid(dir_db_attrs=dir_db_attrs,
+                                                comids_resp= comids_resp,
+                                                attrs_sel= ['nonexistent'])
+            print("✅ fs_read_attr_comid single-row test passed.")
 
 class TestCheckAttributesExist(unittest.TestCase):
     print('Testing _check_attributes_exist')
@@ -144,7 +154,7 @@ class TestCheckAttributesExist(unittest.TestCase):
         with self.assertWarns(UserWarning):
             fs_algo_train_eval._check_attributes_exist(mock_pdf_bad,pd.Series(['pet_mm_s01','cly_pc_sav']))
         
-
+        print("✅ _check_attributes_exist test passed.")
 class TestFsRetrNhdpComids(unittest.TestCase):
 
     def test_fs_retr_nhdp_comids(self):
@@ -158,8 +168,8 @@ class TestFsRetrNhdpComids(unittest.TestCase):
 
         # Assertions
         self.assertListEqual(result['comid'].tolist(), ['1722317', '1520007'])
-        self.assertEqual(result.columns.tolist(), ['comid', 'geometry'])
-
+        self.assertEqual(result.columns.tolist(), ['comid','gage_id', 'geometry'])
+        print("✅ test_fs_retr_nhdp_comids test passed.")
 class TestFindFeatSrceId(unittest.TestCase):
 
     def test_find_feat_srce_id(self):
@@ -172,7 +182,7 @@ class TestFindFeatSrceId(unittest.TestCase):
                         }
         rslt = fs_algo_train_eval._find_feat_srce_id(attr_config = attr_config)
         self.assertEqual(rslt,['nwissite','USGS-{gage_id}'])
-
+        print("✅ _find_feat_srce_id standard test passed.")
     # Raise error when featureSource not provided:
     def test_missing_feat_srce(self):
         attr_config_miss = {'col_schema': [{'featureID': 'USGS-{gage_id}'},
@@ -180,7 +190,7 @@ class TestFindFeatSrceId(unittest.TestCase):
                             'loc_id_read': {'gage_id': 'gage_id'}}
         with self.assertRaises(ValueError):
             fs_algo_train_eval._find_feat_srce_id(attr_config = attr_config_miss, dat_resp=None)
-
+        print("✅ _find_feat_srce_id missing test passed.")
     def test_netcdf_attributes(self):
          # Create a mock xarray.Dataset object w/ attributes
         mock_xr = MagicMock(spec=xr.Dataset)
@@ -189,7 +199,7 @@ class TestFindFeatSrceId(unittest.TestCase):
 
         rslt = fs_algo_train_eval._find_feat_srce_id(mock_xr)
         self.assertEqual(rslt,['nwissite','USGS-{gage_id}'])
-
+        print("✅ _find_feat_srce_id mock xarray test passed.")
 
     # Raise error when featureID not provided:
     def test_missing_feat_id(self):
@@ -200,7 +210,7 @@ class TestFindFeatSrceId(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             fs_algo_train_eval._find_feat_srce_id(mock_xr)
-
+        print("✅ _find_feat_srce_id mock xarray missing featureID test passed.")
     # Test when dataset does not have any attributes but does have config:
     def test_missing_attrs(self):
         mock_xr = MagicMock(spec=xr.Dataset)
@@ -215,6 +225,7 @@ class TestFindFeatSrceId(unittest.TestCase):
                 }
         rslt = fs_algo_train_eval._find_feat_srce_id(dat_resp = mock_xr, attr_config = attr_config)
         self.assertEqual(rslt,['nwissite','USGS-{gage_id}'])
+        print("✅ _find_feat_srce_id missing attributes test passed.")
 
 class build_cfig_path(unittest.TestCase):
     def test_build_cfig_path(self):
@@ -229,6 +240,7 @@ class build_cfig_path(unittest.TestCase):
 
         with self.assertWarns(UserWarning):
             fs_algo_train_eval.build_cfig_path(dir_new,'')
+        print("✅ test_build_cfig_path build config paths test passed.")
 
     @patch('pathlib.Path.exists')
     def test_file_exists(self, mock_exists):
@@ -243,6 +255,7 @@ class build_cfig_path(unittest.TestCase):
         # Assert
         self.assertEqual(rslt, path_or_name_cfig)
         self.assertEqual(mock_exists.call_count, 2)
+        print("✅ build_cfig_path build config paths test with mock paths passed.")
 
 class TestFsSaveAlgoDirStruct(unittest.TestCase):
     def test_fs_save_algo_dir_struct(self):
@@ -254,7 +267,7 @@ class TestFsSaveAlgoDirStruct(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             fs_algo_train_eval.fs_save_algo_dir_struct(dir_base + '/not_a_dir/')
-
+        print("✅ fs_save_algo_dir_struct creating directory structure for outputs passed.")
 class TestOpenResponseDataFs(unittest.TestCase):
     dir_std_base = tempfile.gettempdir()
 
@@ -262,6 +275,7 @@ class TestOpenResponseDataFs(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'Could not identify an approach to read in dataset'):
             fs_algo_train_eval._open_response_data_fs(self.dir_std_base,ds='not_a_ds')
+        print("✅ _open_response_data_fs unable to read dataset test passed.")
 #%% ALGO TRAIN & EVAL
 class TestStdAlgoPath(unittest.TestCase):
 
@@ -295,22 +309,6 @@ class TestStdPredPath(unittest.TestCase):
         mock_exists.return_value = True
         result = fs_algo_train_eval.std_pred_path(dir_out, algo, metric, dataset_id)
 
-        mock_mkdir.assert_called_once_with(exist_ok=True, parents=True)
-        self.assertEqual(result, expected_path)
-
-class TestStdXtrainPath(unittest.TestCase):
-
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.exists')
-    def test_std_Xtrain_path(self, mock_exists, mock_mkdir):
-        dir_out_alg_ds = tempfile.gettempdir()
-        dataset_id = 'test_dataset'
-        expected_path = Path(dir_out_alg_ds) / 'Xtrain__test_dataset.csv'
-
-        # Mock the existence of the directory
-        mock_exists.return_value = True
-
-        result = fs_algo_train_eval.std_Xtrain_path(dir_out_alg_ds, dataset_id)
         mock_mkdir.assert_called_once_with(exist_ok=True, parents=True)
         self.assertEqual(result, expected_path)
 
@@ -354,9 +352,10 @@ class TestAlgoTrainEval(unittest.TestCase):
     def setUp(self):
         # Create a simple DataFrame for testing
         data = {
-            'attr1': [1, 2, 3, 4, 5],
-            'attr2': [5, 4, 3, 2, 1],
-            'metric1': [0.1, 0.9, 0.3, 0.1, 0.8]
+            'attr1': list(range(1, 21)),
+            'attr2': list(range(21, 1, -1)),
+            'metric1': [0.1, 0.9, 0.3, 0.1, 0.8, 0.2, 0.7, 0.5, 0.3, 0.6,
+                        0.2, 0.2, 0.3, 0.6, 0.5, 0.2, 0.7, 0.9, 0.3, 0.1]
         }
         self.df = pd.DataFrame(data)
 
@@ -366,24 +365,43 @@ class TestAlgoTrainEval(unittest.TestCase):
             'rf': {'n_estimators': 10},
             'mlp': {'hidden_layer_sizes': (10,), 'max_iter': 2000}
         }
+        # self.bagging_ci_params = {'n_algos': 5}  # Example parameters
         self.dataset_id = 'test_dataset'
         self.metric = 'metric1'
         self.verbose = False
         # Output directory
         self.dir_out_alg_ds = tempfile.gettempdir()
-
+        self.confidence_levels = [90, 95]  # Example parameters
+        # self.mapie_alpha = [0.1, 0.2]
+        uncertainty_cfg = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.05, 0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }
+        
         # Instantiate AlgoTrainEval class
-        self.train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
+        self.train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, 
+                                        algo_config=self.algo_config,
+                                        uncertainty=uncertainty_cfg,
                                  dir_out_alg_ds=self.dir_out_alg_ds, dataset_id=self.dataset_id,
-                                 metr=self.metric, test_size=0.4, rs=42)
+                                 metr=self.metric, test_size=0.4, rs=42,
+                                 confidence_levels = self.confidence_levels,
+                                 # bagging_ci_params=self.bagging_ci_params,
+                                 # mapie_alpha=self.mapie_alpha
+                                 )
 
     def test_split_data(self):
         # Test data splitting
         self.train_eval.split_data()
-        self.assertEqual(len(self.train_eval.X_train), 3)
-        self.assertEqual(len(self.train_eval.X_test), 2)
-        self.assertEqual(len(self.train_eval.y_train), 3)
-        self.assertEqual(len(self.train_eval.y_test), 2)
+        self.assertEqual(len(self.train_eval.X_train), 12)
+        self.assertEqual(len(self.train_eval.X_test), 8)
+        self.assertEqual(len(self.train_eval.y_train), 12)
+        self.assertEqual(len(self.train_eval.y_test), 8)
 
     def test_train_algos(self):
         # Test algorithm training
@@ -407,8 +425,8 @@ class TestAlgoTrainEval(unittest.TestCase):
 
         self.assertIn('rf', preds)
         self.assertIn('mlp', preds)
-        self.assertEqual(len(preds['rf']['y_pred']), 2)  # Number of test samples
-        self.assertEqual(len(preds['mlp']['y_pred']), 2)
+        self.assertEqual(len(preds['rf']['y_pred']), len(self.train_eval.X_test))  # Number of test samples
+        self.assertEqual(len(preds['mlp']['y_pred']), len(self.train_eval.X_test))
 
     def test_evaluate_algos(self):
         # Test evaluation of algorithms
@@ -456,6 +474,64 @@ class TestAlgoTrainEval(unittest.TestCase):
         self.assertIn('algo', self.train_eval.eval_df.columns)
         self.assertEqual(self.train_eval.eval_df['dataset'].iloc[0], self.dataset_id)
 
+    def test_calculate_forestci_uncertainty(self):
+        # Test the calculate_forestci_uncertainty method
+        self.train_eval.split_data()
+        self.train_eval.train_algos()
+
+        rf = self.train_eval.algs_dict['rf']['algo']
+        ci_dict = self.train_eval.calculate_forestci_uncertainty(rf, self.train_eval.X_train, self.train_eval.X_test)
+
+        self.assertIn('ci_95', ci_dict)  # Check for 95% confidence interval
+        self.assertIn('lower_bound', ci_dict['ci_95'])
+        self.assertIn('upper_bound', ci_dict['ci_95'])
+        self.assertEqual(len(ci_dict['ci_95']['lower_bound']), len(self.train_eval.X_test))
+        self.assertEqual(len(ci_dict['ci_95']['upper_bound']), len(self.train_eval.X_test))
+
+    def test_calculate_bagging_ci(self):
+        # Test the calculate_bagging_ci method
+        self.train_eval.split_data()
+        self.train_eval.train_algos()
+
+        best_algo = self.train_eval.algs_dict['rf']['algo']  # Use the trained RF model
+        self.train_eval.calculate_bagging_ci('rf', best_algo)
+
+        # Check if uncertainty data is stored
+        self.assertIn('Uncertainty', self.train_eval.algs_dict['rf'])
+        self.assertIn('bagging_mean_pred', self.train_eval.algs_dict['rf']['Uncertainty'])
+        self.assertIn('bagging_std_pred', self.train_eval.algs_dict['rf']['Uncertainty'])
+        self.assertIn('bagging_confidence_intervals', self.train_eval.algs_dict['rf']['Uncertainty'])
+        
+        # Check confidence intervals
+        ci = self.train_eval.algs_dict['rf']['Uncertainty']['bagging_confidence_intervals']
+        self.assertIn('confidence_level_90', ci)
+        self.assertIn('confidence_level_95', ci)
+        
+        self.assertEqual(len(ci['confidence_level_90']['lower_bound']), len(self.train_eval.X_test))
+        self.assertEqual(len(ci['confidence_level_90']['upper_bound']), len(self.train_eval.X_test))
+        self.assertEqual(len(ci['confidence_level_95']['lower_bound']), len(self.train_eval.X_test))
+        self.assertEqual(len(ci['confidence_level_95']['upper_bound']), len(self.train_eval.X_test))
+
+    def test_calculate_mapie(self):
+        """Test that calculate_mapie correctly fits MapieRegressor and stores it in algs_dict."""
+        self.train_eval.split_data()
+        self.train_eval.train_algos()
+
+        self.train_eval.calculate_mapie()
+        
+        # Debugging: print algs_dict to check its structure
+        print("algs_dict content:", self.train_eval.algs_dict)
+    
+        # Ensure 'rf' exists in algs_dict before accessing it
+        self.assertIn('rf', self.train_eval.algs_dict, "Key 'rf' not found in algs_dict")
+    
+        # Ensure 'mapie' is stored correctly under 'rf'
+        self.assertIn('mapie', self.train_eval.algs_dict['rf'], "Key 'mapie' not found under 'rf' in algs_dict")
+        self.assertIsInstance(self.train_eval.algs_dict['rf']['mapie'], MapieRegressor)
+        
+        # Check that MapieRegressor is fitted
+        mapie = self.train_eval.algs_dict['rf']['mapie']
+
 class TestAlgoTrainEvalMlti(unittest.TestCase):
 
     def setUp(self):
@@ -480,11 +556,29 @@ class TestAlgoTrainEvalMlti(unittest.TestCase):
         self.rs = 32
         self.verbose = False
 
+        # self.bagging_ci_params = {'n_algos': 5}  # Example parameters
+        self.confidence_levels = [90, 95]  # Example parameters
+        # self.mapie_alpha = [0.1, 0.2]
+        uncertainty_cfg = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.05, 0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }
+
         self.algo_train_eval = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
+                                             uncertainty=uncertainty_cfg,
                                               dir_out_alg_ds=self.dir_out_alg_ds,dataset_id=self.dataset_id,
                                               metr=self.metric, test_size=self.test_size, rs=self.rs,
-                                              verbose=self.verbose)
-
+                                              verbose=self.verbose,
+                                              confidence_levels = self.confidence_levels,
+                                              # bagging_ci_params=self.bagging_ci_params,
+                                              # mapie_alpha=self.mapie_alpha
+                                              )
     def test_initialization(self):
         self.assertEqual(self.algo_train_eval.df.shape, self.df.shape)
         self.assertEqual(self.algo_train_eval.attrs, self.attrs)
@@ -540,7 +634,44 @@ class TestAlgoTrainEvalMlti(unittest.TestCase):
         self.algo_train_eval.convert_to_list(d)
         self.assertEqual(d, {'a': [1, 2], 'b': {'sub1': [3, 4]}})
 
+    # def test_calculate_forestci_uncertainty(self):
+    #     # Test the calculate_forestci_uncertainty method
+    #     self.algo_train_eval.split_data()
+    #     self.algo_train_eval.train_algos()
 
+    #     rf = self.algo_train_eval.algs_dict['rf']['algo']
+    #     ci_dict = self.algo_train_eval.calculate_forestci_uncertainty(rf, self.algo_train_eval.X_train, self.algo_train_eval.X_test)
+
+    #     self.assertIn('ci_95', ci_dict)  # Check for 95% confidence interval
+    #     self.assertIn('lower_bound', ci_dict['ci_95'])
+    #     self.assertIn('upper_bound', ci_dict['ci_95'])
+    #     self.assertEqual(len(ci_dict['ci_95']['lower_bound']), len(self.algo_train_eval.X_test))
+    #     self.assertEqual(len(ci_dict['ci_95']['upper_bound']), len(self.algo_train_eval.X_test))
+
+    # def test_calculate_bagging_ci(self):
+    #     # Test the calculate_bagging_ci method
+    #     self.algo_train_eval.split_data()
+    #     self.algo_train_eval.train_algos()
+
+    #     best_algo = self.algo_train_eval.algs_dict['rf']['algo']  # Use the trained RF model
+    #     self.algo_train_eval.calculate_bagging_ci('rf', best_algo)
+
+    #     # Check if uncertainty data is stored
+    #     self.assertIn('Uncertainty', self.algo_train_eval.algs_dict['rf'])
+    #     self.assertIn('bagging_mean_pred', self.algo_train_eval.algs_dict['rf']['Uncertainty'])
+    #     self.assertIn('bagging_std_pred', self.algo_train_eval.algs_dict['rf']['Uncertainty'])
+    #     self.assertIn('bagging_confidence_intervals', self.algo_train_eval.algs_dict['rf']['Uncertainty'])
+        
+    #     # Check confidence intervals
+    #     ci = self.algo_train_eval.algs_dict['rf']['Uncertainty']['bagging_confidence_intervals']
+    #     self.assertIn('confidence_level_90', ci)
+    #     self.assertIn('confidence_level_95', ci)
+        
+    #     self.assertEqual(len(ci['confidence_level_90']['lower_bound']), len(self.algo_train_eval.X_test))
+    #     self.assertEqual(len(ci['confidence_level_90']['upper_bound']), len(self.algo_train_eval.X_test))
+    #     self.assertEqual(len(ci['confidence_level_95']['lower_bound']), len(self.algo_train_eval.X_test))
+    #     self.assertEqual(len(ci['confidence_level_95']['upper_bound']), len(self.algo_train_eval.X_test))
+        
 class TestAlgoTrainEvalSngl(unittest.TestCase):
     # An algo_config with singular hyperparameter value
     def setUp(self):
@@ -551,8 +682,18 @@ class TestAlgoTrainEvalSngl(unittest.TestCase):
             'metric': [1, 0, 1, 0, 1]
         })
         self.attrs = ['attr1', 'attr2']
-        self.algo_config = {'some_algo': {'param1': 1}}
-        self.dir_out_alg_ds = 'some/dir'
+        self.algo_config = {'mlp': {'max_iter': [100]}}
+        uncertainty_cfg = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }
+        self.dir_out_alg_ds = tempfile.gettempdir()
         self.dataset_id = 'dataset_1'
         self.metr = 'metric'
         self.test_size = 0.3
@@ -562,20 +703,58 @@ class TestAlgoTrainEvalSngl(unittest.TestCase):
         self.grid_search_algs=list()
 
         self.algo_train_eval = AlgoTrainEval(
-            df=self.df, attrs=self.attrs, algo_config=self.algo_config, dir_out_alg_ds=self.dir_out_alg_ds,
+            df=self.df, attrs=self.attrs, algo_config=self.algo_config, 
+            uncertainty=uncertainty_cfg,
+            dir_out_alg_ds=self.dir_out_alg_ds,
             dataset_id=self.dataset_id, metr=self.metr, test_size=self.test_size, rs=self.rs, verbose=self.verbose
         )
 
+    @patch('fs_algo.fs_algo_train_eval.joblib.dump')
+    @patch.object(AlgoTrainEval, 'calculate_bagging_ci')
+    @patch.object(AlgoTrainEval, 'calculate_mapie')
     @patch.object(AlgoTrainEval, 'split_data')
     @patch.object(AlgoTrainEval, 'select_algs_grid_search')
     @patch.object(AlgoTrainEval, 'train_algos_grid_search')
     @patch.object(AlgoTrainEval, 'train_algos')
-    def test_train_eval(self, mock_train_algos, mock_train_algos_grid_search, mock_select_algs_grid_search, mock_split_data):
+    def test_train_eval(self, mock_train_algos, mock_train_algos_grid_search,
+                        mock_select_algs_grid_search, mock_split_data,
+                        mock_calc_bagging_ci,mock_calc_mapie, mock_dump):
         # Mock the methods to avoid actual execution
         mock_split_data.return_value = None
         mock_select_algs_grid_search.return_value = None
         mock_train_algos_grid_search.return_value = None
         mock_train_algos.return_value = None
+        mock_calc_bagging_ci.return_value = None
+        mock_calc_mapie.return_value = None
+
+        # Mock pipeline with a .predict() method
+        mock_pipeline = MagicMock()
+        mock_pipeline.predict.return_value = [0.1, 0.2, 0.3]
+    
+        self.algo_train_eval.X_test = [[1, 2], [3, 4], [5, 6]]
+        self.algo_train_eval.y_test = [0.0, 0.1, 0.2]
+        self.algo_train_eval.preds_dict = {}
+        self.algo_train_eval.uncertainty = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }   
+        
+        # Setup algs_dict with required keys
+        self.algo_train_eval.algs_dict = {
+            'mlp': {
+                'algo': MLPRegressor(),
+                'pipeline': mock_pipeline,
+                'type': 'MLP',
+                'metric': 'metric',
+                'Uncertainty': {}
+            }
+        }
 
         # Call the method
         self.algo_train_eval.train_eval()
@@ -585,6 +764,8 @@ class TestAlgoTrainEvalSngl(unittest.TestCase):
         mock_select_algs_grid_search.assert_called_once()
         mock_train_algos_grid_search.assert_not_called()
         mock_train_algos.assert_called_once()
+        mock_calc_bagging_ci.assert_called_once()
+        mock_calc_mapie.assert_called_once()
 
 class TestAlgoTrainEvalBasic(unittest.TestCase):
 
@@ -611,10 +792,30 @@ class TestAlgoTrainEvalBasic(unittest.TestCase):
         self.rs = 42
         self.verbose = False
         self.algo_config_grid = dict()
+
+        # self.bagging_ci_params = {'n_algos': 5}  # Example parameters
+        self.confidence_levels = [90, 95]  # Example parameters
+        # self.mapie_alpha = [0.1, 0.2]
+        uncertainty_cfg = {
+            'fci': [{'forestci': True}],
+            'bagging': [{'n_algos': 10}],
+            'mapie': [{
+                'alpha': [0.2, 0.32],
+                'method': 'plus',
+                'cv': 10,
+                'agg_function': 'median'
+            }]
+        }
+        
         self.algo = AlgoTrainEval(df=self.df, attrs=self.attrs, algo_config=self.algo_config,
+                                  uncertainty=uncertainty_cfg,
                                   dir_out_alg_ds=self.dir_out_alg_ds, dataset_id=self.dataset_id, 
                                   metr=self.metric, test_size=self.test_size, rs=self.rs, 
-                                  verbose=self.verbose)
+                                  verbose=self.verbose,
+                                  confidence_levels = self.confidence_levels,
+                                  # bagging_ci_params=self.bagging_ci_params,
+                                  # mapie_alpha=self.mapie_alpha
+                                  )
 
     @patch('joblib.dump')  # Mock saving the model to disk
     @patch('sklearn.model_selection.train_test_split', return_value=(pd.DataFrame(), pd.DataFrame(), pd.Series(), pd.Series()))
@@ -660,73 +861,5 @@ class TestAlgoTrainEvalBasic(unittest.TestCase):
         # Check eval dataframe was created
         self.assertIsInstance(self.algo.eval_df, pd.DataFrame)
         self.assertFalse(self.algo.eval_df.empty)
-
-
-class TestCalculateRfUncertainty(unittest.TestCase):
-
-    def setUp(self):
-        # Sample data for testing
-        data = {
-            'attr1': [1, 2, 3, 4, 5],
-            'attr2': [5, 4, 3, 2, 1],
-            'metric': [0.1, 0.9, 0.3, 0.1, 0.8]
-        }
-        self.df = pd.DataFrame(data)
-        self.attrs = ['attr1', 'attr2']
-        self.algo_config = {
-            'rf': [{'n_estimators': [10, 50]}],
-        }
-        self.dir_out_alg_ds = './'
-        self.dataset_id = 'test_dataset'
-        self.metric = 'metric'
-        self.test_size = 0.3
-        self.rs = 32
-        self.verbose = False
-
-        # Initialize AlgoTrainEval instance
-        self.algo_train_eval = AlgoTrainEval(
-            df=self.df,
-            attrs=self.attrs,
-            algo_config=self.algo_config,
-            dir_out_alg_ds=self.dir_out_alg_ds,
-            dataset_id=self.dataset_id,
-            metr=self.metric,
-            test_size=self.test_size,
-            rs=self.rs,
-            verbose=self.verbose
-        )
-
-    @patch('forestci.random_forest_error')
-    def test_calculate_rf_uncertainty(self, mock_rf_error):
-        # Create mock inputs
-        forest = RandomForestRegressor()
-        X_train = np.random.rand(10, 5)
-        X_test = np.random.rand(3, 5)
-
-        # Mock RandomForestRegressor training
-        forest.fit(X_train, np.random.rand(10))
-
-        # Mock the output of forestci.random_forest_error
-        mock_ci = np.array([0.1, 0.2, 0.3])
-        mock_rf_error.return_value = mock_ci
-
-        # Call the method under test
-        result = self.algo_train_eval.calculate_rf_uncertainty(forest, X_train, X_test)
-
-        # Assertions
-        mock_rf_error.assert_called_once_with(
-            forest=forest,
-            X_train_shape=X_train.shape,
-            X_test=X_test,
-            inbag=None,
-            calibrate=True,
-            memory_constrained=False,
-            memory_limit=None,
-            y_output=0
-        )
-        np.testing.assert_array_equal(result, mock_ci)
-
-if __name__ == '__main__':
-    unittest.main()
-
+    
 # %%

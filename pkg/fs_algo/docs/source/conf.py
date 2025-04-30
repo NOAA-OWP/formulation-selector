@@ -10,7 +10,7 @@
 project = 'Formulation Selector Algorithms'
 copyright = '2024, Guy Litt'
 author = 'Guy Litt'
-release = '0.0.1'
+release = "0.0.3.01"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

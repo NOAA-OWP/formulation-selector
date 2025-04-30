@@ -4,7 +4,13 @@
 \alias{retr_comids}
 \title{Retrieve comids based on provided gage_ids and expected NLDI format}
 \usage{
-retr_comids(gage_ids, featureSource, featureID, dir_db_attrs)
+retr_comids(
+  gage_ids,
+  featureSource,
+  featureID,
+  dir_db_attrs,
+  path_save_gpkg = NULL
+)
 }
 \arguments{
 \item{gage_ids}{array of gage_id values to be queried for catchment attributes}
@@ -17,7 +23,15 @@ featureID for \link[nhdplusTools:get_nldi_feature]{nhdplusTools::get_nldi_featur
 represents exactly what the nldi_feature$featureID should be, then
 featureID="{gage_id}". In other instances, conversions may be necessary,
 e.g. featureID="USGS-{gage_id}". When defining featureID, it's expected
-that the term 'gage_id' is used as a variable in glue syntax to create featureID}
+that the term 'gage_id' is used as a variable in glue syntax to create featureID
+Refer to ?dataRetrieval::get_nldi_sources() for options to use with nldi_feature}
+
+\item{dir_db_attrs}{Attribute directory path, where the standardized
+comid-gage_id will be stored as a .csv}
+
+\item{path_save_gpkg}{The filepath where the geopackage containing
+comid-gageid-geometry mappings are saved. Default NULL, but strongly recommended
+to use!}
 }
 \description{
 Retrieve comids based on provided gage_ids and expected NLDI format
@@ -25,4 +39,7 @@ Retrieve comids based on provided gage_ids and expected NLDI format
 \details{
 The gage_id-comid mappings are saved to file to avoid exceeding
 the NLDI database connection rate limit
+}
+\note{
+2025-03-07 This needs a deeper refactoring
 }

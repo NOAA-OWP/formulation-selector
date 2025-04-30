@@ -1,5 +1,5 @@
 # Config visualization of the RaFTS results
-name_pred_config: 'xssaus_pred_config.yaml' # REQUIRED. The name of the prediction configuration file if in same directory as this config file. Otherwise the full path to the file.  
+name_pred_config: 'xssanwm_pred_config.yaml' # REQUIRED. The name of the prediction configuration file if in same directory as this config file. Otherwise the full path to the file.  
 algos: # All option could pull from the pred config file 
   - 'rf'
 metrics: # All option could pull from the pred config file 

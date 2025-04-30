@@ -1,9 +1,9 @@
 '''
-Unit tests for the fs_proc package
+Unit tests for the fs_prep package
 
 example::
-> cd /path/to/fs_proc/fs_proc/tests/
-> python -m unittest test_proc_eval
+> cd /path/to/fs_prep/fs_prep/tests/
+> python -m unittest test_proc_eval_metrics.py
 or if interested in unit testing coverage:
 > python -m coverage run -m unittest
 > python -m coverage report 
@@ -22,7 +22,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 import xarray as xr
-from fs_proc.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema,\
+from fs_prep.proc_eval_metrics import read_schm_ls_of_dict, proc_col_schema,\
       _proc_check_input_config, _proc_flatten_ls_of_dict_keys, \
       _proc_check_input_df, _proc_check_std_fs_ids, check_fix_nwissite_gageids
 import numpy as np
@@ -31,7 +31,7 @@ import pynhd as nhd
 import warnings
 import tempfile
 
-# Define the unit test directory for fs_proc
+# Define the unit test directory for fs_prep
 parent_dir_test = Path(__file__).parent #TODO should change this 
 print(f'Running unit test from {parent_dir_test}')
 # Define the unit test saving directory as a temp dir
@@ -174,7 +174,7 @@ class TestProcColSchemaNwisCheck(unittest.TestCase):
     global raw_test_df
     global test_df
 
-    @patch('fs_proc.proc_eval_metrics.check_fix_nwissite_gageids')
+    @patch('fs_prep.proc_eval_metrics.check_fix_nwissite_gageids')
     @patch('pandas.testing.assert_frame_equal')
     def test_check_nwis_gage_id_fix(self, mock_assert_frame_equal, mock_check_fix_nwissite_gageids):
         # Set up mock data
