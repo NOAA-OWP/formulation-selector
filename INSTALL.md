@@ -120,7 +120,7 @@ Linux and macOS:
 ## R environment configuration
 Then configure your R environment. RaFTS has been developed and tested using R 4.4.0 and 4.4.2.
 
-For RaFTS, we set a project-specific library
+TODO: Fill out better R install instructions
 
 
 ## Install the `proc.attr.hydfab` R Package
