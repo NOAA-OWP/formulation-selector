@@ -2,7 +2,10 @@
 
 Detailed instructions on how to install, configure, and get the project running.
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> cdab25e2 (cleaning up install guidance and related python install files)
 
 # RaFTS Installation
 
@@ -122,7 +125,11 @@ Linux and macOS:
 ## R environment configuration
 Then configure your R environment. RaFTS has been developed and tested using R 4.4.0 and 4.4.2.
 
+<<<<<<< HEAD
 TODO: Fill out better R install instructions
+=======
+For RaFTS, we set a project-specific library
+>>>>>>> cdab25e2 (cleaning up install guidance and related python install files)
 
 
 ## Install the `proc.attr.hydfab` R Package
@@ -141,4 +148,7 @@ install.packages("arrow", repos = c("https://apache.r-universe.dev"))
 ```
 Note that this may generally reduce the number of headaches if you go ahead and install arrow from apache.r-universe.dev in lieu of CRAN.
 
+<<<<<<< HEAD
 >>>>>>> 19454933 (cleaning R-related commentary - not much there and needs to be cleaned up/filled out with details)
+=======
+>>>>>>> cdab25e2 (cleaning up install guidance and related python install files)

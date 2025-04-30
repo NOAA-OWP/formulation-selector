@@ -1,0 +1,17 @@
+# configure your RaFTS install
+
+# would you like to install python? (python 3.12 will be installed if true)
+install_python: true
+
+# if install_python is 'false', please provide the command to execute
+# your desired python install. ("python" will use the default python in
+# your path)
+python_exe: "C:/Python/Python311/python.exe"
+
+# if install_python is "true", provide a location at which to install the
+# python executable. "default" or "" will result in an install to a 
+# default location
+python_install_dir: "C:/Python/uv/"
+
+# 
+

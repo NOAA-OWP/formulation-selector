@@ -13,7 +13,10 @@ dependencies:
   - netCDF4
   - numpy
   - pandas
+<<<<<<< HEAD
   - pandera
+=======
+>>>>>>> cdab25e2 (cleaning up install guidance and related python install files)
   - pip
   - pyarrow
   - pydrive2
@@ -27,4 +30,8 @@ dependencies:
   - xarray
   - pip:
       - forestci==0.7
+<<<<<<< HEAD
       - -e ../pkg/fs_prep
+=======
+      - -e ../pkg/fs_proc
+>>>>>>> cdab25e2 (cleaning up install guidance and related python install files)
