@@ -21,7 +21,7 @@ if ('bolotin' %in% Sys.getenv("HOME")) {
 } else if ('choat' %in% Sys.getenv("HOME")){
   # if you have a different path to formulation-selector, add it here, otherwise remove
 } else { # assume this is the path to the formulation-selector repo dir
-  fs_dir <- file.path(Sys.getenv("HOME"),"git","formulation-selector")
+  fs_dir <- file.path(Sys.getenv("HOME"),"Lauren/FSDS/formulation-selector")
 }
 # Run unit tests?
 RunTest <- T #TRUE Default FALSE prevents s3 data downloading in unit testing (FALSE=fast)

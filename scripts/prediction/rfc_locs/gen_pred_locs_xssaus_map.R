@@ -32,9 +32,12 @@ main <- function(){
   }
   # Define args supplied to command line
   home_dir <- Sys.getenv("HOME")
-  path_cfig_pred <- glue::glue(as.character(args[1])) # path_cfig_pred <- glue::glue("{home_dir}/git/formulation-selector/scripts/eval_ingest/xssa_us/xssaus_pred_config.yaml")
-  dir_base_huc08 <- glue::glue(as.character(args[2]))# dir_base_huc08 <- dir_repo <- glue::glue("{home_dir}/noaa/regionalization/data/analyses/basin_selection" 
-  dir_repo <- glue::glue(as.character(args[3])) #dir_repo <- glue::glue("{home_dir}/git/formulation-selector/")
+  # path_cfig_pred <- glue::glue(as.character(args[1])) 
+  path_cfig_pred <- glue::glue("{home_dir}/Lauren/FSDS/formulation-selector/scripts/eval_ingest/xssa_us/xssaus_pred_config.yaml")
+  # dir_base_huc08 <- glue::glue(as.character(args[2]))
+  dir_base_huc08 <- dir_repo <- glue::glue("{home_dir}/noaa/regionalization/data/analyses/basin_selection")
+  # dir_repo <- glue::glue(as.character(args[3])) 
+  dir_repo <- glue::glue("{home_dir}/Lauren/FSDS/formulation-selector/")
   # Read in config file
   if(!base::file.exists(path_cfig_pred)){
     stop(glue::glue("The provided path_cfig_pred does not exist: {path_cfig_pred}"))
@@ -119,7 +122,7 @@ main <- function(){
   col_comid_huc08 <- "hf_id"
   path_gpkg_comids <- glue::glue("{dir_base_huc08}terminal_nonhuc08_with_comids.gpkg")
   # Generated using flow.comid.terminal.R in https://github.com/bolotinl/NWM_process_mapping
-  path_gpkg_comids <- glue::glue("{dir_base_huc08}/terminal_locs/nhdp_cat_line_out_tnx_above10sqkm.gpkg") 
+  path_gpkg_comids <- glue::glue("{dir_base_huc08}/nhdp_cat_line_out_tnx_above10sqkm.gpkg") 
   #sf::st_layers(path_gpkg_comids)
   df_tnx <- sf::st_read(path_gpkg_comids,"outlet")
   col_comid_tnx <- 'comid'
@@ -206,7 +209,7 @@ main <- function(){
     source(text_script)
 
     # Run python function from the tfrm_attr.py file:
-    reticulate::use_condaenv(condaenv="py312",required=TRUE) # The anaconda environment that has the fs_algo RaFTS package installed
+    reticulate::use_condaenv(condaenv="rafts_env",required=TRUE) # The anaconda environment that has the fs_algo RaFTS package installed
     fta <- reticulate::import("fs_algo.tfrm_attr")
     result <- try(fta$tfrm_attr_comids_wrap(comids = df[,col_comid],
                                         path_tfrm_cfig = path_tfrm_config))
@@ -223,7 +226,7 @@ main <- function(){
     if(base::is.null(dir_save_nhdp)){
       dir_save_nhdp <- base::dirname(path_save_gpkg)
     }
-
+  # LB: PICK UP HERE!!!!!!!!!!!!!!!!!!!!!!!!! (or dont heheh)
     ls_compiled_data <- proc.attr.hydfab::dl_nhdplus_geoms_wrap(df=df,col_id=col_comid,
                                               dir_save_nhdp = dir_save_nhdp,
                                               filename_str=paste0(glue::glue("{datasets}_{ds_type}")),

@@ -7,9 +7,9 @@
 
 #!/bin/bash
 echo "Using system home directory as basis for all paths: $HOME"
-DIR_REPO="$HOME/git/formulation-selector/" # The system-specific path to the formulation-selector repo
+DIR_REPO="$HOME/Lauren/FSDS/formulation-selector/" # The system-specific path to the formulation-selector repo
 DIR_CONFIG="${DIR_REPO}/scripts/eval_ingest/xssa_us/"
-DIR_PRED="${DIR_REPO}/scripts/prediction/rfc_locs/"
+DIR_PRED="${DIR_REPO}/scripts/prediction/HUC08/"
 DIR_PY="${DIR_REPO}/pkg/fs_algo/fs_algo/"
 DIR_R="${DIR_REPO}/pkg/proc.attr.hydfab/flow/"
 
