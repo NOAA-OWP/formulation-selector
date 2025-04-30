@@ -26,4 +26,4 @@ dependencies:
   - xarray
   - pip:
       - forestci==0.7
-      - -e ../pkg/fs_proc
+      - -e ../pkg/fs_prep
