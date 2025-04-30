@@ -1,0 +1,30 @@
+name: rafts_env
+channels:
+  - conda-forge
+
+dependencies:
+  - dask
+  - duecredit
+  - geopandas
+  - joblib
+  - mapie
+  - matplotlib
+  - multidict
+  - netCDF4
+  - numpy
+  - pandas
+  - pandera
+  - pip
+  - pyarrow
+  - pydrive2
+  - pynhd>=0.19.0
+  - python=3.12
+  - pyyaml
+  - scikit-learn
+  - seaborn
+  - shapely
+  - wheel
+  - xarray
+  - pip:
+      - forestci==0.7
+      - -e ../pkg/fs_prep
