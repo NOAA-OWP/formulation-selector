@@ -13,6 +13,7 @@ dependencies:
   - netCDF4
   - numpy
   - pandas
+  - pandera
   - pip
   - pyarrow
   - pydrive2
