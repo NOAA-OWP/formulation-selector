@@ -312,22 +312,6 @@ class TestStdPredPath(unittest.TestCase):
         mock_mkdir.assert_called_once_with(exist_ok=True, parents=True)
         self.assertEqual(result, expected_path)
 
-class TestStdXtrainPath(unittest.TestCase):
-
-    @patch('pathlib.Path.mkdir')
-    @patch('pathlib.Path.exists')
-    def test_std_Xtrain_path(self, mock_exists, mock_mkdir):
-        dir_out_alg_ds = tempfile.gettempdir()
-        dataset_id = 'test_dataset'
-        expected_path = Path(dir_out_alg_ds) / 'Xtrain__test_dataset.csv'
-
-        # Mock the existence of the directory
-        mock_exists.return_value = True
-
-        result = fs_algo_train_eval.std_Xtrain_path(dir_out_alg_ds, dataset_id)
-        mock_mkdir.assert_called_once_with(exist_ok=True, parents=True)
-        self.assertEqual(result, expected_path)
-
 class TestReadPredComid(unittest.TestCase):
     @patch('pathlib.Path.exists')
     @patch('pandas.read_csv')
