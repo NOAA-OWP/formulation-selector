@@ -102,7 +102,6 @@ testthat::test_that("dl_nhdplus_geoms_wrap", {
 
   filename_str <- 'test_rafts_utils'
   dir_save_nhdp <- file.path(temp_dir,"test_geoms_retr_new")
-
   names_nhdp_query <- c("catchment","flowlines","outlet","input_dt",
                         "path_gpkg_compiled")
   df <- data.frame(comids =c("1520007","1623207","1638559","1722317"),
