@@ -20,3 +20,4 @@ shapely
 wheel
 xarray
 -e ../pkg/fs_prep
+-e ../pkg/fs_algo
