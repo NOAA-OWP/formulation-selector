@@ -9,10 +9,7 @@ multidict
 netCDF4
 numpy
 pandas
-<<<<<<< HEAD
 pandera
-=======
->>>>>>> cdab25e2 (cleaning up install guidance and related python install files)
 pyarrow
 pydrive2
 pynhd>=0.19.0
