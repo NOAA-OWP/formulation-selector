@@ -6,9 +6,8 @@
 #' @param path_cfig_pred The path to the prediction configuration yaml file. May use glue formatting for {home_dir}
 #' @param dir_base_huc The directory containing analyses on HUC08 data. Created using https://github.com/bolotinl/NWM_process_mapping
 #' @examples
-#' \dontrun{Rscript gen_pred_locs_huc8.R "{repo_dir}formulation-selector/scripts/eval_ingest/HUC08/huc08_pred_config.yaml" 
+#' \dontrun{Rscript gen_pred_locs_HUC8.R "{repo_dir}formulation-selector/scripts/eval_ingest/xssa_NWM_domain/xssanwm_pred_config.yaml" 
 #' }
-# TODO: finalize the above example run
 
 library(dplyr)
 library(glue)
