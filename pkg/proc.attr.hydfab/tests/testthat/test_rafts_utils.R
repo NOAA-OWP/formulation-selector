@@ -168,3 +168,35 @@ testthat::test_that("dl_nhdplus_geoms_wrap", {
   testthat::expect_identical(base::nrow(rslt_compile_dat$flowlines), 
                              base::nrow(df))
 })
+
+
+testthat::test_that("sub_hf_huc_conus", {
+  test_that("sub_hf_huc_conus errors on invalid huc_level", {
+    hf_path <- glue::glue('{dir_base}/gpkg_dat/sub_hf_huc_conus_test.gpkg')
+    
+    ## Test inputs: 
+    # Test incompatible HUC level
+    expect_error(sub_hf_huc_conus(huc_level = 3, hydrofab_path = hf_path))
+    
+    # Test missing hydrofabric path
+    expect_error(sub_hf_huc_conus(huc_level = 6))
+    
+    # Test invalid hydrofabric file type
+    expect_error(sub_hf_huc_conus(huc_level = 6, hydrofab_path = "invalid_path"))
+    
+    # Test nonexistent hydrofabric gpkg
+    expect_error(sub_hf_huc_conus(huc_level = 6, hydrofab_path = "nonexistent_path.gpkg"))
+  
+    ## Test output:
+    sub_hf_huc_conus(huc_level = 10, hydrofab_path = hf_path, 
+                     dir_save_hf_sub = temp_dir)
+    expect_true(file.exists(glue::glue('{temp_dir}/conus_nextgen_huc10_divides.gpkg')))
+    expect_true(file.exists(glue::glue('{temp_dir}/conus_nextgen_huc10_comids.csv')))
+    
+    })
+  
+  
+  
+  
+  
+})

@@ -39,6 +39,7 @@ main <- function(){
   
   # READ IN ATTRIBUTE CONFIG FILE
   path_attr_config <- glue::glue(cfig_pred[['path_attr_config']])
+  # TODO: incorporate new function for parsing config file (Guy will provide example)
   cfig_attr <- yaml::read_yaml(path_attr_config)
   
   # Defining directory paths as early as possible:
@@ -95,7 +96,7 @@ main <- function(){
   
   if (!file.exists(glue::glue('{home_dir}/noaa/regionalization/data/analyses/basin_selection/conus_nextgen_huc8_comids.csv'))){
     message(glue::glue("Generating IDs for HUC level 8..."))
-    sub_hf_huc_conus(huc_level = 8)
+    proc.attr.hydfab::sub_hf_huc_conus(huc_level = 8)
   } else{
     message(glue::glue("IDs for HUC level 8 already exist. Retrieving..."))
     df_huc08 <- read.csv(glue::glue('{home_dir}/noaa/regionalization/data/analyses/basin_selection/conus_nextgen_huc8_comids.csv'))

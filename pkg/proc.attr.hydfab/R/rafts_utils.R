@@ -445,3 +445,162 @@ dl_nhdplus_geoms_wrap <- function(df,col_id, dir_save_nhdp,filename_str,
 
   return(ls_compiled_data)
 }
+
+#' @title Grab approximate hydrofabric polygons for HUC levels of interest
+#' @description Identifies plausible outlets for catchments at the specified
+#' HUC level by identifying the most downstream reach according to the hydro-
+#' fabric, subsetting the network above this reach, union-ing all divides into
+#' one polygon, and appends to a dataframe, which gets saved as a geopackage.
+#' @details The outlet locations used for subsetting have not been quality 
+#' checked -- users should evaluate if the resulting polygons meet their
+#' needs and criteria. 
+#' @param huc_level integer. The HUC level (6, 8, 10, 12) to which the user
+#' wants to subset and aggregate hydrofabric catchments. Larger HUCs (e.g. 2,
+#' 4) are not compatible with this methodology.
+#' @param hydrofab_path The local path to the nextgen CONUS hydrofabric gpkg.
+#' Only hydrofabric version 2.2 is currently supported. 
+#' @seealso \link[proc.attr.hydfab]{proc_attr_wrap}
+#' @export
+# Changelog/Contributions
+#  2025-05-15 Originally created, LB
+sub_hf_huc_conus <- function(huc_level = 8, hydrofab_path = NULL, dir_save_hf_sub){
+  home_dir <- Sys.getenv("HOME")
+  
+  if (missing(dir_save_hf_sub)) {
+    dir_save_hf_sub <- file.path(home_dir, 'noaa/regionalization/data/analyses/basin_selection')
+  }
+  
+  # Check if the huc_level is provided
+  if (missing(huc_level)) {
+    message('No huc_level provided by user. Defaulting to HUC8...')
+  }
+  
+  # Check if the huc_level is valid
+  valid_hucs <- c(6, 8, 10, 12)
+  if (!huc_level %in% valid_hucs) {
+    stop(glue::glue("Invalid huc_level: {huc_level}. Valid options are: {paste(valid_hucs, collapse = ', ')}"))
+  }
+  
+  # Check if the hydrofabric path is provided
+  if (is.null(hydrofab_path)) {
+    stop("The hydrofabric path is required.")
+  }
+  hydrofab_path <- file.path(hydrofab_path)
+  
+  # Check if the hydrofabric path is a valid geopackage
+  if (!grepl("\\.gpkg$", hydrofab_path)) {
+    stop(glue::glue("The hydrofabric path is not a valid geopackage: {hydrofab_path}"))
+  }
+  
+  # Check if the hydrofabric path exists
+  if (!file.exists(hydrofab_path)) {
+    stop(glue::glue("The hydrofabric path does not exist: {hydrofab_path}"))
+  }
+  
+  # Read in hydrofabric data
+  hf_network <- sf::st_read(hydrofab_path, layer = 'network', quiet = TRUE)
+  
+  # Subset for those whose hl_uri starts with 'huc' (these will be huc-12s)
+  hf_network_huc <- hf_network[grep('^huc', hf_network$hl_uri), ]
+  
+  # Extract just the huc codes for the selected level
+  str_end <- 6 + huc_level 
+  hf_network_huc$huc <- substr(hf_network_huc$hl_uri, 7, str_end)
+  
+  # Group by huc at the desired level and get the id with the lowest hf_hydroseq (most downstream)
+  message(glue::glue('Identifying hydrofabric outlets for HUC level {huc_level}...'))
+  hf_network_huc_min <- hf_network_huc %>%
+    group_by(huc) %>%
+    slice(which.min(hf_hydroseq)) %>% 
+    ungroup()
+  
+  ##  Start a data frame to append all the polygons to
+  # Grab the first id's hydrofabric
+  hf_sub <-
+    hfsubsetR::get_subset(
+      id = hf_network_huc_min$id[1],
+      gpkg = hydrofab_path,
+      lyrs = c("divides"),
+      type = 'nextgen'
+    )
+  
+  # Merge all divides into one
+  poly <- st_union(hf_sub$divides)
+  
+  # Calculate area so we can layer smaller polygons on top at the end
+  area <- sum(hf_sub[["divides"]]$areasqkm)
+  
+  # Establish the data frame we'll add all ids to
+  hf_subset_polygons <- st_sf(id = hf_network_huc_min$id[1], divide_area_sqkm_sum = area, geometry = poly)
+  
+  # Create an empty list to store failed IDs
+  failed_ids <- list()
+  
+  ## Finish the data frame by looping through the rest of the ids
+  subset_func <- function(id) {
+    tryCatch({
+      hf_sub <- hfsubsetR::get_subset(
+        id = id,
+        gpkg = hydrofab_path,
+        lyrs = c("divides"),
+        type = 'nextgen',
+        overwrite = TRUE
+      )
+      
+      if (!"divides" %in% names(hf_sub) || is.null(hf_sub$divides)) {
+        stop("Missing 'divides' layer or it's NULL")
+      }
+      
+      poly <- st_union(hf_sub$divides)
+      area <- sum(hf_sub[["divides"]]$areasqkm)
+      poly_df <- st_sf(id = id, divide_area_sqkm_sum = area, geometry = poly)
+      
+      # Add to hf_subset_polygons data frame
+      hf_subset_polygons <<- rbind(hf_subset_polygons, poly_df)
+    },
+    error = function(e) {
+      message(glue("Failed for id: {id} - {e$message}"))
+      failed_ids[[length(failed_ids) + 1]] <<- id
+    })
+  }
+  
+  # Use pblapply to track progress, skipping the first id since it's already in the data frame
+  ids_to_process <- unique(hf_network_huc_min$id[-1])
+  
+  message(glue::glue('Subsetting hydrofabric divides by HUC level {huc_level}...'))
+  pbapply::pblapply(ids_to_process, subset_func) 
+  
+  # Extract the COMIDs for these hydrofabric ids
+  comids <- hf_network_huc_min %>%
+    select(id, huc, hf_id) %>%
+    # rename hf_id to comid
+    rename(comid = hf_id) %>%
+    unique()
+  
+  # Add the comids to the shapefile data frame
+  hf_subset_polygons <- hf_subset_polygons %>%
+    left_join(comids, by = "id") %>%
+    select(id, huc, comid, divide_area_sqkm_sum, geometry)
+  
+  # Save output shapefile of divides 
+  # NOTE: this is where the user may want to visually investigate in a GUI whether the divides
+  # represent their desired areas/resolution
+  # TODO: figure out why area sorting isn't working properly. some small divides are still being hidden behind larger ones. 
+  # Calculate area from the geometry column
+  hf_subset_polygons$area <- st_area(hf_subset_polygons) / 1e6 # Convert to km^2
+  hf_subset_polygons$area <- as.numeric(as.character(hf_subset_polygons$area))
+  
+  # Sort by area, descending
+  hf_subset_polygons <- hf_subset_polygons %>%
+    arrange(desc(area)) %>%
+    unique()
+  
+  gpkg_out_path <- glue::glue('{dir_save_hf_sub}/conus_nextgen_huc{huc_level}_divides.gpkg')
+  message(glue::glue('Saving output shapefile of divides to {gpkg_out_path}...'))
+  write_sf(hf_subset_polygons, dsn = as.character(gpkg_out_path))
+  
+  # Save output csv of comids
+  comid_out_path <- glue::glue('{dir_save_hf_sub}/conus_nextgen_huc{huc_level}_comids.csv')
+  message(glue::glue('Saving output csv of HUC {huc_level} outlet comids to {comid_out_path}...'))
+  write.csv(comids, comid_out_path, row.names = FALSE)
+}
