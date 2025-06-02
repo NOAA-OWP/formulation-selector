@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "_read_attr_config", "label": "_read_attr_config", "shape": "dot"}, {"color": "#97c2fc", "id": "_std_fs_prep_ds_paths", "label": "_std_fs_prep_ds_paths", "shape": "dot"}, {"color": "#97c2fc", "id": "fs_read_attr_comid", "label": "fs_read_attr_comid", "shape": "dot"}, {"color": "#97c2fc", "id": "_check_attr_rm_dupes", "label": "_check_attr_rm_dupes", "shape": "dot"}, {"color": "#97c2fc", "id": "_check_attributes_exist", "label": "_check_attributes_exist", "shape": "dot"}, {"color": "#97c2fc", "id": "_id_attrs_sel_wrap", "label": "_id_attrs_sel_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "build_cfig_path", "label": "build_cfig_path", "shape": "dot"}, {"color": "#97c2fc", "id": "_open_response_data_fs", "label": "_open_response_data_fs", "shape": "dot"}, {"color": "#97c2fc", "id": "fs_retr_nhdp_comids_geom_wrap", "label": "fs_retr_nhdp_comids_geom_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "fs_retr_nhdp_comids_geom", "label": "fs_retr_nhdp_comids_geom", "shape": "dot"}, {"color": "#97c2fc", "id": "combine_resp_gdf_comid_wrap", "label": "combine_resp_gdf_comid_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "_find_feat_srce_id", "label": "_find_feat_srce_id", "shape": "dot"}, {"color": "#97c2fc", "id": "_std_fs_prep_ds_companion_gpkg_path", "label": "_std_fs_prep_ds_companion_gpkg_path", "shape": "dot"}, {"color": "#97c2fc", "id": "split_train_test_comid_wrap", "label": "split_train_test_comid_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "find_common_comid", "label": "find_common_comid", "shape": "dot"}, {"color": "#97c2fc", "id": "convert_to_list", "label": "convert_to_list", "shape": "dot"}, {"color": "#97c2fc", "id": "select_algs_grid_search", "label": "select_algs_grid_search", "shape": "dot"}, {"color": "#97c2fc", "id": "list_to_dict", "label": "list_to_dict", "shape": "dot"}, {"color": "#97c2fc", "id": "save_algos", "label": "save_algos", "shape": "dot"}, {"color": "#97c2fc", "id": "std_algo_path", "label": "std_algo_path", "shape": "dot"}, {"color": "#97c2fc", "id": "train_eval", "label": "train_eval", "shape": "dot"}, {"color": "#97c2fc", "id": "split_data", "label": "split_data", "shape": "dot"}, {"color": "#97c2fc", "id": "train_algos_grid_search", "label": "train_algos_grid_search", "shape": "dot"}, {"color": "#97c2fc", "id": "train_algos", "label": "train_algos", "shape": "dot"}, {"color": "#97c2fc", "id": "calculate_forestci_uncertainty", "label": "calculate_forestci_uncertainty", "shape": "dot"}, {"color": "#97c2fc", "id": "calculate_bagging_ci", "label": "calculate_bagging_ci", "shape": "dot"}, {"color": "#97c2fc", "id": "calculate_mapie", "label": "calculate_mapie", "shape": "dot"}, {"color": "#97c2fc", "id": "predict_algos", "label": "predict_algos", "shape": "dot"}, {"color": "#97c2fc", "id": "evaluate_algos", "label": "evaluate_algos", "shape": "dot"}, {"color": "#97c2fc", "id": "org_metadata_alg", "label": "org_metadata_alg", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_corr_mat_save_wrap", "label": "plot_corr_mat_save_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_corr_mat", "label": "plot_corr_mat", "shape": "dot"}, {"color": "#97c2fc", "id": "std_corr_mat_plot_path", "label": "std_corr_mat_plot_path", "shape": "dot"}, {"color": "#97c2fc", "id": "corr_thr_write_table_wrap", "label": "corr_thr_write_table_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "corr_attrs_thr_table", "label": "corr_attrs_thr_table", "shape": "dot"}, {"color": "#97c2fc", "id": "std_corr_path", "label": "std_corr_path", "shape": "dot"}, {"color": "#97c2fc", "id": "write_corr_attrs_thr", "label": "write_corr_attrs_thr", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_pca_save_wrap", "label": "plot_pca_save_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "pca_stdscaled_tfrm", "label": "pca_stdscaled_tfrm", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_pca_stdscaled_tfrm", "label": "plot_pca_stdscaled_tfrm", "shape": "dot"}, {"color": "#97c2fc", "id": "std_pca_plot_path", "label": "std_pca_plot_path", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_pca_stdscaled_cumulative_var", "label": "plot_pca_stdscaled_cumulative_var", "shape": "dot"}, {"color": "#97c2fc", "id": "save_feat_imp_fig_wrap", "label": "save_feat_imp_fig_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_rf_importance", "label": "plot_rf_importance", "shape": "dot"}, {"color": "#97c2fc", "id": "std_feat_imp_plot_path", "label": "std_feat_imp_plot_path", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_learning_curve_save_wrap", "label": "plot_learning_curve_save_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "gen_learning_curve", "label": "gen_learning_curve", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_learning_curve", "label": "plot_learning_curve", "shape": "dot"}, {"color": "#97c2fc", "id": "std_lc_plot_path", "label": "std_lc_plot_path", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_pred_vs_obs_regr", "label": "plot_pred_vs_obs_regr", "shape": "dot"}, {"color": "#97c2fc", "id": "_estimate_decimals_for_plotting", "label": "_estimate_decimals_for_plotting", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_pred_vs_obs_wrap", "label": "plot_pred_vs_obs_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "std_regr_pred_obs_path", "label": "std_regr_pred_obs_path", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_pred_vs_obs_regr_mapie", "label": "plot_pred_vs_obs_regr_mapie", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_pred_vs_obs_wrap_mapie", "label": "plot_pred_vs_obs_wrap_mapie", "shape": "dot"}, {"color": "#97c2fc", "id": "std_regr_pred_obs_path_mapie", "label": "std_regr_pred_obs_path_mapie", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_map_pred_wrap", "label": "plot_map_pred_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "std_map_pred_path", "label": "std_map_pred_path", "shape": "dot"}, {"color": "#97c2fc", "id": "gen_conus_basemap", "label": "gen_conus_basemap", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_map_pred", "label": "plot_map_pred", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_map_pred_wrap_mapie", "label": "plot_map_pred_wrap_mapie", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_map_pred_mapie", "label": "plot_map_pred_mapie", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_best_algo_wrap", "label": "plot_best_algo_wrap", "shape": "dot"}, {"color": "#97c2fc", "id": "std_map_best_path", "label": "std_map_best_path", "shape": "dot"}, {"color": "#97c2fc", "id": "plot_best_perf_map", "label": "plot_best_perf_map", "shape": "dot"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "_read_attr_config", "to": "_std_fs_prep_ds_paths"}, {"arrows": "to", "from": "fs_read_attr_comid", "to": "_check_attr_rm_dupes"}, {"arrows": "to", "from": "fs_read_attr_comid", "to": "_check_attributes_exist"}, {"arrows": "to", "from": "_id_attrs_sel_wrap", "to": "build_cfig_path"}, {"arrows": "to", "from": "_open_response_data_fs", "to": "_std_fs_prep_ds_paths"}, {"arrows": "to", "from": "fs_retr_nhdp_comids_geom_wrap", "to": "fs_retr_nhdp_comids_geom"}, {"arrows": "to", "from": "combine_resp_gdf_comid_wrap", "to": "_open_response_data_fs"}, {"arrows": "to", "from": "combine_resp_gdf_comid_wrap", "to": "_find_feat_srce_id"}, {"arrows": "to", "from": "combine_resp_gdf_comid_wrap", "to": "_std_fs_prep_ds_paths"}, {"arrows": "to", "from": "combine_resp_gdf_comid_wrap", "to": "_std_fs_prep_ds_companion_gpkg_path"}, {"arrows": "to", "from": "combine_resp_gdf_comid_wrap", "to": "fs_retr_nhdp_comids_geom_wrap"}, {"arrows": "to", "from": "split_train_test_comid_wrap", "to": "combine_resp_gdf_comid_wrap"}, {"arrows": "to", "from": "split_train_test_comid_wrap", "to": "find_common_comid"}, {"arrows": "to", "from": "convert_to_list", "to": "convert_to_list"}, {"arrows": "to", "from": "select_algs_grid_search", "to": "list_to_dict"}, {"arrows": "to", "from": "select_algs_grid_search", "to": "convert_to_list"}, {"arrows": "to", "from": "save_algos", "to": "std_algo_path"}, {"arrows": "to", "from": "train_eval", "to": "split_data"}, {"arrows": "to", "from": "train_eval", "to": "select_algs_grid_search"}, {"arrows": "to", "from": "train_eval", "to": "train_algos_grid_search"}, {"arrows": "to", "from": "train_eval", "to": "train_algos"}, {"arrows": "to", "from": "train_eval", "to": "calculate_forestci_uncertainty"}, {"arrows": "to", "from": "train_eval", "to": "calculate_bagging_ci"}, {"arrows": "to", "from": "train_eval", "to": "calculate_mapie"}, {"arrows": "to", "from": "train_eval", "to": "predict_algos"}, {"arrows": "to", "from": "train_eval", "to": "evaluate_algos"}, {"arrows": "to", "from": "train_eval", "to": "save_algos"}, {"arrows": "to", "from": "train_eval", "to": "org_metadata_alg"}, {"arrows": "to", "from": "plot_corr_mat_save_wrap", "to": "plot_corr_mat"}, {"arrows": "to", "from": "plot_corr_mat_save_wrap", "to": "std_corr_mat_plot_path"}, {"arrows": "to", "from": "corr_thr_write_table_wrap", "to": "corr_attrs_thr_table"}, {"arrows": "to", "from": "corr_thr_write_table_wrap", "to": "std_corr_path"}, {"arrows": "to", "from": "corr_thr_write_table_wrap", "to": "write_corr_attrs_thr"}, {"arrows": "to", "from": "plot_pca_save_wrap", "to": "pca_stdscaled_tfrm"}, {"arrows": "to", "from": "plot_pca_save_wrap", "to": "plot_pca_stdscaled_tfrm"}, {"arrows": "to", "from": "plot_pca_save_wrap", "to": "std_pca_plot_path"}, {"arrows": "to", "from": "plot_pca_save_wrap", "to": "plot_pca_stdscaled_cumulative_var"}, {"arrows": "to", "from": "save_feat_imp_fig_wrap", "to": "plot_rf_importance"}, {"arrows": "to", "from": "save_feat_imp_fig_wrap", "to": "std_feat_imp_plot_path"}, {"arrows": "to", "from": "plot_learning_curve_save_wrap", "to": "gen_learning_curve"}, {"arrows": "to", "from": "plot_learning_curve_save_wrap", "to": "plot_learning_curve"}, {"arrows": "to", "from": "plot_learning_curve_save_wrap", "to": "std_lc_plot_path"}, {"arrows": "to", "from": "plot_pred_vs_obs_regr", "to": "_estimate_decimals_for_plotting"}, {"arrows": "to", "from": "plot_pred_vs_obs_wrap", "to": "plot_pred_vs_obs_regr"}, {"arrows": "to", "from": "plot_pred_vs_obs_wrap", "to": "std_regr_pred_obs_path"}, {"arrows": "to", "from": "plot_pred_vs_obs_regr_mapie", "to": "_estimate_decimals_for_plotting"}, {"arrows": "to", "from": "plot_pred_vs_obs_wrap_mapie", "to": "plot_pred_vs_obs_regr_mapie"}, {"arrows": "to", "from": "plot_pred_vs_obs_wrap_mapie", "to": "std_regr_pred_obs_path_mapie"}, {"arrows": "to", "from": "plot_map_pred_wrap", "to": "std_map_pred_path"}, {"arrows": "to", "from": "plot_map_pred_wrap", "to": "gen_conus_basemap"}, {"arrows": "to", "from": "plot_map_pred_wrap", "to": "plot_map_pred"}, {"arrows": "to", "from": "plot_map_pred_wrap_mapie", "to": "std_map_pred_path"}, {"arrows": "to", "from": "plot_map_pred_wrap_mapie", "to": "gen_conus_basemap"}, {"arrows": "to", "from": "plot_map_pred_wrap_mapie", "to": "plot_map_pred_mapie"}, {"arrows": "to", "from": "plot_best_algo_wrap", "to": "std_map_best_path"}, {"arrows": "to", "from": "plot_best_algo_wrap", "to": "gen_conus_basemap"}, {"arrows": "to", "from": "plot_best_algo_wrap", "to": "plot_best_perf_map"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"edges": {"arrows": {"to": {"enabled": true}}, "smooth": false}, "layout": {"hierarchical": {"enabled": true, "direction": "UD", "sortMethod": "hubsize"}}, "physics": {"hierarchicalRepulsion": {"nodeDistance": 120}, "minVelocity": 0.75}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
