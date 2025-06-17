@@ -10,6 +10,14 @@ import os
 import numpy as np
 import forestci as fci
 from sklearn.model_selection import train_test_split
+import pandera.pandas as pa
+from pandera import Column, DataFrameSchema, Index, Check
+from pandera.typing import Series
+from datetime import datetime
+import importlib.util
+import sys
+from fs_algo.file_schemas.pydantic_schemas import ModelMetadata
+from fs_algo.file_schemas import schemas
 
 # TODO create a function that's flexible/converts user formatted checks (a la fs_prep)
 
@@ -22,6 +30,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     path_pred_config = Path(args.path_pred_config) #Path(f'~/git/formulation-selector/scripts/eval_ingest/xssa/xssa_pred_config.yaml') 
+
+    # Conditionally load schemas
+    if args.validate:
+        arg_val = True
+
     with open(path_pred_config, 'r') as file:
         pred_cfg = yaml.safe_load(file)
     
@@ -82,6 +95,16 @@ if __name__ == "__main__":
         df_attr = fsate.fs_read_attr_comid(dir_db_attrs, comids_pred, attrs_sel = attrs_sel,
                                            read_type = 'all', # 'all' tends to be the fastest
                                         _s3 = None,storage_options=None)
+
+        # Validating DataFrame object
+        if arg_val:
+            try:
+                 schemas.schema_df_attr.validate(df_attr)
+                 print("✅ DataFrame validated successfully.")
+            except (pa.errors.SchemaError, pa.errors.SchemaErrors) as e:
+                print(f"❌ Validation failed: {e}")
+                print(e.args)
+    
         df_attr = df_attr.drop(columns='dl_timestamp')
         # Constrain the values in the value column to two digits after the decimal point (to help ID duplicates)
         df_attr['value'] = df_attr['value'].apply(lambda x: round(x, 2))
@@ -112,6 +135,9 @@ if __name__ == "__main__":
                 # Read in the algorithm's pipeline
                 # pipe = joblib.load(path_algo)
                 pipeline_data = joblib.load(path_algo)
+                
+                # Validate joblib file
+                validated = ModelMetadata(**pipeline_data)
                 
                 pipe = pipeline_data['pipeline']
                 X_train_shape = pipeline_data['X_train_shape']  # Retrieve X_train.shape
@@ -156,6 +182,37 @@ if __name__ == "__main__":
                     "If prediction uncertainty desired, re-run the algorithm training fs_proc_algo_viz.py, " \
                     "with mapie specified in the Uncertainty section of the algo config file.")
 
+                # Validating DataFrame object
+                if arg_val:
+                    schema_df_pred_dict = {
+                        "featureID": Column(pa.Int, nullable=False),
+                        "prediction": Column(pa.Float, nullable=False),
+                        "metric": Column(pa.String, checks=Check.isin(["NSE", "RMSE", "KGE"]), nullable=False),
+                        "dataset": Column(pa.String, nullable=False),
+                        "algo": Column(pa.String, checks=Check.isin(["rf", "mlp"]), nullable=False),
+                        "name_algo": Column(pa.String, checks=Check.str_matches(r".+\.joblib$"), nullable=False),
+                        "forestci": Column(pa.Float, nullable=True)  # Optional if not always present
+                    }
+                    
+                    # Dynamically add mapie_lower and mapie_upper columns if mapie_alpha is not empty
+                    for alpha in mapie_alpha:
+                        # Convert to string with consistent format (e.g., 0.05 -> "0.05")
+                        alpha_str = f"{alpha:.2f}".rstrip("0").rstrip(".") if "." in f"{alpha:.2f}" else f"{alpha:.2f}"
+                        col_name1 = f"mapie_lower_{alpha_str}"
+                        col_name2 = f"mapie_upper_{alpha_str}"
+                        schema_df_pred_dict[col_name1] = Column(pa.Float, nullable=True)
+                        schema_df_pred_dict[col_name2] = Column(pa.Float, nullable=True)
+    
+                    schema_df_pred = schemas.build_schema_df_pred(schema_df_pred_dict)
+                    
+                    try:
+                        validated_df_pred = schema_df_pred.validate(pd.DataFrame(df_pred))
+                        print("✅ Prediction DataFrame validated successfully.")
+                    except Exception as e:
+                        print(f"❌ Prediction validation failed: {e}")
+                        sys.exit(1)
+
+# validated_df_pred = df_pred_schema .validate(df_pred)
                 path_pred_out = fsate.std_pred_path(dir_out,algo=algo,metric=metric,dataset_id=ds)
                 # Write prediction results
                 df_pred.to_parquet(path_pred_out)
