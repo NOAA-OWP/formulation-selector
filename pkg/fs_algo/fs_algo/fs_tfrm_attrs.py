@@ -28,13 +28,31 @@ import subprocess
 import numpy as np
 import os
 import re
+import importlib.util
+import sys
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'process the algorithm config file')
     parser.add_argument('path_tfrm_cfig', type=str, help='Path to the YAML configuration file specific for algorithm training')
+    parser.add_argument('--validate', action='store_true', help='Enable schema loading for data validation')
     args = parser.parse_args()
 
     path_tfrm_cfig = Path(args.path_tfrm_cfig)#path_tfrm_cfig = Path(f'~/git/formulation-selector/scripts/eval_ingest/xssa/xssa_attrs_tform.yaml') 
+    config_dir = path_tfrm_cfig.parent
+
+    # Conditionally load schemas
+    if args.validate:
+        arg_val = True
+        schema_file = config_dir / "schemas.py"
+    
+        if not schema_file.exists():
+            raise FileNotFoundError(f"No schema file found at expected location: {schema_file}")
+    
+        # Dynamically import schemas.py
+        spec = importlib.util.spec_from_file_location("schemas", str(schema_file))
+        schemas = importlib.util.module_from_spec(spec)
+        sys.modules["schemas"] = schemas
+        spec.loader.exec_module(schemas)
 
     with open(path_tfrm_cfig, 'r') as file:
         tfrm_cfg = yaml.safe_load(file)
@@ -74,6 +92,15 @@ if __name__ == "__main__":
         path_comid = Path(path_comid)
         colname_comid = fio.get('colname_comid') 
         df_comids = fta.read_df_ext(path_comid) # Simply read in a file
+        
+        if arg_val:
+            try:
+                schema_df_comids = schemas.schema_df_comids  # Load schema from schemas.py
+                validated_df_comids = schema_df_comids.validate(df_comids)
+                print("✅ DataFrame validated successfully.")
+            except Exception as e:
+                print(f"❌ Validation failed: {e}")
+                sys.exit(1)
         
         # Now we need to make sure we select the comids!
         all_uniq_comids = df_comids[colname_comid].unique()
@@ -136,7 +163,7 @@ if __name__ == "__main__":
                                 'uniq_cmbo':np.nan,
                                 'dl_dataset':np.nan
                               }).drop_duplicates().reset_index()
-    
+
     # Save this to file, appending if missing data already exist.
     df_missing.to_csv(path_need_attrs, mode = 'a',
                                 header= not path_need_attrs.exists(),

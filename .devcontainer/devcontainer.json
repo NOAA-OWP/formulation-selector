@@ -1,0 +1,9 @@
+{
+  "build": {
+    "dockerfile": "./Dockerfile"
+  },
+
+  "containerEnv": {
+    "HOME": "/home/rafts"
+  }
+}
