@@ -1,0 +1,414 @@
+# expected categorical formats used in rafts
+target_var_mappings: # Lists each allowable target variable and what it means
+  - 'Q': 'stream discharge'
+  - 'SWE': 'snow water equivalent'
+  - 'DO': 'dissolved oxygen in water'
+  - 'airTemp2m': 'Air Temperature at 2m elevation'
+metric_mappings_single_timeseries: # Refer to CIROH-funded TEEHR Metric List: https://docs.google.com/spreadsheets/d/1dyI9ZSTDslntNRmxldXB8rtLYmDWgEE5FL6oQ5Qka4M/edit?usp=sharing
+  - resp_var: 'ME'
+    description: 'mean error'
+    Q_lims: # For discharge, which is non-negative, the mean error is theoretically unbounded.
+      min_lim: None
+      max_lim: None
+  - resp_var: 'MAE'
+    description: 'mean absolute error'
+    Q_lims:
+      min_lim: 0 # The minimum is 0, representing a perfect match.
+      max_lim: None # There is no theoretical upper bound.
+  - resp_var: 'MSE'
+    description: 'mean square error'
+    Q_lims:
+      min_lim: 0 # The minimum is 0, representing a perfect match.
+      max_lim: None # There is no theoretical upper bound.
+  - resp_var: 'RMSE'
+    description: 'root mean squared error'
+    Q_lims:
+      min_lim: 0 # The minimum is 0, as the root of a non-negative value.
+      max_lim: None # There is no theoretical upper bound.
+  - resp_var: 'RB'
+    description: 'relative bias'
+    Q_lims:
+      min_lim: -1 # Occurs when the mean of simulated values is zero.
+      max_lim: None # There is no theoretical upper bound.
+  - resp_var: 'MB'
+    description: 'multiplicative bias'
+    Q_lims:
+      min_lim: 0 # Occurs when the mean simulated value is zero.
+      max_lim: None # There is no theoretical upper bound.
+  - resp_var: 'MARE'
+    description: 'mean absolute relative error'
+    Q_lims:
+      min_lim: 0 # The minimum is 0, representing a perfect match.
+      max_lim: None # There is no theoretical upper bound.
+  - resp_var: 'PCC'
+    description: 'Pearson correlation coefficient'
+    Q_lims:
+      min_lim: -1 # Represents a perfect negative linear correlation. 
+      max_lim: 1 # Represents a perfect positive linear correlation. 
+  - resp_var: 'SRCC'
+    description: 'Spearman rank correlation coefficient'
+    Q_lims:
+      min_lim: -1 # Represents a perfect inverse rank agreement. Same bounds as PCC as SRCC is PCC applied to ranked data.
+      max_lim: 1 # Represents a perfect positive rank agreement.
+  - resp_var: 'NSE'
+    description: 'Nash-Sutcliffe efficiency'
+    Q_lims:
+      min_lim: None # There is no lower bound. # Nash, J. E., & Sutcliffe, J. V. (1970). https://doi.org/10.1016/0022-1694(70)90255-6
+      max_lim: 1 # A value of 1 represents a perfect match. # Nash, J. E., & Sutcliffe, J. V. (1970).
+  - resp_var: 'NNSE'
+    description: 'normalized Nash-Sutcliffe efficiency'
+    Q_lims:
+      min_lim: 0 # Approaches 0 as NSE approaches -inf. # McCuen et al., (2006). https://doi.org/10.1061/(ASCE)1084-0699(2006)11:6(597)
+      max_lim: 1 # A value of 1 corresponds to an NSE of 1. # McCuen et al., (2006).
+  - resp_var: 'logNSE'
+    description: 'Nash-Sutcliffe efficiency of log flows'
+    Q_lims:
+      min_lim: None # There is no lower bound, same as NSE.
+      max_lim: 1 # A value of 1 represents a perfect match, same as NSE.
+  - resp_var: 'KGE'
+    description: 'Kling-Gupta efficiency'
+    Q_lims:
+      min_lim: None # There is no lower bound. # Gupta, et al. (2009). https://doi.org/10.1016/j.jhydrol.2009.08.003
+      max_lim: 1 # A value of 1 represents a perfect match. # Gupta, et al. (2009).
+  - resp_var: 'KGEmod1'
+    description: 'Kling-Gupta efficiency from Kling et al 2012'
+    Q_lims:
+      min_lim: None # There is no lower bound. # Kling, H., et al. (2012). https://doi.org/10.1016/j.jhydrol.2012.01.011
+      max_lim: 1 # A value of 1 represents a perfect match. # Kling, H., et al. (2012).
+  - resp_var: 'KGEmod2'
+    description: 'Kling-Gupta efficiency from Clark et al 2021'
+    Q_lims:
+      min_lim: None # There is no lower bound. # Clark, et al. (2021).  https://doi.org/10.1029/2020WR029001
+      max_lim: 1 # A value of 1 represents a perfect match. # Clark, et al. (2021).
+  - resp_var: 'MSESS'
+    description: 'mean square error skill score'
+    Q_lims:
+      min_lim: None # Lower bound is negative infinity if the model is much worse than the reference.
+      max_lim: 1 # A value of 1 indicates a perfect score.
+  - resp_var: 'alpha_NSE'
+    description: 'alpha NSE decomposition, Gupta et al 2009: the variability ratio sigma_m/sigma_o'
+    Q_lims:
+      min_lim: 0 # Occurs if the model has zero variance. # Gupta, et al. (2009).
+      max_lim: None # There is no upper bound on the ratio of standard deviations.
+  - resp_var: 'beta_NSE'
+    description: 'beta NSE decomposition, Gupta et al 2009: bias; ratio of means mu_m/mu_o'
+    Q_lims:
+      min_lim: 0 # Occurs if the mean of the model is zero. # Gupta, H. V., et al. (2009).
+      max_lim: None # There is no upper bound on the ratio of means.
+  - resp_var: 'FHV'
+    description: 'top 2% peak flow bias, Yilmaz et al 2008'
+    Q_lims:
+      min_lim: -1 # Represents a value of zero for the mean of simulated peak flows. # Yilmaz, et al. (2008). https://doi.org/10.1029/2007WR006716
+      max_lim: None # The bias is unbounded in the positive direction. # Yilmaz, et al. (2008).
+  - resp_var: 'FLV'
+    description: '30% low flow bias, Yilmaz et al 2008'
+    Q_lims:
+      min_lim: -1 # # Represents a value of zero for the mean of simulated peak flows. # Yilmaz, et al. (2008). https://doi.org/10.1029/2007WR006716
+      max_lim: None # The bias is unbounded in the positive direction. # Yilmaz, et al. (2008).
+  - resp_var: 'FMS'
+    description: 'bias of FDC midsegment slope, Yilmaz et al 2008'
+    Q_lims:
+      min_lim: -1 # As a relative error, the lower limit is -1. # Yilmaz, et al. (2008). https://doi.org/10.1029/2007WR006716
+      max_lim: None # The bias is unbounded in the positive direction. # Yilmaz, et al. (2008).
+  - resp_var: 'Rsq'
+    description: 'Coefficient of Determination'
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'RSR'
+    description: 'Root mean standard deviation ratio'
+    Q_lims:
+      min_lim: 0
+      max_lim: None
+  - resp_var: 'MVD'
+    description: 'Max value delta'
+    Q_lims:
+      min_lim: None
+      max_lim: None
+  - resp_var: 'MVTD'
+    description: 'Max value time delta' # intended to be units of seconds in TEEHR
+    Q_lims:
+      min_lim: None
+      max_lim: None
+  - resp_var: 'APRB'
+    description: 'Annual Peak Relative Bias'
+    Q_lims:
+      min_lim: 0
+      max_lim: None
+metric_mappings_hydrotools: #  consider the metrics provided via hydrotools https://github.com/NOAA-OWP/hydrotools/tree/main/python/metrics/src/hydrotools/metrics/metrics.py
+  - resp_var: 'MESS'
+    description: 'mean error skill score'
+    Q_lims: # Assuming this is the same as MSESS (Mean Square Error Skill Score)
+      min_lim: None 
+      max_lim: 1 
+  - resp_var: 'COP'
+    description: 'coefficient of persistence'
+    Q_lims: # Bounds are identical to NSE, as it is NSE with a persistence forecast as the benchmark.
+      min_lim: None
+      max_lim: 1
+  - resp_var: 'COE'
+    description: 'coefficient of extrapolation'
+    Q_lims: # Bounds are like NSE, but not sure.
+      min_lim: None
+      max_lim: 1
+  - resp_var: 'POD'
+    description: 'probability of detection'
+    Q_lims:
+      min_lim: 0 
+      max_lim: 1 # Perfect "hit rate", as the ratio of true positives to the number of observations..
+  - resp_var: 'POFD'
+    description: 'probability of false detection'
+    Q_lims:      # POFD ranges from 0.0 to 1.0, lower is better.
+      min_lim: 0 
+      max_lim: 1 
+  - resp_var: 'POFA'
+    description: 'probability of false alarm'
+    Q_lims:      # Also known as False Alarm Ratio (FAR). POFA ranges from 0.0 to 1.0, lower is better.
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'TS'
+    description: 'threat score'
+    Q_lims:      # CSI ranges from 0.0 to 1.0, higher is better.
+      min_lim: 0 
+      max_lim: 1 
+  - resp_var: 'FB'
+    description: 'frequency bias'
+    Q_lims:      #  A perfect score is 1.0. Values less than 1.0 indicate under-prediction. Values greater than 1.0 indicate over-prediction.
+      min_lim: 0 # Occurs when no events are forecast.
+      max_lim: None # Unbounded if no events were observed but events were forecast.
+  - resp_var: 'PctC'
+    description: 'percent correct'
+    Q_lims:      # PC ranges from 0.0 to 1.0, higher is better.
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'BC'
+    description: 'base chance'
+    Q_lims: 
+      min_lim: 0 # If either the number of forecasted events (TP+FP) or the number of observed events (TP+FN) is zero. 
+      max_lim: 1 # A case where the number of forecasts equals the number of observations, and both are equal to the total number of forecasts/observations.
+  - resp_var: 'ETS'
+    description: 'equitable threat score'
+    Q_lims:
+      min_lim: -0.3333333333333333 # Lower bound is -1/3. # Schaefer, J. T. (1990). https://doi.org/10.1175/1520-0434(1990)005%3C0570:TCSIAA%3E2.0.CO;2
+      max_lim: 1 # Perfect score is 1. # Schaefer, J. T. (1990). https://doi.org/10.1175/1520-0434(1990)005%3C0570:TCSIAA%3E2.0.CO;2
+metric_mappings_signatures:
+  - resp_var: 'FDCSE'
+    description: 'flow duration curve slope error'
+    Q_lims: # Defined as a relative error.
+      min_lim: -1
+      max_lim: None
+  - resp_var: 'APFRB'
+    description: 'annual peak flow relative bias'
+    Q_lims: # Defined as a relative error.
+      min_lim: -1
+      max_lim: None
+  - resp_var: 'MMVE'
+    description: 'mean monthly volume error'
+    Q_lims: 
+      min_lim: None
+      max_lim: None
+  - resp_var: 'MMMVE'
+    description: 'maximum mean monthly volume error'
+    Q_lims: 
+      min_lim: None
+      max_lim: None
+  - resp_var: 'EPFRB'
+    description: 'event peak flow relative bias'
+    Q_lims: # Defined as a relative error.
+      min_lim: -1
+      max_lim: None
+  - resp_var: 'EPFTE'
+    description: 'event peak flow timing error'
+    Q_lims: 
+      min_lim: None
+      max_lim: None
+  - resp_var: 'BFIE'
+    description: 'baseflow index error'
+    Q_lims: # The error between two values that are themselves bounded by [0, 1].
+      min_lim: -1
+      max_lim: 1
+  - resp_var: 'RLDE'
+    description: 'rising limb density error'
+    Q_lims: # Assuming to be the difference between model and observed RLE.
+      min_lim: None
+      max_lim: None
+  - resp_var: 'RRE'
+    description: 'runoff ratio error'
+    Q_lims: # Considering 0≤RR≤1, RRE as a signed difference between model and observed RR.
+      min_lim: -1
+      max_lim: 1
+  - resp_var: 'PFRE10'
+    description: '10th percentile flow relative error'
+    Q_lims: # Defined as a relative error.
+      min_lim: -1
+      max_lim: None
+  - resp_var: 'PFRE90'
+    description: '90th percentile flow relative error'
+    Q_lims: # Defined as a relative error.
+      min_lim: -1
+      max_lim: None
+metric_mappings_categorical:
+  - resp_var: 'FAR'
+    description: 'false alarm ratio'
+    Q_lims: # FAR ranges from 0.0 to 1.0, lower is better.
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'POD'
+    description: 'probability of detection'
+    Q_lims: # POD ranges from 0.0 to 1.0, higher is better.
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'CSI'
+    description: 'criticial success index - threat score'
+    Q_lims: # CSI ranges from 0.0 to 1.0, higher is better.
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'PFD'
+    description: 'probability of false detection'
+    Q_lims: # PFD ranges from 0.0 to 1.0, lower is better.
+      min_lim: 0
+      max_lim: 1
+metric_mappings_probabilistic:
+  - resp_var: 'ROCS'
+    description: 'relative operating characteristic score'
+    Q_lims: # This is the Area Under the ROC Curve (AUC).
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'BS'
+    description: 'Brier score'
+    Q_lims: # Lower is better.
+      min_lim: 0 
+      max_lim: 1 
+  - resp_var: 'BSS'
+    description: 'Brier skill score'
+    Q_lims:
+      min_lim: None # Can be negative if the forecast is worse than the reference.
+      max_lim: 1 # Perfect score.
+  - resp_var: 'CRPS'
+    description: 'continuous ranked probability score'
+    Q_lims: # Lower is better.
+      min_lim: 0 # Perfect score. # Gneiting, T., & Raftery, A. E. (2007). https://doi.org/10.1198/016214506000001437
+      max_lim: None # Has no theoretical upper bound. 
+  - resp_var: 'CRPSS'
+    description: 'continuous ranked probability skill'
+    Q_lims: # Higher is better.
+      min_lim: None # Can be negative if the forecast is worse than the reference.
+      max_lim: 1 # Perfect score.
+metric_xssa_process_categories: # Custom response variables from Mai et al 2022 xSSA paper
+  - resp_var: 'W_precip_corr'
+    description: 'Precipitation Correction $W$'
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'V_rainsnow_part'
+    description: 'Rain-Snow Partitioning $V$'
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'U_perc'
+    description: "Percoloation $U$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'T_pot_melt'
+    description: "Potential Melt $T$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'S_delay_ro'
+    description: "Convolution (dlyd runoff) $S$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'R_srfc_ro'
+    description: "Convolution (srfc runoff) $R$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'Q_snow_bal'
+    description: "Snow Balance $Q$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'P_baseflow'
+    description: "Baseflow $P$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'O_evap'
+    description: "Evaporation $O$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'N_quickflow'
+    description: "Quickflow $N$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'M_infilt'
+    description: "Infiltration $M$"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'W_wt_precip_corr'
+    description: 'Precipitation Correction $W$, variance weighted'
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'V_wt_rainsnow_part'
+    description: 'Rain-Snow Partitioning $V$, variance weighted'
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'U_wt_perc'
+    description: "Percoloation $U$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'T_wt_pot_melt'
+    description: "Potential Melt $T$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'S_wt_delay_ro'
+    description: "Convolution (dlyd runoff) $S$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'R_wt_srfc_ro'
+    description: "Convolution (srfc runoff) $R$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'Q_wt_snow_bal'
+    description: "Snow Balance $Q$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'P_wt_baseflow'
+    description: "Baseflow $P$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'P_wt_baseflow'
+    description: "Evaporation $O$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'N_wt_quickflow'
+    description: "Quickflow $N$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  - resp_var: 'M_wt_infilt'
+    description: "Infiltration $M$, variance weighted"
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+metric_testing_placeholder:
+  - resp_var: 'fake'
+    description: A fake value to use as a placeholder
+    Q_lims:
+      min_lim: 0
+      max_lim: 1
+  # If you add response variable, make sure it begins with metric_ e.g. metric_xssa_process_categories,

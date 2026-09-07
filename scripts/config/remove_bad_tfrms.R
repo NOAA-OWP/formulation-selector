@@ -4,7 +4,7 @@ library(proc.attr.hydfab)
 library(glue)
 
 # Path to attribute configuration file
-path_attr_config <- "~/git/formulation-selector/scripts/eval_ingest/xssa/xssa_attr_config.yaml"
+path_attr_config <- "~/git/rafts/scripts/workflow_configs/legacy/xssa/xssa_attr_config.yaml"
 attr_cfig <- proc.attr.hydfab::attr_cfig_parse(path_attr_config)
 # List of bad attribute transformations
 bad_vars <- c('TOT_WB5100_yr_np.mean')

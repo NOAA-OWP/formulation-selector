@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rafts_prep"
+dynamic = ["version"]
+description = "Formulation Selector evaluation data preparation"
+authors = [
+    { name = "Guy Litt", email = "guy.litt@noaa.gov" },
+    { name = "Soroush Sorourian", email = "soroush.sorourian@noaa.gov"},
+    { name = "Lauren Bolotin", email = "lauren.bolotin@noaa.gov"},
+    { name = "Ben Choat", email = "benjamin.choat@noaa.gov"}
+]
+license = { text = "MIT License" }
+keywords = ["formulation", "evaluation"]
+classifiers = [
+    "Programming Language :: Python :: 3.12"
+]
+requires-python = "==3.12.11" 
+dependencies = [
+    "numpy==2.4.4",
+    "pandas>=2.2.3",
+    "xarray>=2024.9.0",
+    "pyarrow>=17.0.0",
+    "zarr>=2.18.3",
+    "dask>=2024.10.0",
+    "netcdf4>=1.7.2",
+    "pynhd>=0.19.0",
+    "rafts_algo"
+]
+
+[project.urls]
+Repository = "https://github.com/noaa-owp/rafts"
+
+[project.scripts]
+rafts_prep = "rafts_prep.main:main"
+
+[tool.uv.sources]
+rafts_algo = { workspace = true }
+
+# Translates find_packages(exclude=['tests*'])
+[tool.hatch.build.targets.wheel]
+packages = ["rafts_prep"]
+exclude = [
+    "tests",
+    "tests*",
+]
+
+[tool.hatch.version]
+path = "rafts_prep/__version__.py"
+
+# Hatchling includes package data automatically by default, but you can explicitly force it:
+[tool.hatch.build.targets.wheel.force-include]
+"rafts_prep/data" = "rafts_prep/data"

@@ -24,7 +24,7 @@ This can change the exact 1:1 match of gage_ids, which is expected
 in \link[proc.attr.hydfab]{proc_attr_gageids}. May set epsg to NULL
 }
 \seealso{
-\link[proc.attr.hydfab]{fs_retr_nhdp_comids_geom_wrap}
+\link[proc.attr.hydfab]{rafts_retr_nhdp_comids_geom_wrap}
 
 \link[proc.attr.hydfab]{proc_attr_gageids}
 }

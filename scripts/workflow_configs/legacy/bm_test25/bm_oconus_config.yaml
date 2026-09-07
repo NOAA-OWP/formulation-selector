@@ -1,0 +1,12 @@
+# Map locations & custom metadata of OCONUS nextgen hydrofabric gpkg files
+# Make sure the name of this file is referenced in the corresponding attribute config file.
+# Companion parsing function: proc.attr.hydfab::parse_hfab_oconus_config
+dir_base_hfab: "~/noaa/hydrofabric/v2.2" # The base directory containing the hydrofabric gpkg files downloaded from the hydrofabric data repository e.g. https://spatial.dev.water.noaa.gov/data/hydrofabric/ or https://www.lynker-spatial.com/data?path=hydrofabric%2F
+source_map_ak:
+  path: "{dir_base_hfab}/ak_nextgen.gpkg"
+source_map_pr:
+  path: "{dir_base_hfab}/prvi_nextgen.gpkg"
+source_map_vi:
+  path: "{dir_base_hfab}/prvi_nextgen.gpkg"
+source_map_hi:
+  path: "{dir_base_hfab}/hi_nextgen.gpkg"

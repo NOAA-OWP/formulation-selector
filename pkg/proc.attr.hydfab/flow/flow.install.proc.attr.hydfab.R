@@ -1,4 +1,4 @@
-#' @title Build the formulation-selector R packages
+#' @title Build the rafts R packages
 #' @description Following the package building framework as outlined here:
 #' https://hilaryparker.com/2014/04/29/writing-an-r-package-from-scratch/
 #' Another good resource:
@@ -16,12 +16,13 @@ lapply(c("devtools","roxygen2","testthat","covr"), library, character.only = TRU
 
 # ---------------------------------------------------------------------------- #
 #  Define user-specific paths for installation
-if ('bolotin' %in% Sys.getenv("HOME")) {
-  # if you have a different path to formulation-selector, add it here, otherwise remove
-} else if ('choat' %in% Sys.getenv("HOME")){
-  # if you have a different path to formulation-selector, add it here, otherwise remove
-} else { # assume this is the path to the formulation-selector repo dir
-  fs_dir <- file.path(Sys.getenv("HOME"),"git","formulation-selector")
+home_dir <-  Sys.getenv("HOME")
+if (base::grepl('bolotin', home_dir)) {
+  # if you have a different path to rafts, add it here, otherwise remove
+} else if (base::grepl('choat', home_dir)){
+  # if you have a different path to rafts, add it here, otherwise remove
+} else { # assume this is the path to the rafts repo dir
+  rafts_dir <- file.path(home_dir,"git","rafts")
 }
 # Run unit tests?
 RunTest <- T #TRUE Default FALSE prevents s3 data downloading in unit testing (FALSE=fast)
@@ -32,9 +33,9 @@ namePack <- c("proc.attr.hydfab")
 
 for(pack in namePack){
 
-  pkg_dir <- file.path(fs_dir,"pkg") # Note that CRAN does not allow '_' in package names, hence the '.'
-  if (!dir.exists(pkg_dir)){
-    stop(paste0("reconsider the path to ",pkg_dir))
+  pkg_dir <- file.path(rafts_dir,"pkg") # Note that CRAN does not allow '_' in package names, hence the '.'
+  if (!base::dir.exists(pkg_dir)){
+    stop(base::paste0("reconsider the path to ",pkg_dir))
   }
 
   pack_dir <- file.path(pkg_dir, pack)

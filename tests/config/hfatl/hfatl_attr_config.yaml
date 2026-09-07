@@ -1,0 +1,44 @@
+# hfatl_attr_config.yaml
+# Config for grabbing catchment attributes from the pure Python hfATLAS workflow, for
+# the 30-gage training subset of the hfATLAS integration test.
+col_schema:
+  - featureID: '{gage_id}'
+  - featureSource: 'hfv4_test_id'
+file_io:
+  - save_loc: 'local'
+  - home_dir: '~'
+  - dir_base: '../../data/run_data'
+  - dir_std_base: '{dir_base}/input/user_data_std'
+  - dir_db_attrs: '{dir_base}/input/attrs_hfatl/{ds}/'
+  - ds_type: 'training'
+  - write_type: 'parquet'
+  - path_meta: "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.parquet"
+  - name_prep_config: 'hfatl_prep_config.yaml' # REQUIRED for linking to the formulation
+attr_select: # The names of variable sublistings are standardized with _vars, e.g. hfatl_vars
+  - hfatl_id_col: 'gageID_divide_id' # Matches map_divide_id_col in hfatl_prep_config.yaml
+  - paths_hfatl: # Divide-level hfATLAS attributes, derived via build_hfatl_divide_attrs.py
+    - "../../data/hfv4_x30_divide_attrs.parquet"
+  - hfatl_vars: # hydrofabricATLAS variables. Must be present in BOTH paths_hfatl (training)
+    # and hfatl_pred_config.yaml's path_meta (prediction), so the trained model's
+    # feature set matches at prediction time. This is the intersection of columns
+    # available in hfv4_x30_divide_attrs.parquet and
+    # tests/data/jul26_cal_hf4_predictors_9locations_final.parquet.
+    - 'TOT_AET_hfa'
+    - 'TOT_AWCAVE_hfa'
+    - 'TOT_BFI_hfa'
+    - 'TOT_CLAYAVE_hfa'
+    - 'TOT_Dry_hfa'
+    - 'TOT_ELEV_MEAN_hfa'
+    - 'TOT_EVI_JFM_2012_hfa'
+    - 'TOT_IMPV01_hfa'
+    - 'TOT_Intensity_hfa'
+    - 'TOT_PPT9120_ANN_hfa'
+    - 'TOT_PRSNOW_hfa'
+    - 'TOT_RECHG_hfa'
+    - 'TOT_RH_hfa'
+    - 'TOT_SANDAVE_hfa'
+    - 'TOT_TMIN7100_JAN_hfa'
+    - 'TOT_WB5100_yr_min_hfa'
+    - 'TOT_Wet_hfa'
+    - 'ari_ix_stats'
+    - 'glc_pc_c18_hfa'

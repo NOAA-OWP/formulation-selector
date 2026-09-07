@@ -18,5 +18,5 @@ Build a standardized path for every config file used in RaFTS
 Ensure the 'path_known_config' exists
 }
 \seealso{
-\code{fs_algo.build_cfig_path} The python equivalent of this function
+\code{rafts_algo.build_cfig_path} The python equivalent of this function
 }

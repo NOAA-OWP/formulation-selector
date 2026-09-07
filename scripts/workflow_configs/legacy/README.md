@@ -1,0 +1,3 @@
+The legacy workflow represent historic dataset processing when watershed attribute data were retrieved from NLDI (aka `usgs_vars`) and the hydroatlas (aka `ha_vars`) using the R package `proc.attr.hydfab`. The legacy workflows are not guaranteed to run and are no longer maintained, but serve as an archive for historic uses of RaFTS.
+
+The R package `proc.attr.hydfab` was deprecated in 2026 upon creation of the `hfatlas` tool which prepares attribute data for hydrofabric divides using custom processing workflows. More details on `hfatlas` may be found in [https://github.com/NOAA-OWP/hfatlas](https://github.com/NOAA-OWP/hfatlas).

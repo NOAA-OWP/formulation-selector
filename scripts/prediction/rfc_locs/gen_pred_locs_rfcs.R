@@ -2,6 +2,10 @@
 #' @author Guy Litt
 #' @description Given the comids of RFC forecast locations, grab NHDPlus
 #' catchment attributes
+#' @example \dontrun{gen_pred_locs_rfcs.R
+#' "{home_dir}/git/rafts/scripts/workflow_configs/legacy/xssa_us/xssaus_pred_config.yaml"
+#' "~/git/rafts/scripts/prediction/rfc_locs/nws_nwm_crosswalk.txt"}
+
 
 library(nhdplusTools)
 library(proc.attr.hydfab)
@@ -16,12 +20,13 @@ library(future.apply)
 main <- function(){
   args <- commandArgs(trailingOnly = TRUE)
   # Check if the input argument is provided
-  if (length(args) < 1) {
-    stop("Input prediction configuration file must be specified")
+  if (length(args) < 2) {
+    stop("Input prediction configuration filepath and full path to nws_nwm_crosswalk.txt must be specified.")
   }
   # Define args supplied to command line
   home_dir <- Sys.getenv("HOME")
-  path_cfig_pred <- glue::glue(as.character(args[1])) # path_cfig_pred <- glue::glue("{home_dir}/git/formulation-selector/scripts/eval_ingest/xssa_us/xssaus_pred_config.yaml")
+  path_cfig_pred <- glue::glue(as.character(args[1])) # path_cfig_pred <- glue::glue("{home_dir}/git/rafts/scripts/workflow_configs/legacy/xssa_us/xssaus_pred_config.yaml")
+  path_nwm_crosswalk <- glue::glue(as.character(args[2]))
   # Read in config file
   if(!base::file.exists(path_cfig_pred)){
     stop(glue::glue("The provided path_cfig_pred does not exist: {path_cfig_pred}"))
@@ -31,23 +36,17 @@ main <- function(){
   write_type <- base::unlist(cfig_pred)[['write_type']]
   path_meta <- base::unlist(cfig_pred)[['path_meta']] # The filepath of the file that generates the list of comids used for prediction
   # READ IN ATTRIBUTE CONFIG FILE
-  path_attr_config <- glue::glue(cfig_pred[['path_attr_config']])
-  cfig_attr <- yaml::read_yaml(path_attr_config)
-  # Defining directory paths as early as possible:
-  io_cfig <- cfig_attr[['file_io']]
-  dir_base <- glue::glue(base::unlist(io_cfig)[['dir_base']])
-  dir_std_base <- glue::glue(base::unlist(io_cfig)[['dir_std_base']])
-  dir_db_hydfab <- glue::glue(base::unlist(io_cfig)[['dir_db_hydfab']])
-  dir_db_attrs <- glue::glue(base::unlist(io_cfig)[['dir_db_attrs']])
+
+  name_attr_config <- cfig_pred[['name_attr_config']]
+  path_attr_config <- proc.attr.hydfab::build_cfig_path(path_cfig_pred,name_attr_config)
 
   # ------------------------ ATTRIBUTE CONFIGURATION --------------------------- #
+  cfig_attr <- proc.attr.hydfab::attr_cfig_parse(path_attr_config)
   hfab_cfg <- cfig_attr[['hydfab_config']]
-
   names_hfab_cfg <- unlist(lapply(hfab_cfg, function(x) names(x)))
   names_attr_sel_cfg <- unlist(lapply(cfig_attr[['attr_select']], function(x) names(x)))
   s3_base <- glue::glue(base::unlist(hfab_cfg)[['s3_base']]) # s3 path containing hydrofabric-formatted attribute datasets
   s3_path_hydatl <- glue::glue(unlist(cfig_attr[['attr_select']])[['s3_path_hydatl']]) # path to hydroatlas data formatted for hydrofabric
-
   form_cfig <- cfig_attr[['formulation_metadata']]
   datasets <- form_cfig[[grep("datasets",form_cfig)]]$datasets
 
@@ -63,31 +62,55 @@ main <- function(){
   vars_ls <- base::lapply(ls_vars, function(x) base::unlist(base::lapply(cfig_attr[['attr_select']], function(y) y[[x]])))
   names(vars_ls) <- ls_vars
   # The attribute retrieval parameters
-  Retr_Params <- list(paths = list(# Note that if a path is provided, ensure the
-    # name includes 'path'. Same for directory having variable name with 'dir'
-    dir_db_hydfab=dir_db_hydfab,
-    dir_db_attrs=dir_db_attrs,
-    s3_path_hydatl = s3_path_hydatl,
-    dir_std_base = dir_std_base,
-    path_meta=path_meta),
-    vars = vars_ls,
-    datasets = datasets,
-    ds_type = ds_type,
-    write_type = write_type
-  )
+  Retr_Params <- proc.attr.hydfab::attr_cfig_parse(path_attr_config)
+  datasets <- Retr_Params$datasets
+
   ###################### DATASET-SPECIFIC CUSTOM MUNGING #########################
   # USER INPUT: Paths to relevant config files
   # Read file and remove poorly-parsed rows
-  if(TRUE){
-    df <- read.delim(file="~/git/formulation-selector/scripts/prediction/rfc_locs/nws_nwm_crosswalk.txt", # Obtained from Gautam Sood at OWP: a file of all RFC station locations
+  if("nws_nwm_crosswalk.txt" %in% path_nwm_crosswalk){
+    df <- read.delim(file=path_nwm_crosswalk, # Obtained from Gautam Sood at OWP: a file of all RFC station locations
                      skip=0,sep = "|",col.names = c("nws_station_id","comid"))
     df <- df[-base::grep("-------+-----", df$nws_station_id),]
     df <- df[-which(base::is.na(df$comid)),]
     col_comid <- 'comid'
+    df$nws_station_id <- base::gsub(" ","",df$nws_station_id)
+
+    # Read in the HADS sites
+    df_hads <- proc.attr.hydfab:::read_noaa_hads_sites()
+    df_cmbo_hads <- base::merge(x=df,y=df_hads,by.x = "nws_station_id", by.y="lid",all.x = TRUE)
+    df_cmbo_miss_h <- df_cmbo_hads[which(is.na(df_cmbo_hads$GOES)),]
+
+    # Read in NWPS:
+    df_nwps <- proc.attr.hydfab::read_noaa_nwps_gauges()
+    df_cmbo_nwps <- base::merge(x=df,y=df_nwps, by.x = "nws_station_id",by.y="nws_shef_id", all.x=TRUE)
+    df_cmbo_miss_n <- df_cmbo_nwps[which(is.na(df_cmbo_nwps$usgs_id)),]
+
+    # The unknown locations and known locations
+    nws_ids_unkn <- base::intersect(df_cmbo_miss_n$nws_station_id,df_cmbo_miss_h$nws_station_id)
+    nws_ids_have <- base::which(!df$nws_station_id %in% nws_ids_unkn)
+
+    # TODO identify which locations are oCONUS and consider how to explicitly process using hf_uid
+    oconus_states <- c("AK","HI","PR","VI")
+    base::which(df_cmbo_nwps$state %in% oconus_states)
+    # Next step: refactor proc_attr_gageids to allow different featureSources to be called separately (one for hf_uid, one for comid)
+    #. One idea - allow queries using lat/lon when first query fails (e.g. comid) Would need to make sure to reduce NLDI hits per hour in this case.
+
+
+    if(FALSE){
+      # Retrieve state postal codes (this takes a few mins)
+      hads_postal <- lapply(1:nrow(df_cmbo_hads), function(i)  proc.attr.hydfab::retr_state_terr_postal(
+        lat=df_cmbo_hads$latitude[i],lon=df_cmbo_hads$longitude[i]))
+      df_cmbo_hads$state <- base::unlist(hads_postal)
+      #  Observations: No HI locations recognized after HADS merge: grep("HI", df_cmbo_hads$state)
+    }
+
+
   } else { # HUC08 approximations based on comids generated by Lauren Bolotin
     df <- read.csv("~/noaa/regionalization/data/rfc_locs/comids_highest_hf_hydroseq.csv")
     col_comid <- "hf_id"
   }
+
 
 
   ############################ END CUSTOM MUNGING ##############################
@@ -98,6 +121,7 @@ main <- function(){
   # Define the standardized path to the geopackage based on the input dataset
   path_save_gpkg <- proc.attr.hydfab::std_path_retr_gpkg_wrap(
     dir_std_base = Retr_Params$paths$dir_std_base,ds = Retr_Params$datasets[[1]])
+
 
   seq_nums <- c(seq(from=1,nrow(df),390),nrow(df))[-1]
   for(seq_num in seq_nums){

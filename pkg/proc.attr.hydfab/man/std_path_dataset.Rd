@@ -2,7 +2,7 @@
 % Please edit documentation in R/proc_attr_grabber.R
 \name{std_path_dataset}
 \alias{std_path_dataset}
-\title{Return filepath of standardized formulation-selector gage_id
+\title{Return filepath of standardized rafts gage_id
 location identifiers}
 \usage{
 std_path_dataset(dir_dataset, ds_filenames = "")
@@ -14,6 +14,6 @@ std_path_dataset(dir_dataset, ds_filenames = "")
 inside \code{dir_dataset}}
 }
 \description{
-Return filepath of standardized formulation-selector gage_id
+Return filepath of standardized rafts gage_id
 location identifiers
 }

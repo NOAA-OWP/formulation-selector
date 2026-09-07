@@ -4,7 +4,7 @@
 \alias{std_path_retr_gpkg_wrap}
 \title{Wrapper to create the standardized geopackage path for coordinate
 . data and id mapping corresponding to the standardized input data from
-the \code{fs_prep} python processing steps}
+the \code{rafts_prep} python processing steps}
 \usage{
 std_path_retr_gpkg_wrap(dir_std_base, ds)
 }
@@ -18,5 +18,5 @@ Given the standardized base directory and the dataset name,
 generate the standardized geopackage
 }
 \details{
-These same steps happen inside \code{grab_attrs_datasets_fs_wrap}
+These same steps happen inside \code{grab_attrs_datasets_rafts_wrap}
 }

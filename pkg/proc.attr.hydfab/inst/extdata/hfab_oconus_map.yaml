@@ -1,0 +1,16 @@
+# Map custom metadata of OCONUS nextgen hydrofabric gpkg files, relevant for v2.2
+source_map_ak:
+  domain: "AK"
+  crs_hfab: "EPSG:3338" # Only used if not retrievable using sf::st_crs(). See retr_hfab_id_wrap()
+source_map_pr:
+  domain: "PR"
+  crs_hfab: "EPSG:6566"
+source_map_vi:
+  domain: "VI"
+  crs_hfab: "EPSG:6566"
+source_map_hi:
+  domain: "HI"
+  crs_hfab: "ESRI:102007"
+# source_map_conus:
+#   domain: "conus"
+#   crs_hfab: "EPSG:" #TODO what's the epsg code??

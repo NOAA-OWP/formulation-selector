@@ -1,0 +1,41 @@
+# Prepare the Julie Mai xSSA metrics datasets from 2022 Nature Comm pub
+col_schema:   # required column mappings in the evaluation metrics dataset
+  - 'gage_id': 'divide_id' # The basin identifier/gage id used for each modeled location in the evaluation metrics dataset
+  - 'featureID': '{gage_id}' # python f-string / R glue() format; converting the 'gage_id' to the standardized featureID used by nhdplusTools. Must use '{gage_id}' e.g. 'USGS-{gage_id}'
+  - 'featureSource': 'hfv22_id' # The standardized nhdplusTools featureSource. Possible featureSources might be 'nwissite', 'comid', 'hfv22_id', hfv30_id
+  - 'respvar_cols': 'snw_pc_max|gw_Expon' # Column(s) in the dataset corresponding to the evaluation metrics. If multiple exist, separate each string by '|' e.g. 'rmse|kge|nse'
+  - 'respvar_mappings': 'snw_pc_max|gw_Expon' # OPTIONAL unless 'val_respvar' is True, which maps respvar_cols to the standardized format as specified in rafts_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'. When val_metrics is False (default), enter the same thing as respvar_cols.
+  - 'val_respvar': 'False' # Should respvar_mappings be validated against the options in rafts_categories.yaml? Default False.
+file_io: # May define {home_dir} for python's '{home_dir}/string_path'.format(home_dir =str(Path.home())) functionality
+  - 'home_dir': '~' # OPTIONAL, define the home_dir path. If undefined, rafts_prep will automatically assume default '~' 
+  - 'path_data': '{home_dir}/noaa/regionalization/data/raw/hfatl_test/resp_dataset.parquet' # Where the raw input data are stored.
+  - 'data_source': 'hfATLAS_hf22' # The hydrofabricATLAS dataset version (may need to update with major version changes, or somehow integrate with dvc tracking)
+  - 'dir_save': '{home_dir}/noaa/regionalization/data/input' # Required. The save location of standardized output
+  - 'save_type': 'netcdf' #  Required. Save as hierarchical files 'netcdf' or 'zarr'. Default 'netcdf' until attribute 
+  - 'save_loc': 'local' #  Required.  Use 'local' for saving to a local path via dir_save. Future work will create an approach for 'aws' or other cloud saving methods
+  - 'path_hf_gpkg': "{home_dir}/noaa/hydrofabric/v2.2_2025Apr/conus_nextgen.gpkg" # The path to the gpkg containing the hfATLAS divides. This is required for mapping the divide_id to the standardized featureID and featureSource.
+  - 'hf_divides_layer': "divides"         # The layer name inside the gpkg
+  - 'map_divide_id_col': "divide_id"     # The column name in your metadata mapping CS
+  - 'hf_fp_layer': "flowpaths" # Hydrofabric layer name for flowpaths layer
+  - 'hf_fp_id_col': "id" # The column name in the flowpaths layer corresponding to the flowpath outlet of the divide
+  - 'vpu_id_col': "vpuid" # The column name in the hydrofabric flowpaths layer
+  - 'vpu_mapped': 'True' # Boolean str. Should output attribute data be organized by vpu? True recommended for large datasets, e.g. entire CONUS scale.
+formulation_metadata:  
+  - 'dataset_name': 'test_hfatl0' # Required. 
+  - 'formulation_base': 'test_regnl' # Required. Basename of formulation. the rr, sp, and gw will be added to this if 'formulation_id' is left empty
+  - 'formulation_id': 'test_regnl' # Optional alternative in lieu of generating a formulation_id based on 'formulation_base'. Should leave empty if automatic formulation_id generation desired.
+  - 'formulation_ver': # Optional. The version of the formulation
+  - 'temporal_res': '' # The temporal resolution corresponding to the modeled data
+  - 'target_var': 'param' # Required. The target variable modeled. This is standardized. See target_var_mappings in rafts_categories.yaml
+  - 'start_date': '1980-01-01' # Required. The YYYY-MM-DD start date corresponding to the evaluation metric's modeled timeseries
+  - 'end_date':  '2010-01-01' # Required. The YYYY-MM-DD end date corresponding to the evaluation metric's modeled timeseries
+  - 'modeled notes': 'Test case using data that does not matter, the wltsmc created in the hfATLAS pipeline'
+  - 'cal_status': 'N' # Required. Was the formulation model fully calibrated? Options include 'Y','N', or 'S' (yes/no/somewhat)
+  - 'start_date_cal': '1980-01-01' # The YYYY-MM-DD start date corresponding to the calibration period
+  - 'end_date_cal': '2010-01-01' # The YYYY-MM-DD end date corresponding to the calibration period
+  - 'cal_notes': 'Not calibrated. Ignore all calibration references'
+references: # All optional but **very** helpful metadata
+  - 'input_filepath': '{base_dir}/git/hydrofabricATLAS/workflow/nwmv4_static_params/results/apr26cal_hf22/final/apr26cal_hf22_final.parquet'
+  - 'source_url': 'NA'
+  - 'dataset_doi': 'NA'
+  - 'literature_doi': 'NA'

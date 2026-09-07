@@ -1,0 +1,16 @@
+# hfatl_algo_config.yaml
+# Config for testing parallelized algorithm training (unsupervised clustering)
+task_type: 'clustering'
+save_all_clusters: True # Essential for capturing all cluster sizes in the output
+algorithms:
+  kmeans:
+    - n_clusters: [3, 5]
+  gower_agglomerative:
+    - n_clusters: [4, 6]
+test_size: 0.3
+seed: 32
+name_attr_config: 'hfatl_attr_config.yaml'
+verbose: True
+read_type: 'all' # MUST use 'all' with Dask for hfATLAS/custom-generated predictor data
+make_plots: True
+same_test_ids: True

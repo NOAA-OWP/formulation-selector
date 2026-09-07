@@ -38,7 +38,7 @@ in chunks at hourly intervals to account for external database hits
 }
 \details{
 If AOI selected, the area of interest is assumed to be a line, and
-the midpoint is selected for querrying NLDI.
+the midpoint is selected for querying NLDI.
 Recommended to stick to a certain seq_size (e.g. default) to easily re-use
 file chunks when \code{overwrite_chunk} is FALSE.
 }

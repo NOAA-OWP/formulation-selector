@@ -16,3 +16,7 @@ std_path_miss_tfrm_io(path_missing_attrs, read = TRUE, df_miss = NULL)
 \description{
 Read or write the standardized missing comid file for transformation
 }
+\details{
+De-dupes data based on the uniq_cmbo column, a combo of loc ID and
+attribute, made by \link[proc.attr.hydfab]{uniq_id_loc_attr}
+}

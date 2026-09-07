@@ -5,14 +5,16 @@ USE remove_bad_tfrms.R INSTEAD!!
 
 Could this relate to parquet files being created using arrow, not dask?
 This may need to be performed using the R package proc.attr.hydfab's capabilities.
+
+Changelog / Contributions
+2025-10-10 refactor to renamed rafts_algo modules, GL
 """
-import fs_algo.fs_algo_train_eval as fsate
-import yaml
+import rafts_algo.utils as raftsutil
 from pathlib import Path
 import dask.dataframe as dd
 
-path_attr_config = "~/git/formulation-selector/scripts/eval_ingest/xssa/xssa_attr_config.yaml"
-attr_cfig = fsate.AttrConfigAndVars(path_attr_config) 
+path_attr_config = "~/git/rafts/scripts/workflow_configs/legacy/xssa/xssa_attr_config.yaml"
+attr_cfig = raftsutil.AttrConfigAndVars(path_attr_config) 
 attr_cfig._read_attr_config()
 
 # list the bad attribute transformations here

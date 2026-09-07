@@ -10,9 +10,9 @@ library(future.apply) #IMPORTANT Must call to avoid import error
 
 # Set important params (Retr_Params) ----------------------------------
 home_dir <- Sys.getenv("HOME")
-path_cfig_pred <- glue::glue("{home_dir}/Lauren/FSDS/formulation-selector/scripts/eval_ingest/xssa_NWM_domain/xssanwm_pred_config.yaml")
+path_cfig_pred <- glue::glue("{home_dir}/Lauren/FSDS/rafts/scripts/workflow_configs/legacy/xssa_NWM_domain/xssanwm_pred_config.yaml")
 
-dir_repo <- glue::glue("{home_dir}/Lauren/FSDS/formulation-selector/")
+dir_repo <- glue::glue("{home_dir}/Lauren/FSDS/rafts/")
 
 # Read in config file
 if(!base::file.exists(path_cfig_pred)){
@@ -33,7 +33,6 @@ cfig_attr <- yaml::read_yaml(path_attr_config)
 io_cfig <- cfig_attr[['file_io']]
 dir_base <- glue::glue(base::unlist(io_cfig)[['dir_base']])
 dir_std_base <- glue::glue(base::unlist(io_cfig)[['dir_std_base']])
-dir_db_hydfab <- glue::glue(base::unlist(io_cfig)[['dir_db_hydfab']])
 dir_db_attrs <- glue::glue(base::unlist(io_cfig)[['dir_db_attrs']])
 
 # ------------------------ ATTRIBUTE CONFIGURATION --------------------------- #
@@ -62,7 +61,6 @@ names(vars_ls) <- ls_vars
 # The attribute retrieval parameters
 Retr_Params <- list(paths = list(# Note that if a path is provided, ensure the
   # name includes 'path'. Same for directory having variable name with 'dir'
-  dir_db_hydfab=dir_db_hydfab,
   dir_db_attrs=dir_db_attrs,
   s3_path_hydatl = s3_path_hydatl,
   dir_std_base = dir_std_base,
@@ -90,12 +88,12 @@ col_comid <- 'comid'
 for(ds in datasets){
   message(glue::glue("Processing {nrow(df)} locations"))
   # ---------------------- Grab all needed attributes ---------------------- #
-  
+
   # --- Create the path to the geopackage:
   # Define the standardized path to the geopackage based on the input dataset
   path_save_gpkg <- proc.attr.hydfab::std_path_retr_gpkg_wrap(
     dir_std_base = Retr_Params$paths$dir_std_base,ds = ds)
-  
+
   ls_site_feat <- list()
   seq_nums <- c(seq(from=1,nrow(df),390),nrow(df))[-1]
   ctr <- 0
@@ -106,7 +104,7 @@ for(ds in datasets){
     gage_ids <- base::unique(sub_df[[col_comid]])
     base::message(glue::glue(
       "Acquiring attributes for seq_num {seq_num} of {nrow(df)}"))
-    
+
     # Now acquire the attributes:
     dt_site_feat <- proc.attr.hydfab::proc_attr_gageids(gage_ids=gage_ids,
                                                         featureSource='comid',
@@ -117,28 +115,28 @@ for(ds in datasets){
                                                         overwrite=FALSE)
     ls_site_feat[[ctr]] <- dt_site_feat
   }
-  
+
   base::message(glue::glue("Completed attribute retrieval to
     {Retr_Params$paths$dir_db_attrs}
     & outlet coordinate retrieval to
     {path_save_gpkg} "))
-  
+
   # Combine all chunked site feature data
   dt_site_feat_all <- data.table::rbindlist(ls_site_feat)
   # Generate the prediction metadata
   path_nldi_out <- glue::glue(path_meta)
   proc.attr.hydfab::write_meta_nldi_feat(dt_site_feat=dt_site_feat_all,
                                          path_meta = path_nldi_out)
-  
+
   # ------------------------------------------------------------------------ #
   # ------------------------------------------------------------------------ #
   library(reticulate)
-  
+
   # TODO add in attribute transformation of prediction variables by calling python transformation script
   # TODO make sure user activates appropriate conda environment before running!
-  
-  path_tfrm_script <- glue::glue("{dir_repo}/pkg/fs_algo/fs_algo/fs_tfrm_attrs.py")
-  path_tfrm_config <- glue::glue("{dir_repo}/scripts/eval_ingest/xssa_us/xssaus_attrs_tform.yaml")
+
+  path_tfrm_script <- glue::glue("{dir_repo}/pkg/rafts_algo/rafts_algo/rafts_tfrm_attrs.py")
+  path_tfrm_config <- glue::glue("{dir_repo}/scripts/workflow_configs/legacy/xssa_us/xssaus_attrs_tform.yaml")
   if(!file.exists(path_tfrm_script)){
     stop(glue::glue("Does not exist: {path_tfrm_script}"))
   }
@@ -147,10 +145,10 @@ for(ds in datasets){
   }
   text_script <- glue::glue('python {path_tfrm_script} "{path_tfrm_config}"')
   source(text_script)
-  
+
   # Run python function from the tfrm_attr.py file:
-  reticulate::use_condaenv(condaenv="rafts_env",required=TRUE) # The anaconda environment that has the fs_algo RaFTS package installed
-  fta <- reticulate::import("fs_algo.tfrm_attr")
+  reticulate::use_condaenv(condaenv="rafts_env",required=TRUE) # The anaconda environment that has the rafts_algo RaFTS package installed
+  fta <- reticulate::import("rafts_algo.tfrm_attr")
   result <- try(fta$tfrm_attr_comids_wrap(comids = df[,col_comid],
                                           path_tfrm_cfig = path_tfrm_config))
   if("try-error" %in% class(result)){
@@ -159,7 +157,7 @@ for(ds in datasets){
       script directly from the shell or terminal:
       {path_tfrm_script}") )
   }
-  
+
   # ------------------------------------------------------------------------ #
   # ------------------------------------------------------------------------ #
   # Generate the NLDI full geometries ( outlet, flowlines, catchment )
@@ -192,12 +190,12 @@ col_comid <- 'comids'
 for(ds in datasets){
   message(glue::glue("Processing {nrow(df)} locations"))
   # ---------------------- Grab all needed attributes ---------------------- #
-  
+
   # --- Create the path to the geopackage:
   # Define the standardized path to the geopackage based on the input dataset
   path_save_gpkg <- proc.attr.hydfab::std_path_retr_gpkg_wrap(
     dir_std_base = Retr_Params$paths$dir_std_base,ds = ds)
-  
+
   ls_site_feat <- list()
   seq_nums <- c(seq(from=1,nrow(df),390),nrow(df))[-1]
   ctr <- 0
@@ -208,7 +206,7 @@ for(ds in datasets){
     gage_ids <- base::unique(sub_df[[col_comid]])
     base::message(glue::glue(
       "Acquiring attributes for seq_num {seq_num} of {nrow(df)}"))
-    
+
     # Now acquire the attributes:
     dt_site_feat <- proc.attr.hydfab::proc_attr_gageids(gage_ids=gage_ids,
                                                         featureSource='comid',
@@ -219,28 +217,28 @@ for(ds in datasets){
                                                         overwrite=FALSE)
     ls_site_feat[[ctr]] <- dt_site_feat
   }
-  
+
   base::message(glue::glue("Completed attribute retrieval to
     {Retr_Params$paths$dir_db_attrs}
     & outlet coordinate retrieval to
     {path_save_gpkg} "))
-  
+
   # Combine all chunked site feature data
   dt_site_feat_all <- data.table::rbindlist(ls_site_feat)
   # Generate the prediction metadata
   path_nldi_out <- glue::glue(path_meta)
   proc.attr.hydfab::write_meta_nldi_feat(dt_site_feat=dt_site_feat_all,
                                          path_meta = path_nldi_out)
-  
+
   # ------------------------------------------------------------------------ #
   # ------------------------------------------------------------------------ #
   # library(reticulate)
-  # 
+  #
   # # TODO add in attribute transformation of prediction variables by calling python transformation script
   # # TODO make sure user activates appropriate conda environment before running!
-  # 
-  # path_tfrm_script <- glue::glue("{dir_repo}/pkg/fs_algo/fs_algo/fs_tfrm_attrs.py")
-  # path_tfrm_config <- glue::glue("{dir_repo}/scripts/eval_ingest/xssa_us/xssaus_attrs_tform.yaml")
+  #
+  # path_tfrm_script <- glue::glue("{dir_repo}/pkg/rafts_algo/rafts_algo/rafts_tfrm_attrs.py")
+  # path_tfrm_config <- glue::glue("{dir_repo}/scripts/workflow_configs/legacy/xssa_us/xssaus_attrs_tform.yaml")
   # if(!file.exists(path_tfrm_script)){
   #   stop(glue::glue("Does not exist: {path_tfrm_script}"))
   # }
@@ -249,10 +247,10 @@ for(ds in datasets){
   # }
   # text_script <- glue::glue('python {path_tfrm_script} "{path_tfrm_config}"')
   # source(text_script)
-  # 
+  #
   # # Run python function from the tfrm_attr.py file:
-  # reticulate::use_condaenv(condaenv="py312",required=TRUE) # The anaconda environment that has the fs_algo RaFTS package installed
-  # fta <- reticulate::import("fs_algo.tfrm_attr")
+  # reticulate::use_condaenv(condaenv="py312",required=TRUE) # The anaconda environment that has the rafts_algo RaFTS package installed
+  # fta <- reticulate::import("rafts_algo.tfrm_attr")
   # result <- try(fta$tfrm_attr_comids_wrap(comids = df[,col_comid],
   #                                         path_tfrm_cfig = path_tfrm_config))
   # if("try-error" %in% class(result)){
@@ -261,14 +259,14 @@ for(ds in datasets){
   #     script directly from the shell or terminal:
   #     {path_tfrm_script}") )
   # }
-  # 
+  #
   # ------------------------------------------------------------------------ #
   # ------------------------------------------------------------------------ #
   # Generate the NLDI full geometries ( outlet, flowlines, catchment )
   if(base::is.null(dir_save_nhdp)){
     dir_save_nhdp <- base::dirname(path_save_gpkg)
   }
-  
+
   ls_compiled_data <- proc.attr.hydfab::dl_nhdplus_geoms_wrap(df=df,col_id=col_comid,
                                                               dir_save_nhdp = dir_save_nhdp,
                                                               filename_str=paste0(glue::glue("{datasets}_{ds_type}")),
@@ -276,7 +274,7 @@ for(ds in datasets){
                                                               keep_cols="all",
                                                               seq_size = 391,
                                                               overwrite_chunk=FALSE)
-  
+
   base::message(glue::glue(
     "Completed geopackage saving of outlet, flowlines, and catchment boundaries
     to {dir_save_nhdp} ") )
@@ -286,14 +284,14 @@ for(ds in datasets){
 # # For some reason, running the following got this working
 # library(future)
 # library(future.apply)
-# dt_site_feat <- proc_attr_mlti_wrap(comids = comids, Retr_Params = Retr_Params, 
+# dt_site_feat <- proc_attr_mlti_wrap(comids = comids, Retr_Params = Retr_Params,
 #                     lyrs = "network", overwrite = FALSE)
 # # Run this^^, run attribute transformation, and then run it again???
-# 
-# 
+#
+#
 # for(ds in datasets){
 #   path_nldi_out <- glue::glue(path_meta)
-#   
+#
 #   proc.attr.hydfab::write_meta_nldi_feat(dt_site_feat=dt_site_feat,
 #                                          path_meta = path_nldi_out)
 # }

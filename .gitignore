@@ -75,7 +75,9 @@ share/python-wheels/
 .installed.cfg
 *.egg
 
-
+# uv #
+**/uv.lock
+**/.envrc
 
 # pyenv #
 #########
@@ -94,6 +96,11 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+*.joblib
+
+# integration tests #
+#####################
+tests/data/testdata_20250901
 
 #  R  #
 #######
@@ -109,3 +116,6 @@ bower_components/
 src/vendor/
 dist/
 .Rproj.user
+
+# Developer #
+CLAUDE.md

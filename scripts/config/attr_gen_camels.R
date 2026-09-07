@@ -1,7 +1,7 @@
 #' @title Generate attributes for CAMELS basins
 #' @description This script uses the proc.attr.hydfab package to acquire attributes
 #' of interest.
-#' @usage Rscript attr_gen_camels.R "~/git/formulation-selector/scripts/config/attr_gen_camels_config.yaml"
+#' @usage Rscript attr_gen_camels.R "~/git/rafts/scripts/config/attr_gen_camels_config.yaml"
 #'
 
 
@@ -16,11 +16,11 @@ main <- function(){
   home_dir <- Sys.getenv("HOME")
   cmd_args <- commandArgs("trailingOnly" = TRUE)
   if(base::length(cmd_args)!=1){
-    warning("Unexpected to have more than one argument in Rscript fs_attrs_grab.R /path/to/attribute_config.yaml.")
+    warning("Unexpected to have more than one argument in Rscript rafts_attrs_grab.R /path/to/attribute_config.yaml.")
   }
   home_dir <- Sys.getenv("HOME")
   # Read in config file, e.g.
-  path_config <- glue::glue(cmd_args[1]) # path_config <- "~/git/formulation-selector/scripts/config/attr_gen_camels_config.yaml"
+  path_config <- glue::glue(cmd_args[1]) # path_config <- "~/git/rafts/scripts/config/attr_gen_camels_config.yaml"
   raw_config <- yaml::read_yaml(path_config)
 
   dir_std_base <- glue::glue(raw_config$dir_std_base)

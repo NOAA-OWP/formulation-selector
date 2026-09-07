@@ -15,5 +15,5 @@ Create a standardized path for storing missing comid-attribute
 pairings needed for attribute transformation
 }
 \seealso{
-\code{fs_algo.tfrm_attrs.std_path_miss_tfrm} python package
+\code{rafts_algo.tfrm_attrs.std_path_miss_tfrm} python package
 }
