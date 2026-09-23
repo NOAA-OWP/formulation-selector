@@ -9,8 +9,7 @@ retr_comids(
   featureSource,
   featureID,
   dir_db_attrs,
-  path_save_gpkg = NULL,
-  epsg = 4326
+  path_save_gpkg = NULL
 )
 }
 \arguments{

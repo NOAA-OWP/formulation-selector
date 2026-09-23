@@ -5,20 +5,16 @@
 #' @details Read the following locations:
 #' @seealso Final_COMID_Selection.R representing approximate HUC08 locations
 #' https://github.com/bolotinl/NWM_process_mapping/blob/main/Final_Comid_Selection.R
-#' @seealso flow.comid.terminal.R representing terminal locations
+#' @seealso flow.comid.terminal.R representing terminal locations (e.g. flowlines into coasts)
 #' https://github.com/bolotinl/NWM_process_mapping/blob/guy/flow.comid.terminal.R
 #' @reference https://www.nature.com/articles/s41467-022-28010-7
 #' @param path_cfig_pred The path to the prediction configuration yaml file. May use glue formatting for {home_dir}
+#' @param dir_base_huc08 The directory containing analyses on HUC08 data. Created using https://github.com/bolotinl/NWM_process_mapping
 #' @examples
-#' \dontrun{Rscript gen_pred_locs_xssaus_map.R "{home_dir}/git/rafts/scripts/workflow_configs/legacy/xssa_us/xssaus_pred_config.yaml"
-#' "{home_dir}/noaa/regionalization/data/analyses/basin_selection" "{home_dir}/git/rafts/"
+#' \dontrun{Rscript gen_pred_locs_xssaus_map.R "{home_dir}/git/formulation-selector/scripts/eval_ingest/xssa_us/xssaus_pred_config.yaml" 
+#' "{home_dir}/noaa/regionalization/data/analyses/basin_selection" "{home_dir}/git/formulation-selector/"
 #' }
-#' # When wanting to randomly subsample from a dataset, set the total # of samples and optionally the seed number
-#' \dontrun{Rscript gen_pred_locs_xssa.R --path_cfig_pred "{home_dir}/git/rafts/path/to/pred_config.yaml"
-#'                                       --subsamp_n 20
-#'                                       --subsamp_seed 123
-#' }
-#'
+
 
 library(dplyr)
 library(glue)
@@ -31,14 +27,14 @@ library(future.apply) #IMPORTANT Must call to avoid import error
 main <- function(){
   args <- commandArgs(trailingOnly = TRUE)
   # Check if the input argument is provided
-  if (length(args) < 1) {
+  if (length(args) < 2) {
     stop("Input prediction configuration file must be specified")
   }
   # Define args supplied to command line
   home_dir <- Sys.getenv("HOME")
-  path_cfig_pred <- glue::glue(as.character(args[1])) # path_cfig_pred <- glue::glue("{home_dir}/git/rafts/scripts/workflow_configs/legacy/xssa_us/xssaus_pred_config.yaml")
-  dir_base_huc08 <- glue::glue(as.character(args[2]))# dir_base_huc08 <- dir_repo <- glue::glue("{home_dir}/noaa/regionalization/data/analyses/basin_selection"
-  dir_repo <- glue::glue(as.character(args[3])) #dir_repo <- glue::glue("{home_dir}/git/rafts/")
+  path_cfig_pred <- glue::glue(as.character(args[1])) # path_cfig_pred <- glue::glue("{home_dir}/git/formulation-selector/scripts/eval_ingest/xssa_us/xssaus_pred_config.yaml")
+  dir_base_huc08 <- glue::glue(as.character(args[2]))# dir_base_huc08 <- dir_repo <- glue::glue("{home_dir}/noaa/regionalization/data/analyses/basin_selection" 
+  dir_repo <- glue::glue(as.character(args[3])) #dir_repo <- glue::glue("{home_dir}/git/formulation-selector/")
   # Read in config file
   if(!base::file.exists(path_cfig_pred)){
     stop(glue::glue("The provided path_cfig_pred does not exist: {path_cfig_pred}"))
@@ -61,6 +57,7 @@ main <- function(){
   io_cfig <- cfig_attr[['file_io']]
   dir_base <- glue::glue(base::unlist(io_cfig)[['dir_base']])
   dir_std_base <- glue::glue(base::unlist(io_cfig)[['dir_std_base']])
+  dir_db_hydfab <- glue::glue(base::unlist(io_cfig)[['dir_db_hydfab']])
   dir_db_attrs <- glue::glue(base::unlist(io_cfig)[['dir_db_attrs']])
 
   # ----------------------- TRANSFORMATION CONFIGURATION --------------------- #
@@ -89,15 +86,28 @@ main <- function(){
   # Additional config options
   hf_cat_sel <- base::unlist(hfab_cfg)[['hf_cat_sel']]#c("total","all")[1] # total: interested in the single location's aggregated catchment data; all: all subcatchments of interest
 
-  # ------------------------ ATTRIBUTE CONFIGURATION --------------------------- #
-  # READ IN ATTRIBUTE CONFIG FILE
-  name_attr_config <- cfig_pred[['name_attr_config']]
-  path_attr_config <- proc.attr.hydfab::build_cfig_path(path_cfig_pred,name_attr_config)
+  # The names of attribute datasets of interest (e.g. 'ha_vars', 'usgs_vars', etc.)
+  names_attr_sel <- base::lapply(cfig_attr[['attr_select']],
+                                 function(x) base::names(x)[[1]]) %>% unlist()
 
-  Retr_Params <- proc.attr.hydfab::attr_cfig_parse(path_attr_config)
+  # Generate list of standard attribute dataset names containing sublist of variable IDs
+  ls_vars <- names_attr_sel[grep("_vars",names_attr_sel)]
+  vars_ls <- base::lapply(ls_vars, function(x) base::unlist(base::lapply(cfig_attr[['attr_select']], function(y) y[[x]])))
+  names(vars_ls) <- ls_vars
 
-  datasets <- Retr_Params$datasets
-
+  # The attribute retrieval parameters
+  Retr_Params <- list(paths = list(# Note that if a path is provided, ensure the
+    # name includes 'path'. Same for directory having variable name with 'dir'
+    dir_db_hydfab=dir_db_hydfab,
+    dir_db_attrs=dir_db_attrs,
+    s3_path_hydatl = s3_path_hydatl,
+    dir_std_base = dir_std_base,
+    path_meta=path_meta),
+    vars = vars_ls,
+    datasets = datasets,
+    ds_type = ds_type,
+    write_type = write_type
+  )
   ###################### DATASET-SPECIFIC CUSTOM MUNGING #########################
   # USER INPUT: Paths to relevant config files
   # Read file and remove poorly-parsed rows
@@ -109,7 +119,7 @@ main <- function(){
   col_comid_huc08 <- "hf_id"
   path_gpkg_comids <- glue::glue("{dir_base_huc08}terminal_nonhuc08_with_comids.gpkg")
   # Generated using flow.comid.terminal.R in https://github.com/bolotinl/NWM_process_mapping
-  path_gpkg_comids <- glue::glue("{dir_base_huc08}/terminal_locs/nhdp_cat_line_out_tnx_above10sqkm.gpkg")
+  path_gpkg_comids <- glue::glue("{dir_base_huc08}/terminal_locs/nhdp_cat_line_out_tnx_above10sqkm.gpkg") 
   #sf::st_layers(path_gpkg_comids)
   df_tnx <- sf::st_read(path_gpkg_comids,"outlet")
   col_comid_tnx <- 'comid'
@@ -122,14 +132,14 @@ main <- function(){
   df <- base::data.frame(comid = unique(dfall$comid),
                          source = "gen_pred_locs_xssaus_map.R")
   col_comid <- 'comid'
-
-
+  
+ 
   # Read in locations generated by ID_term_coast.R in bolotinl/NWM_process_mapping/
-  path_huc08_10sqkm <- glue::glue("{dir_base_huc08}/tnx_comids_highest_hf_hydroseq.csv")
+  path_huc08_10sqkm <- glue::glue("{dir_base_huc08}/tnx_comids_highest_hf_hydroseq.csv") 
   df_huc08_10sqkm <- read.csv(path_huc08_10sqkm)
-
+    
   idxs_need <- which(!df_huc08_10sqkm$hf_id %in% df[,col_comid])
-
+  
   df_add <- base::data.frame(comid=df_huc08_10sqkm$hf_id[idxs_need],
                              source = "gen_pred_locs_xssaus_map.R")
   df <- base::rbind(df,df_add)
@@ -184,8 +194,8 @@ main <- function(){
     # TODO add in attribute transformation of prediction variables by calling python transformation script
     # TODO make sure user activates appropriate conda environment before running!
 
-    path_tfrm_script <- glue::glue("{dir_repo}/pkg/rafts_algo/rafts_algo/rafts_tfrm_attrs.py")
-    path_tfrm_config <- glue::glue("{dir_repo}/scripts/workflow_configs/legacy/xssa_us/xssaus_attrs_tform.yaml")
+    path_tfrm_script <- glue::glue("{dir_repo}/pkg/fs_algo/fs_algo/fs_tfrm_attrs.py")
+    path_tfrm_config <- glue::glue("{dir_repo}/scripts/eval_ingest/xssa_us/xssaus_attrs_tform.yaml")
     if(!file.exists(path_tfrm_script)){
       stop(glue::glue("Does not exist: {path_tfrm_script}"))
     }
@@ -196,8 +206,8 @@ main <- function(){
     source(text_script)
 
     # Run python function from the tfrm_attr.py file:
-    reticulate::use_condaenv(condaenv="py312",required=TRUE) # The anaconda environment that has the rafts_algo RaFTS package installed
-    fta <- reticulate::import("rafts_algo.tfrm_attr")
+    reticulate::use_condaenv(condaenv="py312",required=TRUE) # The anaconda environment that has the fs_algo RaFTS package installed
+    fta <- reticulate::import("fs_algo.tfrm_attr")
     result <- try(fta$tfrm_attr_comids_wrap(comids = df[,col_comid],
                                         path_tfrm_cfig = path_tfrm_config))
     if("try-error" %in% class(result)){
