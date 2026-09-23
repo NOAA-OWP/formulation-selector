@@ -5,7 +5,7 @@
     - name_attr_config: 'xssaus_attr_config.yaml' # REQUIRED. The filename of the attribute configuration file, expected to contain the dir_db_attrs: The parent dir where each comid's attribute parquet file is stored in the subdirectory 'comid/', and each dataset's aggregated parquet attributes are stored in the subdirectory '/{dataset_name}
     - path_comid: '{home_dir}/noaa/regionalization/data/input/user_data_std/xSSA_proc_sens_wt/xSSA_proc_sens_wt_Raven_blended_loc.gpkg' # OPTIONAL. File path to the file containing comids. May be .parquet, .csv or .gpkg (with only one layer) format. May be used separately in addition to the name_attr_config
     - colname_comid: 'comid'  # Required only if specifying path_comid. The column name corresponding to the comid data in the `path_comid` file.
-    - path_fs_attrs_miss: '{home_dir}/git/formulation-selector/pkg/proc.attr.hydfab/flow/fs_attrs_miss.R' # OPTIONAL. If not present, will not attempt to retrieve missing comid-attribute pairings using the proc.attr.hydfab R package. Needs proc.attr.hydfab installed in order to work!
+    - path_rafts_attrs_miss: '{home_dir}/git/rafts/pkg/proc.attr.hydfab/flow/rafts_attrs_miss.R' # OPTIONAL. If not present, will not attempt to retrieve missing comid-attribute pairings using the proc.attr.hydfab R package. Needs proc.attr.hydfab installed in order to work!
     - overwrite_tfrm: False # OPTIONAL, default False. Should the transformation attributes specified below overwrite existing attributes with the same name?
 - transform_attrs:
   - 'TOT_PROGLACIAL_SED_{tform_type}':

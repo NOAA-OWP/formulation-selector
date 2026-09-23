@@ -1,0 +1,14 @@
+# Map locations & custom metadata of OCONUS nextgen hydrofabric gpkg files
+# Make sure the name of this file is referenced in the corresponding attribute config file.
+# Companion parsing function: proc.attr.hydfab::parse_hfab_oconus_config
+# Where dir_base =  system.file("extdata", package="proc.attr.hydfab")
+# THIS IS USED FOR TESTING (test_proc_hydfab.R), AND A TEMPLATE FOR ACTUAL CONFIG FILES
+dir_base_hfab: "{dir_base}/gpkg_dat" # The base directory containing the hydrofabric gpkg files in the R Package directory for unit testing, where `dir_base = system.file("extdata",package="proc.attr.hydfab")`
+source_map_ak:
+  path: "{dir_base_hfab}/ak_nextgen_subtest.gpkg"
+source_map_pr:
+  path: "{dir_base_hfab}/prvi_nextgen_subtest.gpkg"
+source_map_vi:
+  path: "{dir_base_hfab}/prvi_nextgen_subtest.gpkg"
+source_map_hi:
+  path: "{dir_base_hfab}/hi_nextgen_subtest.gpkg"

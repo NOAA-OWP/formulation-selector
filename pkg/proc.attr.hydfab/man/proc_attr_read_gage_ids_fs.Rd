@@ -2,7 +2,7 @@
 % Please edit documentation in R/proc_attr_grabber.R
 \name{proc_attr_read_gage_ids_fs}
 \alias{proc_attr_read_gage_ids_fs}
-\title{Read in standardized formulation-selector gage_id location identifiers}
+\title{Read in standardized rafts gage_id location identifiers}
 \usage{
 proc_attr_read_gage_ids_fs(dir_dataset, ds_filenames = "")
 }
@@ -13,7 +13,7 @@ proc_attr_read_gage_ids_fs(dir_dataset, ds_filenames = "")
 inside \code{dir_dataset}}
 }
 \description{
-Reads output generated using \pkg{fs_prep} python package and
+Reads output generated using \pkg{rafts_prep} python package and
 selects the gage_id location identifier(s) and the
 featureSource & featureID that correspond to the gage_id
 }

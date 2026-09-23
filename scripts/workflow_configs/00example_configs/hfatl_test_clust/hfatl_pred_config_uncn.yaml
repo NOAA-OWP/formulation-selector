@@ -1,0 +1,19 @@
+# Prediction configuration file
+# Note: This alternative configuration of the algo_config file was used in early August 2025 to perform process sensitivity analysis and assess uncertainty bounds.
+name_attr_config: 'hfatl_attr_config.yaml'  # REQUIRED. Name of the corresponding dataset's attribute configuration file, which should be in the same directory as this. If not provided, assumes 'attr' may be substituted for this filename's 'algo'
+name_algo_config: 'hfatl_algo_config_uncn.yaml' # REQUIRED. The name of the algorithm configuration file if in same directory as this config file. Otherwise the full path to the file.
+
+ds_type: 'prediction' # Required string. Strongly recommended to select 'prediction' in the prediction config file. This string will be used in the filename of the output metadata describing each data point's identifer, COMID, lat/lon, reach name of the location. This string should differ from the string used in the attribute config yaml file. Filename: `"nldi_feat_{dataset}_{ds_type}.csv"` inside `dir_std_base / dataset /`.
+write_type: 'parquet' # Required filetype for writing NLDI feature metadata. Default 'parquet'. May also select 'csv'
+path_donors: "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.parquet" # The donor locations, using f-str from attr_config's file_io subsection
+path_meta: "{dir_std_base}/../../raw/hfatlas_hf22/" # Required. Prediction attribute metadata filepath formatted for R's glue() & py f-strings as generated using `proc.attr.hydfab::write_meta_nldi_feat()`. Fundamentally, this can be a path to any file containing the locations of interest. Strongly suggested default format when using proc.attr.hydfab:  "{dir_std_base}/{ds}/nldi_feat_{ds}_{ds_type}.parquet"
+pred_file_comid_colname: 'divide_id' # REQUIRED. The column name containing the location identifiers used for prediction in the prediction metadata file as defined above as path_meta.
+path_tfrm_script: # "{home_dir}/git/rafts/pkg/rafts_algo/rafts_algo/rafts_tfrm_attrs.py" # Required. The filepath to the transformation script
+
+
+basepath_algos:
+algo_response_vars: # List out the desired response variables (e.g. metrics, hydrologic signatures) for prediction. # TODO offer 'all'
+  - 'cluster_labels'
+algo_type: # List out the regressor algorithms desired for prediction (e.g. rf, mlp).  # TODO offer 'all'
+  - 'kmeans'
+  - 'gower_agglomerative'

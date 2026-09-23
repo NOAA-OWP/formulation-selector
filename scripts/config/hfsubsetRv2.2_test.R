@@ -55,7 +55,7 @@ proc_attr_hfab <- function(comid,dir_save= "~/", hfab_vars="all",
   #' @param dir_save The temporary directory location for saving subset hydrofabric.
   #' @param hfab_vars character vector. The attributes of interest to acquire
   #'  from hydrofabric. Default "all".
-  #'  Refer to formulation-selector github wiki for options.
+  #'  Refer to rafts github wiki for options.
   #' @param attr_name The list name for attribute data as retrieved from
   #'  \code{hfsubsetR::get_subset()}. Default 'divide-attributes' corresponds to
   #'  hydrofabric v2.2. Previous versions used 'model-attributes'

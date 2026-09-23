@@ -19,8 +19,9 @@ path for a given comid and identifies missing attributes.
 Returns list of
 \itemize{
 \item dt_all: a data.table of existing comid data,
-\item need_vars: a list of datasource ids containing a list of variable
-names that will be downloaded.
+\item need_vars_ls: a list of datasource ids containing sublists of variable
+names that will be downloaded, aka a location list, with each
+item containing the \code{need_vars} list.
 }
 }
 \seealso{

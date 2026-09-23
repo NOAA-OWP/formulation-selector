@@ -10,8 +10,21 @@ std_attr_data_fmt(attr_data)
 \item{attr_data}{list of data.frame of attribute data}
 }
 \description{
-Standardize the catchment attribute data to read/write in parquet files
+Standardizes into common format with the following columns:
+\itemize{
+\item \code{featureID} The unique location identifier
+\item \code{featureSource} The type of unique identifier
+\item \code{data_source} The source of attribute data corresponding to a location
+\item \code{dl_timestamp} The download timestamp of attribute data
+\item \code{attribute} The attribute name from the external source
+\item \code{value} The value of the attribute
+}
+Additionally, uses the internal function \code{read_rafts_attr_menu_config} to
+check if the entries in the \code{attribute} column are consistent with
+expected forms, and removes those that are not defined in the menu.
 }
 \seealso{
 \link[proc.attr.hydfab]{retr_attr_new}
+
+\link[proc.attr.hydfab]{read_rafts_attr_menu_config}
 }

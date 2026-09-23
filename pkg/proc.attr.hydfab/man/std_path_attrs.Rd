@@ -7,7 +7,7 @@
 std_path_attrs(comid, dir_db_attrs)
 }
 \arguments{
-\item{comid}{character. USGS COMID value of interest}
+\item{comid}{character. USGS COMID/hf_uid/etc. value of interest}
 
 \item{dir_db_attrs}{character. Directory where attribute .parquet files live}
 }
@@ -17,6 +17,6 @@ standardized path to attribute parquet file
 \seealso{
 \link[proc.attr.hydfab]{proc_attr_wrap}
 
-\code{fs_algo.fs_algo_train_eval.fs_read_attr_comid()} python function
+\code{rafts_algo.utils.rafts_read_attr_comid()} python function
 that reads these files
 }

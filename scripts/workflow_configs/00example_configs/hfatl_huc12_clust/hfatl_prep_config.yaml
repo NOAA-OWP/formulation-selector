@@ -1,0 +1,45 @@
+# Prepare the Julie Mai xSSA metrics datasets from 2022 Nature Comm pub
+col_schema:   # required column mappings in the evaluation metrics dataset
+  - 'gage_id': 'site_id' # The basin identifier/gage id used for each modeled location in the input dataset
+  - 'featureID': '{gage_id}' # python f-string / R glue() format; converting the 'gage_id' to the standardized featureID used by nhdplusTools. Must use '{gage_id}' e.g. 'USGS-{gage_id}'
+  - 'featureSource': 'hfv22_id' # The standardized nhdplusTools featureSource. Possible featureSources might be 'nwissite', 'comid', 'hfv22_id', hfv30_id
+  - 'respvar_cols': "b|satdk|satpsi|slope|maxsmc|wltsmc|max_gw_storage|Cgw|expon|alpha_fc|Kn|Klf|Kinf_nash_surface|retention_depth_nash_surface|refkdt|MFSNO|SCAMAX|RSURF_SNOW|CWP|VCMX25|MP" # Column(s) in the dataset corresponding to the evaluation metrics. If multiple exist, separate each string by '|' e.g. 'rmse|kge|nse'
+  - 'respvar_mappings': "b|satdk|satpsi|slope|maxsmc|wltsmc|max_gw_storage|Cgw|expon|alpha_fc|Kn|Klf|Kinf_nash_surface|retention_depth_nash_surface|refkdt|MFSNO|SCAMAX|RSURF_SNOW|CWP|VCMX25|MP" # OPTIONAL unless 'val_respvar' is True, which maps respvar_cols to the standardized format as specified in rafts_categories.yaml, separate each metric name by '|' e.g. 'RMSE|KGE|NSE'. When val_metrics is False (default), enter the same thing as respvar_cols.
+  - 'val_respvar': 'False' # Should respvar_mappings be validated against the options in rafts_categories.yaml? Default False.
+file_io: # May define {home_dir} for python's '{home_dir}/string_path'.format(home_dir =str(Path.home())) functionality
+  - 'home_dir': '~' # OPTIONAL, define the home_dir path. If undefined, rafts_prep will automatically assume default '~' 
+  - 'path_data': '{home_dir}/noaa/regionalization/data/raw/test2_disc_NNSE_gt0.7_sel_NNSE_MAPPE_0.5/sloth_noahowp_cfe_s_selected_params.parquet' # Where the raw input data are stored.
+  - 'data_source': 'hfATLAS_hf22' # The hydrofabricATLAS dataset version (may need to update with major version changes, or somehow integrate with dvc tracking)
+  - 'dir_save': '{home_dir}/noaa/regionalization/data/input' # Required. The save location of standardized output
+  - 'save_type': 'netcdf' #  Required. Save as hierarchical files 'netcdf' or 'zarr'. Default 'netcdf' until attribute 
+  - 'save_loc': 'local' #  Required.  Use 'local' for saving to a local path via dir_save. Future work will create an approach for 'aws' or other cloud saving methods
+  - 'path_hf_gpkg': "{home_dir}/noaa/regionalization/data/raw/regn_apr26_test1/hf22_regn_apr26_gages.gpkg" # The path to the gpkg containing the hfATLAS divides. This is required for mapping the divide_id to the standardized featureID and featureSource.
+  - 'hf_divides_layer': "gages"         # The layer name inside the gpkg
+  - 'map_divide_id_col': "divide_id"     # The column name in your metadata mapping CS
+  - 'hf_fp_layer': "gages" # Hydrofabric layer name for flowpaths layer
+  - 'hf_fp_id_col': "id" # The column name in the flowpaths layer corresponding to the flowpath outlet of the divide
+  - 'vpu_id_col': "vpuid" # The column name in the hydrofabric flowpaths layer
+  - 'vpu_mapped': 'True' # Boolean str. Should output attribute data be organized by vpu? True recommended for large datasets, e.g. entire CONUS scale.
+  # aggregation: # OPTIONAL - when divides need to be aggregated to a larger scale, the hydrofabric-based aggregation goes here:
+  - 'path_hf_basins_gpkg': "{home_dir}/noaa/regionalization/data/raw/regn_apr26_test1/hf22_regn_apr26_gages.gpkg"  # OPTIONAL - the path to the gpkg or dir of gpkgs containing the divide_ids as they correspond to basins of interest.
+  - 'gage_id_col_gpkg': 'gage_id' # The gage_id column in the path_hf_basins_gpkg
+  # - 'gpkg_filename_pattern': 'gage_(.*)\.gpkg' # Optional string pattern used to isolate the gage_id from filenames (Default 'gage_{gage_id}.gpkg')
+formulation_metadata:  
+  - 'dataset_name': 'hfatl_huc12_clust' # Required. 
+  - 'formulation_base': 'test_huc12' # Required. Basename of formulation. the rr, sp, and gw will be added to this if 'formulation_id' is left empty
+  - 'formulation_id': 'test_huc12' # Optional alternative in lieu of generating a formulation_id based on 'formulation_base'. Should leave empty if automatic formulation_id generation desired.
+  - 'formulation_ver': # Optional. The version of the formulation
+  - 'temporal_res': '' # The temporal resolution corresponding to the modeled data
+  - 'target_var': 'param' # Required. The target variable modeled. This is standardized. See target_var_mappings in rafts_categories.yaml
+  - 'start_date': '2015-10-01' # Required. The YYYY-MM-DD start date corresponding to the evaluation metric's modeled timeseries
+  - 'end_date':  '2020-09-30' # Required. The YYYY-MM-DD end date corresponding to the evaluation metric's modeled timeseries
+  - 'modeled notes': 'Test case using data that does not matter, the wltsmc created in the hfATLAS pipeline'
+  - 'cal_status': 'N' # Required. Was the formulation model fully calibrated? Options include 'Y','N', or 'S' (yes/no/somewhat)
+  - 'start_date_cal': '2016-10-01' # The YYYY-MM-DD start date corresponding to the calibration period
+  - 'end_date_cal':  '2020-09-30'  # The YYYY-MM-DD end date corresponding to the calibration period
+  - 'cal_notes': "April 2026 TOPMODEL-NOM calibration results, processed by Lauren's first ngen-fs output: equally-weighted combo of NNSE + MAPPE"
+references: # All optional but **very** helpful metadata
+  - 'input_filepath': '{base_dir}/noaa/regionalization/data/raw/test2_disc_NNSE_gt0.7_sel_NNSE_MAPPE_0.5/sloth_noahowp_cfes_selected_params.parquet'
+  - 'source_url': 'NA'
+  - 'dataset_doi': 'NA'
+  - 'literature_doi': 'NA'

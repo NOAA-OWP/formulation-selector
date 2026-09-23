@@ -1,0 +1,32 @@
+[project]
+name = "rafts"
+version = "0.1.0"
+requires-python = "==3.12.11" 
+dependencies = [
+    "rafts_algo",
+    "rafts_prep",
+    "xgboost>=3.4.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "rafts_algo",
+    "rafts_prep"
+]
+
+# Tell the root project to look in the local workspace for these packages
+[tool.uv.sources]
+rafts_algo = { workspace = true }
+rafts_prep = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.31.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "sphinx==9.1.0",
+    "sphinx-rtd-theme==3.1.0",
+]
+spyder = [
+  "spyder-kernels; platform_system == 'Windows'"
+]

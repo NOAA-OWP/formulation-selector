@@ -4,12 +4,14 @@
 \alias{std_dir_dataset}
 \title{Generate the standardized dataset directory}
 \usage{
-std_dir_dataset(dir_std_base, ds)
+std_dir_dataset(dir_std_base, ds, mkdir = FALSE)
 }
 \arguments{
 \item{dir_std_base}{The standardized base directory}
 
 \item{ds}{The dataset name (aka dir name)}
+
+\item{mkdir}{boolean. If missing, should the missing directory be created? Default FALSE.}
 }
 \description{
 Generate the standardized dataset directory

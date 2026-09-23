@@ -14,7 +14,9 @@ using proc.attr.hydfab::proc_attr_gageids}
 \item{path_meta}{the filepath for writing nldi metadata. May be parquet or csv file.}
 }
 \description{
-A short description...
+Standard approach for saving metadata for each location corresponding to
+a dataset. The metadata file contains the featureID/featureSource,
+data_source, dl_timestamp, gage_id, attribute and its value
 }
 \seealso{
 \link[proc.attr.hydfab]{proc_attr_gageids}

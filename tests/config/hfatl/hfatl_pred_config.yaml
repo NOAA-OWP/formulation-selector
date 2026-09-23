@@ -1,0 +1,22 @@
+# hfatl_pred_config.yaml
+# Prediction configuration for the hfATLAS integration test: predicts cluster labels
+# directly at the divide level for the 9-gage / 280-divide rapid test subset (no
+# aggregation/crosswalk needed since predictions target divide_id directly).
+name_attr_config: 'hfatl_attr_config.yaml'
+name_algo_config: 'hfatl_algo_config.yaml'
+name_prep_config: 'hfatl_prep_config.yaml'
+ds_type: 'prediction'
+write_type: 'parquet'
+path_meta: "../../data/jul26_cal_hf4_predictors_9locations_final.parquet" # hfATLAS-formatted divide-level predictors for the 9-gage rapid test subset
+pred_file_comid_colname: 'divide_id'
+algo_response_vars:
+  - 'cluster_labels'
+algo_type:
+  - 'kmeans'
+  - 'gower_agglomerative'
+algo_select: 'gower_agglomerative_k4' # Specific algorithm used for the final regionalization GPKG layer
+overwrite_sql: True
+path_hf_finl_gpkg: '../../data/rapid_test_9_locs_v4.gpkg' # Hydrofabric GPKG containing the divides for the 9-gage rapid test subset
+layr_hf_finl_gpkg: 'divides'
+MAPIE_alpha: [0.05, 0.32]
+uncn_bnd_pred: False

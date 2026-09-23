@@ -9,3 +9,5 @@ usgs_attributes:
   - 'internal_dataset_name' : 'usgs_nhdplus__v2'
 hydrofabric_attributes:
   - 'name': 'hfab_vars'
+hydrofabricatlas_attributes:
+ - 'name': 'hfatl_vars'
